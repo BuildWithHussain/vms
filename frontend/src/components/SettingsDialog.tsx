@@ -1,8 +1,8 @@
-import { useFrappeGetDoc, useFrappeUpdateDoc, useFrappePostCall } from "frappe-react-sdk"
+import { useFrappeGetDoc, useFrappeUpdateDoc, useFrappePostCall, useFrappeGetCall } from "frappe-react-sdk"
 import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Settings01Icon } from "@hugeicons/core-free-icons"
+import { Settings01Icon, UserGroupIcon, Cancel01Icon, SentIcon } from "@hugeicons/core-free-icons"
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 interface VMSSettings {
@@ -29,8 +30,23 @@ interface VMSSettings {
   allowed_extensions: string
 }
 
+interface VMSUser {
+  name: string
+  email: string
+  full_name: string
+  user_image: string | null
+  last_active: string | null
+}
+
+interface PendingInvitation {
+  name: string
+  email: string
+  roles: string[]
+}
+
 const sections = [
   { id: "general", label: "General", icon: Settings01Icon },
+  { id: "users", label: "Users", icon: UserGroupIcon },
 ] as const
 
 type SectionId = (typeof sections)[number]["id"]
@@ -42,8 +58,62 @@ export function SettingsDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const [activeSection, setActiveSection] = useState<SectionId>("general")
+  const [activeSection, setActiveSection] = useState<SectionId>("users")
 
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="sm:max-w-4xl p-0 gap-0 overflow-hidden"
+        showCloseButton={false}
+      >
+        <div className="flex h-[min(85vh,750px)]">
+          {/* Sidebar */}
+          <div className="w-48 shrink-0 border-r border-border bg-muted/30">
+            <div className="p-4 pb-2">
+              <DialogHeader>
+                <DialogTitle className="text-base font-semibold">Settings</DialogTitle>
+                <DialogDescription className="sr-only">
+                  Application settings
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+            <nav className="space-y-0.5 p-2">
+              {sections.map((section) => (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSection(section.id)}
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    activeSection === section.id
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
+                  )}
+                >
+                  <HugeiconsIcon icon={section.icon} strokeWidth={2} className="size-4" />
+                  {section.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Content */}
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto">
+              {activeSection === "general" ? (
+                <GeneralSection />
+              ) : activeSection === "users" ? (
+                <UsersSection />
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+
+function GeneralSection() {
   const { data, error, isValidating, mutate } = useFrappeGetDoc<VMSSettings>(
     "VMS Settings",
     "VMS Settings"
@@ -94,212 +164,356 @@ export function SettingsDialog({
     }
   }
 
+  if (error) {
+    return (
+      <div className="p-6 text-sm text-muted-foreground">
+        You don't have permission to view these settings.
+      </div>
+    )
+  }
+
+  if (isValidating && !data) {
+    return <div className="p-6 text-muted-foreground">Loading settings...</div>
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="sm:max-w-4xl p-0 gap-0 overflow-hidden"
-        showCloseButton={false}
-      >
-        <div className="flex h-[min(85vh,750px)]">
-          {/* Sidebar */}
-          <div className="w-48 shrink-0 border-r border-border bg-muted/30">
-            <div className="p-4 pb-2">
-              <DialogHeader>
-                <DialogTitle className="text-base font-semibold">Settings</DialogTitle>
-                <DialogDescription className="sr-only">
-                  Application settings
-                </DialogDescription>
-              </DialogHeader>
+    <>
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-6 space-y-6">
+          {/* Cloudflare R2 */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold">Cloudflare R2</h3>
+              <p className="text-xs text-muted-foreground">
+                Credentials for your Cloudflare R2 bucket.
+              </p>
             </div>
-            <nav className="space-y-0.5 p-2">
-              {sections.map((section) => (
-                <button
-                  key={section.id}
-                  onClick={() => setActiveSection(section.id)}
-                  className={cn(
-                    "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    activeSection === section.id
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
-                  )}
-                >
-                  <HugeiconsIcon icon={section.icon} strokeWidth={2} className="size-4" />
-                  {section.label}
-                </button>
-              ))}
-            </nav>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="r2_account_id" className="text-xs">Account ID</Label>
+                <Input
+                  id="r2_account_id"
+                  value={form.r2_account_id ?? ""}
+                  onChange={(e) => handleChange("r2_account_id", e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="r2_access_key_id" className="text-xs">Access Key ID</Label>
+                  <Input
+                    id="r2_access_key_id"
+                    value={form.r2_access_key_id ?? ""}
+                    onChange={(e) =>
+                      handleChange("r2_access_key_id", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="r2_secret_access_key" className="text-xs">Secret Access Key</Label>
+                  <Input
+                    id="r2_secret_access_key"
+                    type="password"
+                    value={form.r2_secret_access_key ?? ""}
+                    onChange={(e) =>
+                      handleChange("r2_secret_access_key", e.target.value)
+                    }
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="r2_bucket_name" className="text-xs">Bucket Name</Label>
+                  <Input
+                    id="r2_bucket_name"
+                    value={form.r2_bucket_name ?? ""}
+                    onChange={(e) =>
+                      handleChange("r2_bucket_name", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="r2_public_url" className="text-xs">Public URL</Label>
+                  <Input
+                    id="r2_public_url"
+                    placeholder="https://cdn.example.com"
+                    value={form.r2_public_url ?? ""}
+                    onChange={(e) =>
+                      handleChange("r2_public_url", e.target.value)
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cloudflare_api_token" className="text-xs">Cloudflare API Token</Label>
+                  <Input
+                    id="cloudflare_api_token"
+                    type="password"
+                    placeholder="Bearer token for analytics endpoints"
+                    value={form.cloudflare_api_token ?? ""}
+                    onChange={(e) =>
+                      handleChange("cloudflare_api_token", e.target.value)
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    For bucket usage stats. Create at Cloudflare Dashboard &gt; My Profile &gt; API Tokens.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Content */}
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto">
-              {error ? (
-                <div className="p-6 text-destructive">
-                  Failed to load settings. Make sure VMS Settings DocType exists and you
-                  have permission.
-                </div>
-              ) : isValidating && !data ? (
-                <div className="p-6 text-muted-foreground">Loading settings...</div>
-              ) : activeSection === "general" ? (
-                <div className="p-6 space-y-6">
-                  {/* Cloudflare R2 */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-semibold">Cloudflare R2</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Credentials for your Cloudflare R2 bucket.
-                    </p>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="r2_account_id" className="text-xs">Account ID</Label>
-                      <Input
-                        id="r2_account_id"
-                        value={form.r2_account_id ?? ""}
-                        onChange={(e) => handleChange("r2_account_id", e.target.value)}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="r2_access_key_id" className="text-xs">Access Key ID</Label>
-                        <Input
-                          id="r2_access_key_id"
-                          value={form.r2_access_key_id ?? ""}
-                          onChange={(e) =>
-                            handleChange("r2_access_key_id", e.target.value)
-                          }
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="r2_secret_access_key" className="text-xs">Secret Access Key</Label>
-                        <Input
-                          id="r2_secret_access_key"
-                          type="password"
-                          value={form.r2_secret_access_key ?? ""}
-                          onChange={(e) =>
-                            handleChange("r2_secret_access_key", e.target.value)
-                          }
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="r2_bucket_name" className="text-xs">Bucket Name</Label>
-                        <Input
-                          id="r2_bucket_name"
-                          value={form.r2_bucket_name ?? ""}
-                          onChange={(e) =>
-                            handleChange("r2_bucket_name", e.target.value)
-                          }
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="r2_public_url" className="text-xs">Public URL</Label>
-                        <Input
-                          id="r2_public_url"
-                          placeholder="https://cdn.example.com"
-                          value={form.r2_public_url ?? ""}
-                          onChange={(e) =>
-                            handleChange("r2_public_url", e.target.value)
-                          }
-                        />
-                      </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="cloudflare_api_token" className="text-xs">Cloudflare API Token</Label>
-                      <Input
-                        id="cloudflare_api_token"
-                        type="password"
-                        placeholder="Bearer token for analytics endpoints"
-                        value={form.cloudflare_api_token ?? ""}
-                        onChange={(e) =>
-                          handleChange("cloudflare_api_token", e.target.value)
-                        }
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        For bucket usage stats. Create at Cloudflare Dashboard &gt; My Profile &gt; API Tokens.
-                      </p>
-                    </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Upload Settings */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-semibold">Upload Settings</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Control file size limits and allowed formats.
-                    </p>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="max_file_size" className="text-xs">Max File Size (bytes)</Label>
-                        <Input
-                          id="max_file_size"
-                          type="number"
-                          value={form.max_file_size ?? ""}
-                          onChange={(e) =>
-                            handleChange("max_file_size", parseInt(e.target.value) || 0)
-                          }
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Default: 5 GB (5368709120 bytes)
-                        </p>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="presigned_url_expiry" className="text-xs">
-                          Presigned URL Expiry (seconds)
-                        </Label>
-                        <Input
-                          id="presigned_url_expiry"
-                          type="number"
-                          value={form.presigned_url_expiry ?? ""}
-                          onChange={(e) =>
-                            handleChange(
-                              "presigned_url_expiry",
-                              parseInt(e.target.value) || 0
-                            )
-                          }
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Default: 1 hour (3600 seconds)
-                        </p>
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="allowed_extensions" className="text-xs">Allowed Extensions</Label>
-                      <Textarea
-                        id="allowed_extensions"
-                        value={form.allowed_extensions ?? ""}
-                        onChange={(e) =>
-                          handleChange("allowed_extensions", e.target.value)
-                        }
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Comma-separated list of allowed file extensions (e.g.
-                        mp4,mov,avi,mkv,webm)
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            ) : null}
+          {/* Upload Settings */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold">Upload Settings</h3>
+              <p className="text-xs text-muted-foreground">
+                Control file size limits and allowed formats.
+              </p>
             </div>
-
-            {/* Sticky footer */}
-            <div className="flex justify-end gap-3 border-t border-border px-6 py-3">
-              <Button variant="outline" onClick={handleTestConnection} disabled={testing}>
-                {testing ? "Testing..." : "Test Connection"}
-              </Button>
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : "Save Settings"}
-              </Button>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="max_file_size" className="text-xs">Max File Size (bytes)</Label>
+                  <Input
+                    id="max_file_size"
+                    type="number"
+                    value={form.max_file_size ?? ""}
+                    onChange={(e) =>
+                      handleChange("max_file_size", parseInt(e.target.value) || 0)
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Default: 5 GB (5368709120 bytes)
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="presigned_url_expiry" className="text-xs">
+                    Presigned URL Expiry (seconds)
+                  </Label>
+                  <Input
+                    id="presigned_url_expiry"
+                    type="number"
+                    value={form.presigned_url_expiry ?? ""}
+                    onChange={(e) =>
+                      handleChange(
+                        "presigned_url_expiry",
+                        parseInt(e.target.value) || 0
+                      )
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Default: 1 hour (3600 seconds)
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="allowed_extensions" className="text-xs">Allowed Extensions</Label>
+                <Textarea
+                  id="allowed_extensions"
+                  value={form.allowed_extensions ?? ""}
+                  onChange={(e) =>
+                    handleChange("allowed_extensions", e.target.value)
+                  }
+                />
+                <p className="text-xs text-muted-foreground">
+                  Comma-separated list of allowed file extensions (e.g.
+                  mp4,mov,avi,mkv,webm)
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+
+      {/* Sticky footer */}
+      <div className="flex justify-end gap-3 border-t border-border px-6 py-3">
+        <Button variant="outline" onClick={handleTestConnection} disabled={testing}>
+          {testing ? "Testing..." : "Test Connection"}
+        </Button>
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? "Saving..." : "Save Settings"}
+        </Button>
+      </div>
+    </>
+  )
+}
+
+
+function UsersSection() {
+  const { call: inviteByEmail, loading: inviting } = useFrappePostCall(
+    "frappe.core.api.user_invitation.invite_by_email"
+  )
+  const { call: cancelInvitation } = useFrappePostCall(
+    "frappe.core.api.user_invitation.cancel_invitation"
+  )
+
+  const {
+    data: usersData,
+    isLoading: usersLoading,
+    mutate: mutateUsers,
+  } = useFrappeGetCall<VMSUser[]>("vms.api.get_vms_users")
+
+  const {
+    data: invitesData,
+    isLoading: invitesLoading,
+    error: invitesError,
+    mutate: mutateInvites,
+  } = useFrappeGetCall<PendingInvitation[]>(
+    "frappe.core.api.user_invitation.get_pending_invitations",
+    { app_name: "vms" }
+  )
+
+  const users = usersData?.message || []
+  const pendingInvites = invitesData?.message || []
+  const loading = usersLoading || invitesLoading
+  const isAdmin = !invitesError
+
+  const [email, setEmail] = useState("")
+
+  const refreshAll = () => {
+    mutateUsers()
+    mutateInvites()
+  }
+
+  const handleInvite = async () => {
+    const trimmed = email.trim()
+    if (!trimmed) return
+    try {
+      await inviteByEmail({
+        emails: trimmed,
+        roles: ["Video Manager"],
+        redirect_to_path: "/frontend",
+        app_name: "vms",
+      })
+      toast.success(`Invitation sent to ${trimmed}`)
+      setEmail("")
+      refreshAll()
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to send invitation"
+      toast.error(message)
+    }
+  }
+
+  const handleCancel = async (inviteName: string, inviteEmail: string) => {
+    try {
+      await cancelInvitation({ name: inviteName, app_name: "vms" })
+      toast.success(`Invitation to ${inviteEmail} cancelled`)
+      refreshAll()
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to cancel invitation"
+      toast.error(message)
+    }
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* Invite — only visible to admins */}
+      {isAdmin && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-sm font-semibold">Invite User</h3>
+            <p className="text-xs text-muted-foreground">
+              Send an invitation email to add a new Video Manager.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Input
+              placeholder="email@example.com"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleInvite()
+              }}
+              className="flex-1"
+            />
+            <Button onClick={handleInvite} disabled={inviting || !email.trim()}>
+              <HugeiconsIcon icon={SentIcon} strokeWidth={2} className="size-4 mr-1.5" />
+              {inviting ? "Sending..." : "Invite"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="text-sm text-muted-foreground">Loading users...</div>
+      ) : (
+        <>
+          {/* Pending Invitations — only visible to admins */}
+          {isAdmin && pendingInvites.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold">Pending Invitations</h3>
+              <div className="divide-y divide-border rounded-lg border border-border">
+                {pendingInvites.map((invite) => (
+                  <div
+                    key={invite.name}
+                    className="flex items-center justify-between px-4 py-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex size-8 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                        {invite.email[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm">{invite.email}</p>
+                        <Badge variant="secondary" className="mt-0.5 text-[10px]">
+                          Pending
+                        </Badge>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleCancel(invite.name, invite.email)}
+                    >
+                      <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Active Users */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold">
+              Video Managers{users.length > 0 && ` (${users.length})`}
+            </h3>
+            {users.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No users with the Video Manager role yet.
+              </p>
+            ) : (
+              <div className="divide-y divide-border rounded-lg border border-border">
+                {users.map((user) => (
+                  <div
+                    key={user.name}
+                    className="flex items-center gap-3 px-4 py-3"
+                  >
+                    {user.user_image ? (
+                      <img
+                        src={user.user_image}
+                        alt={user.full_name}
+                        className="size-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-8 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                        {(user.full_name || user.email)[0].toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">
+                        {user.full_name || user.email}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {user.email}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
   )
 }

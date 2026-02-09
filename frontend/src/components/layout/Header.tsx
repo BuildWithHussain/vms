@@ -4,6 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { CloudUploadIcon, LogoutIcon, UserCircleIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { UploadDialog } from "@/components/UploadDialog"
+import { ModeToggle } from "@/components/mode-toggle"
 
 export function Header() {
   const { currentUser, logout } = useFrappeAuth()
@@ -26,6 +27,7 @@ export function Header() {
           <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} className="size-5" />
           <span>{currentUser}</span>
         </div>
+        <ModeToggle />
         <Button variant="ghost" size="icon-sm" onClick={handleLogout}>
           <HugeiconsIcon icon={LogoutIcon} strokeWidth={2} />
         </Button>

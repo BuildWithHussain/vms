@@ -6,7 +6,7 @@ def after_install():
 
 
 def create_roles():
-	for role_name in ("Video Creator", "Video Editor"):
+	for role_name in ("Video Manager",):
 		if not frappe.db.exists("Role", role_name):
 			frappe.get_doc(
 				{

@@ -163,6 +163,26 @@ def move_asset(asset_name: str, target_project: str):
 
 
 @frappe.whitelist()
+def get_vms_users():
+	"""Get all users with the Video Manager role."""
+	user_names = frappe.get_all(
+		"Has Role",
+		filters={"role": "Video Manager", "parenttype": "User"},
+		pluck="parent",
+	)
+	if not user_names:
+		return []
+
+	users = frappe.get_all(
+		"User",
+		filters={"name": ["in", user_names], "enabled": 1},
+		fields=["name", "email", "full_name", "user_image", "last_active"],
+		order_by="full_name asc",
+	)
+	return users
+
+
+@frappe.whitelist()
 def update_asset_category(asset_name: str, category: str):
 	"""Change an asset's category (Source/Cut/Review/Final)."""
 	valid_categories = ("Source", "Cut", "Review", "Final")

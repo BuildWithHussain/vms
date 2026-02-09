@@ -253,3 +253,9 @@ permission_query_conditions = {
 
 
 website_route_rules = [{'from_route': '/frontend/<path:app_path>', 'to_route': 'frontend'},]
+
+user_invitation = {
+	"allowed_roles": {
+		"System Manager": ["Video Manager"],
+	},
+}
