@@ -65,6 +65,9 @@ export function UploadDialog({
 
   const handleClose = (nextOpen: boolean) => {
     if (!nextOpen && !isUploading) {
+      if (files.some((f) => f.status === "done")) {
+        onComplete?.()
+      }
       reset()
       setCategory("Source")
     }
