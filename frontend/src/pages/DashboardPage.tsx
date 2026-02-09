@@ -61,15 +61,15 @@ export function DashboardPage() {
   }, [getBucketUsage])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="mt-1 text-muted-foreground">
+        <h1 className="text-xl font-bold md:text-2xl">Dashboard</h1>
+        <p className="mt-1 text-sm text-muted-foreground md:text-base">
           Overview of your projects and recent activity.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
         <Card
           size="sm"
           className="cursor-pointer"
@@ -142,15 +142,15 @@ export function DashboardPage() {
                     className="flex items-center justify-between rounded-lg border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
                     onClick={() => navigate(`/projects/${p.name}`)}
                   >
-                    <div>
-                      <div className="text-sm font-medium">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium">
                         {p.project_name}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="truncate text-xs text-muted-foreground">
                         {p.name}
                       </div>
                     </div>
-                    <Badge variant="outline">{p.status}</Badge>
+                    <Badge variant="outline" className="shrink-0">{p.status}</Badge>
                   </div>
                 ))}
               </div>
@@ -174,16 +174,16 @@ export function DashboardPage() {
                     key={a.name}
                     className="flex items-center justify-between rounded-lg border p-3"
                   >
-                    <div>
-                      <div className="text-sm font-medium">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium">
                         {a.file_name}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="truncate text-xs text-muted-foreground">
                         {a.project || "Inbox"} &middot;{" "}
                         {new Date(a.creation).toLocaleDateString()}
                       </div>
                     </div>
-                    <Badge variant="secondary">{a.category}</Badge>
+                    <Badge variant="secondary" className="shrink-0">{a.category}</Badge>
                   </div>
                 ))}
               </div>

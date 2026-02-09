@@ -120,7 +120,7 @@ export function ProjectDetailPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
@@ -129,12 +129,12 @@ export function ProjectDetailPage() {
         >
           <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
         </Button>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold">{project.project_name}</h1>
-            <Badge variant="outline">{project.status}</Badge>
+            <h1 className="truncate text-xl font-bold md:text-2xl">{project.project_name}</h1>
+            <Badge variant="outline" className="shrink-0">{project.status}</Badge>
           </div>
-          <p className="text-sm text-muted-foreground">{project.name}</p>
+          <p className="truncate text-sm text-muted-foreground">{project.name}</p>
         </div>
       </div>
 
@@ -150,7 +150,7 @@ export function ProjectDetailPage() {
       )}
 
       <Tabs defaultValue="assets">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <TabsList>
             <TabsTrigger value="assets">
               Assets{assetItems.length > 0 ? ` (${assetItems.length})` : ""}
@@ -159,11 +159,12 @@ export function ProjectDetailPage() {
               Exports{exportItems.length > 0 ? ` (${exportItems.length})` : ""}
             </TabsTrigger>
           </TabsList>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {selected.size > 0 && (
               <>
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={handleBulkDownload}
                   disabled={isDownloading}
                 >
@@ -172,15 +173,21 @@ export function ProjectDetailPage() {
                     strokeWidth={2}
                     data-icon="inline-start"
                   />
-                  {isDownloading ? "Downloading..." : `Download (${selected.size})`}
+                  <span className="hidden sm:inline">
+                    {isDownloading ? "Downloading..." : "Download"}
+                  </span>
+                  <span className="sm:hidden">
+                    {selected.size}
+                  </span>
+                  <span className="hidden sm:inline"> ({selected.size})</span>
                 </Button>
-                <Button variant="outline" onClick={() => setDeleteOpen(true)}>
+                <Button variant="outline" size="sm" onClick={() => setDeleteOpen(true)}>
                   <HugeiconsIcon
                     icon={Delete02Icon}
                     strokeWidth={2}
                     data-icon="inline-start"
                   />
-                  Delete ({selected.size})
+                  <span className="hidden sm:inline">Delete ({selected.size})</span>
                 </Button>
               </>
             )}
@@ -200,7 +207,7 @@ export function ProjectDetailPage() {
                 <HugeiconsIcon icon={GridViewIcon} strokeWidth={2} />
               </Button>
             </div>
-            <Button onClick={() => setUploadOpen(true)}>
+            <Button size="sm" onClick={() => setUploadOpen(true)}>
               <HugeiconsIcon
                 icon={CloudUploadIcon}
                 strokeWidth={1.5}
@@ -335,11 +342,11 @@ function AssetList({
                       onCheckedChange={() => toggleSelect(asset.name)}
                     />
                   </div>
-                  <div className="flex flex-1 items-center justify-between">
-                    <CardTitle className="text-sm">
+                  <div className="flex flex-1 items-center justify-between gap-2 overflow-hidden">
+                    <CardTitle className="truncate text-sm">
                       {asset.file_name}
                     </CardTitle>
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-2">
                       {asset.status === "Ready" && (
                         <Button
                           variant="ghost"

@@ -89,11 +89,11 @@ export function ProjectsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Projects</h1>
-          <p className="mt-1 text-muted-foreground">
+          <h1 className="text-xl font-bold md:text-2xl">Projects</h1>
+          <p className="mt-1 text-sm text-muted-foreground md:text-base">
             Manage your video projects.
           </p>
         </div>

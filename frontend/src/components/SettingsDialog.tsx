@@ -10,6 +10,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
@@ -50,7 +51,6 @@ const sections = [
   { id: "users", label: "Users", icon: UserGroupIcon },
 ] as const
 
-type SectionId = (typeof sections)[number]["id"]
 
 export function SettingsDialog({
   open,
@@ -59,17 +59,15 @@ export function SettingsDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const [activeSection, setActiveSection] = useState<SectionId>("profile")
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="sm:max-w-4xl p-0 gap-0 overflow-hidden"
         showCloseButton={false}
       >
-        <div className="flex h-[min(85vh,750px)]">
-          {/* Sidebar */}
-          <div className="w-48 shrink-0 border-r border-border bg-muted/30">
+        <Tabs defaultValue="profile" orientation="vertical" className="flex flex-col md:flex-row h-[min(85vh,750px)] gap-0">
+          {/* Header + tabs */}
+          <div className="shrink-0 border-b border-border bg-muted/30 md:w-48 md:border-b-0 md:border-r">
             <div className="p-4 pb-2">
               <DialogHeader>
                 <DialogTitle className="text-base font-semibold">Settings</DialogTitle>
@@ -78,36 +76,29 @@ export function SettingsDialog({
                 </DialogDescription>
               </DialogHeader>
             </div>
-            <nav className="space-y-0.5 p-2">
+            <TabsList className="w-full rounded-none bg-transparent px-2 pb-2 md:flex-col md:items-stretch md:h-auto">
               {sections.map((section) => (
-                <button
-                  key={section.id}
-                  onClick={() => setActiveSection(section.id)}
-                  className={cn(
-                    "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    activeSection === section.id
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
-                  )}
-                >
+                <TabsTrigger key={section.id} value={section.id} className="gap-2 justify-center md:justify-start">
                   <HugeiconsIcon icon={section.icon} strokeWidth={2} className="size-4" />
                   {section.label}
-                </button>
+                </TabsTrigger>
               ))}
-            </nav>
+            </TabsList>
           </div>
 
           {/* Content */}
-          <div className="flex flex-1 flex-col overflow-hidden">
-            {activeSection === "profile" ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <TabsContent value="profile" className="flex flex-1 flex-col overflow-hidden m-0">
               <ProfileSection />
-            ) : activeSection === "general" ? (
+            </TabsContent>
+            <TabsContent value="general" className="flex flex-1 flex-col overflow-hidden m-0">
               <GeneralSection />
-            ) : activeSection === "users" ? (
+            </TabsContent>
+            <TabsContent value="users" className="flex flex-1 flex-col overflow-hidden m-0">
               <UsersSection />
-            ) : null}
+            </TabsContent>
           </div>
-        </div>
+        </Tabs>
       </DialogContent>
     </Dialog>
   )
@@ -245,7 +236,7 @@ function ProfileSection() {
   return (
     <>
       <div className="flex-1 overflow-y-auto">
-        <div className="p-6 space-y-6">
+        <div className="p-4 md:p-6 space-y-6">
           {/* Profile Photo */}
           <div className="space-y-4">
             <div>
@@ -309,7 +300,7 @@ function ProfileSection() {
               </p>
             </div>
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="first_name" className="text-xs">First Name</Label>
                   <Input
@@ -345,7 +336,7 @@ function ProfileSection() {
       </div>
 
       {/* Sticky footer */}
-      <div className="flex items-center justify-between border-t border-border px-6 py-3">
+      <div className="flex items-center justify-between border-t border-border px-4 py-3 md:px-6">
         <p className={cn(
           "text-xs text-muted-foreground transition-opacity",
           isDirty ? "opacity-100" : "opacity-0"
@@ -435,7 +426,7 @@ function GeneralSection() {
   return (
     <>
       <div className="flex-1 overflow-y-auto">
-        <div className="p-6 space-y-6">
+        <div className="p-4 md:p-6 space-y-6">
           {/* Cloudflare R2 */}
           <div className="space-y-4">
             <div>
@@ -453,7 +444,7 @@ function GeneralSection() {
                   onChange={(e) => handleChange("r2_account_id", e.target.value)}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="r2_access_key_id" className="text-xs">Access Key ID</Label>
                   <Input
@@ -476,7 +467,7 @@ function GeneralSection() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="r2_bucket_name" className="text-xs">Bucket Name</Label>
                   <Input
@@ -526,7 +517,7 @@ function GeneralSection() {
               </p>
             </div>
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="max_file_size" className="text-xs">Max File Size (MB)</Label>
                   <Input
@@ -581,7 +572,7 @@ function GeneralSection() {
       </div>
 
       {/* Sticky footer */}
-      <div className="flex items-center justify-between border-t border-border px-6 py-3">
+      <div className="flex items-center justify-between border-t border-border px-4 py-3 md:px-6">
         <p className={cn(
           "text-xs text-muted-foreground transition-opacity",
           isDirty ? "opacity-100" : "opacity-0"
@@ -669,7 +660,7 @@ function UsersSection() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6">
+    <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
       {/* Invite — only visible to admins */}
       {isAdmin && (
         <div className="space-y-4">

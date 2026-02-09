@@ -94,20 +94,21 @@ export function InboxPage() {
   const allSelected = assets && assets.length > 0 && selected.size === assets.length
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Inbox</h1>
-          <p className="mt-1 text-muted-foreground">
+          <h1 className="text-xl font-bold md:text-2xl">Inbox</h1>
+          <p className="mt-1 text-sm text-muted-foreground md:text-base">
             Assets uploaded without a project. Move them into a project when
             ready.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {selected.size > 0 && (
             <>
               <Button
                 variant="outline"
+                size="sm"
                 onClick={handleBulkDownload}
                 disabled={isDownloading}
               >
@@ -116,27 +117,33 @@ export function InboxPage() {
                   strokeWidth={2}
                   data-icon="inline-start"
                 />
-                {isDownloading ? "Downloading..." : `Download (${selected.size})`}
+                <span className="hidden sm:inline">
+                  {isDownloading ? "Downloading..." : "Download"}
+                </span>
+                <span className="sm:hidden">
+                  {selected.size}
+                </span>
+                <span className="hidden sm:inline"> ({selected.size})</span>
               </Button>
-              <Button variant="outline" onClick={() => setMoveOpen(true)}>
+              <Button variant="outline" size="sm" onClick={() => setMoveOpen(true)}>
                 <HugeiconsIcon
                   icon={Move01Icon}
                   strokeWidth={2}
                   data-icon="inline-start"
                 />
-                Move ({selected.size})
+                <span className="hidden sm:inline">Move ({selected.size})</span>
               </Button>
-              <Button variant="outline" onClick={() => setDeleteOpen(true)}>
+              <Button variant="outline" size="sm" onClick={() => setDeleteOpen(true)}>
                 <HugeiconsIcon
                   icon={Delete02Icon}
                   strokeWidth={2}
                   data-icon="inline-start"
                 />
-                Delete ({selected.size})
+                <span className="hidden sm:inline">Delete ({selected.size})</span>
               </Button>
             </>
           )}
-          <Button onClick={() => setUploadOpen(true)}>
+          <Button size="sm" onClick={() => setUploadOpen(true)}>
             <HugeiconsIcon
               icon={CloudUploadIcon}
               strokeWidth={1.5}
@@ -210,11 +217,11 @@ export function InboxPage() {
                           onCheckedChange={() => toggleSelect(asset.name)}
                         />
                       </div>
-                      <div className="flex flex-1 items-center justify-between">
-                        <CardTitle className="text-sm">
+                      <div className="flex flex-1 items-center justify-between gap-2 overflow-hidden">
+                        <CardTitle className="truncate text-sm">
                           {asset.file_name}
                         </CardTitle>
-                        <div className="flex items-center gap-2">
+                        <div className="flex shrink-0 items-center gap-2">
                           {asset.status === "Ready" && (
                             <Button
                               variant="ghost"
