@@ -1,4 +1,3 @@
-import { useState } from "react"
 import { NavLink, useLocation } from "react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -7,7 +6,6 @@ import {
   FolderVideoIcon,
   Settings01Icon,
 } from "@hugeicons/core-free-icons"
-import { SettingsDialog } from "@/components/SettingsDialog"
 import {
   Sidebar,
   SidebarContent,
@@ -26,8 +24,7 @@ const navItems = [
   { to: "/projects", label: "Projects", icon: FolderVideoIcon },
 ]
 
-export function AppSidebar() {
-  const [settingsOpen, setSettingsOpen] = useState(false)
+export function AppSidebar({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { setOpenMobile } = useSidebar()
   const location = useLocation()
 
@@ -72,7 +69,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => {
-                    setSettingsOpen(true)
+                    onOpenSettings()
                     setOpenMobile(false)
                   }}
                   tooltip="Settings"
@@ -89,8 +86,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </Sidebar>
   )
 }

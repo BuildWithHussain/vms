@@ -11,6 +11,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
@@ -59,13 +60,15 @@ export function SettingsDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const isMobile = useIsMobile()
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="sm:max-w-4xl p-0 gap-0 overflow-hidden"
         showCloseButton={false}
       >
-        <Tabs defaultValue="profile" orientation="vertical" className="flex flex-col md:flex-row h-[min(85vh,750px)] gap-0">
+        <Tabs defaultValue="profile" orientation={isMobile ? "horizontal" : "vertical"} className="flex flex-col md:flex-row h-[min(85vh,750px)] gap-0">
           {/* Header + tabs */}
           <div className="shrink-0 border-b border-border bg-muted/30 md:w-48 md:border-b-0 md:border-r">
             <div className="p-4 pb-2">
