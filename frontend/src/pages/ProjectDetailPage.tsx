@@ -197,9 +197,8 @@ export function ProjectDetailPage() {
               </>
             )}
             <ToggleGroup
-              type="single"
-              value={view}
-              onValueChange={(v) => { if (v) setView(v as "list" | "grid") }}
+              value={[view]}
+              onValueChange={(values) => { if (values.length > 0) setView(values[values.length - 1] as "list" | "grid") }}
               variant="outline"
               size="sm"
             >
