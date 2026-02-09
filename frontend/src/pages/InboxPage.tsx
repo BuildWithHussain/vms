@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useFrappeGetDocList } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { CloudUploadIcon, Download04Icon, GridViewIcon, ListViewIcon, Move01Icon } from "@hugeicons/core-free-icons"
+import { CloudUploadIcon, Delete02Icon, Download04Icon, GridViewIcon, ListViewIcon, Move01Icon } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,6 +13,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { UploadDialog } from "@/components/UploadDialog"
 import { MoveAssetDialog } from "@/components/MoveAssetDialog"
+import { DeleteAssetDialog } from "@/components/DeleteAssetDialog"
 import { MediaPlayerDialog } from "@/components/MediaPlayerDialog"
 import { useDownload } from "@/hooks/useDownload"
 import type { VMSAsset } from "@/types"
@@ -27,6 +28,7 @@ const categoryVariant: Record<string, "default" | "secondary" | "outline"> = {
 export function InboxPage() {
   const [uploadOpen, setUploadOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [view, setView] = useState<"list" | "grid">("list")
   const [playerAsset, setPlayerAsset] = useState<{
@@ -78,6 +80,11 @@ export function InboxPage() {
     mutate()
   }
 
+  const handleDeleteComplete = () => {
+    setSelected(new Set())
+    mutate()
+  }
+
   const handleBulkDownload = () => {
     if (!assets) return
     const toDownload = assets.filter((a) => selected.has(a.name))
@@ -118,6 +125,14 @@ export function InboxPage() {
                   data-icon="inline-start"
                 />
                 Move ({selected.size})
+              </Button>
+              <Button variant="outline" onClick={() => setDeleteOpen(true)}>
+                <HugeiconsIcon
+                  icon={Delete02Icon}
+                  strokeWidth={2}
+                  data-icon="inline-start"
+                />
+                Delete ({selected.size})
               </Button>
             </>
           )}
@@ -189,11 +204,12 @@ export function InboxPage() {
                 >
                   <CardHeader>
                     <div className="flex items-center gap-3">
-                      <Checkbox
-                        checked={selected.has(asset.name)}
-                        onCheckedChange={() => toggleSelect(asset.name)}
-                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                      />
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selected.has(asset.name)}
+                          onCheckedChange={() => toggleSelect(asset.name)}
+                        />
+                      </div>
                       <div className="flex flex-1 items-center justify-between">
                         <CardTitle className="text-sm">
                           {asset.file_name}
@@ -260,12 +276,12 @@ export function InboxPage() {
                 >
                   <CardHeader>
                     <div className="flex items-start gap-2">
-                      <Checkbox
-                        checked={selected.has(asset.name)}
-                        onCheckedChange={() => toggleSelect(asset.name)}
-                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                        className="mt-0.5"
-                      />
+                      <div onClick={(e) => e.stopPropagation()} className="mt-0.5">
+                        <Checkbox
+                          checked={selected.has(asset.name)}
+                          onCheckedChange={() => toggleSelect(asset.name)}
+                        />
+                      </div>
                       <CardTitle className="truncate text-sm">
                         {asset.file_name}
                       </CardTitle>
@@ -331,6 +347,13 @@ export function InboxPage() {
         onOpenChange={setMoveOpen}
         assetNames={Array.from(selected)}
         onComplete={handleMoveComplete}
+      />
+
+      <DeleteAssetDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        assetNames={Array.from(selected)}
+        onComplete={handleDeleteComplete}
       />
 
       <MediaPlayerDialog

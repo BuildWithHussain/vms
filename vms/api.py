@@ -3,7 +3,7 @@ import requests
 import frappe
 from frappe import _
 
-from vms.r2 import generate_presigned_download_url, generate_presigned_upload_url, generate_presigned_view_url, get_r2_client
+from vms.r2 import delete_r2_object, generate_presigned_download_url, generate_presigned_upload_url, generate_presigned_view_url, get_r2_client
 
 
 @frappe.whitelist()
@@ -180,6 +180,22 @@ def get_vms_users():
 		order_by="full_name asc",
 	)
 	return users
+
+
+@frappe.whitelist()
+def delete_asset(asset_name: str):
+	"""Delete an asset and its R2 object(s)."""
+	asset = frappe.get_doc("VMS Asset", asset_name)
+
+	# Delete R2 objects
+	if asset.r2_key:
+		delete_r2_object(asset.r2_key)
+	if asset.get("thumbnail_r2_key"):
+		delete_r2_object(asset.thumbnail_r2_key)
+
+	asset.delete()
+
+	return {"status": "ok"}
 
 
 @frappe.whitelist()

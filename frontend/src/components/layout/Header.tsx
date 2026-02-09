@@ -5,9 +5,11 @@ import { CloudUploadIcon, LogoutIcon, UserCircleIcon } from "@hugeicons/core-fre
 import { Button } from "@/components/ui/button"
 import { UploadDialog } from "@/components/UploadDialog"
 import { ModeToggle } from "@/components/mode-toggle"
+import { useUser } from "@/context/UserContext"
 
 export function Header() {
-  const { currentUser, logout } = useFrappeAuth()
+  const { logout } = useFrappeAuth()
+  const { user } = useUser()
   const [uploadOpen, setUploadOpen] = useState(false)
 
   const handleLogout = () => {
@@ -25,7 +27,7 @@ export function Header() {
         </Button>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} className="size-5" />
-          <span>{currentUser}</span>
+          <span>{user?.full_name || user?.email}</span>
         </div>
         <ModeToggle />
         <Button variant="ghost" size="icon-sm" onClick={handleLogout}>

@@ -5,6 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowLeft01Icon,
   CloudUploadIcon,
+  Delete02Icon,
   Download04Icon,
   GridViewIcon,
   ListViewIcon,
@@ -21,6 +22,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UploadDialog } from "@/components/UploadDialog"
 import { MediaPlayerDialog } from "@/components/MediaPlayerDialog"
+import { DeleteAssetDialog } from "@/components/DeleteAssetDialog"
 import { useDownload } from "@/hooks/useDownload"
 import type { VMSProject, VMSAsset } from "@/types"
 
@@ -35,6 +37,7 @@ export function ProjectDetailPage() {
   const { projectId } = useParams()
   const navigate = useNavigate()
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const [view, setView] = useState<"list" | "grid">("list")
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [playerAsset, setPlayerAsset] = useState<{
@@ -107,6 +110,11 @@ export function ProjectDetailPage() {
     downloadMany(toDownload)
   }
 
+  const handleDeleteComplete = () => {
+    setSelected(new Set())
+    mutateAssets()
+  }
+
   if (!project) {
     return <div className="text-muted-foreground">Loading project...</div>
   }
@@ -153,18 +161,28 @@ export function ProjectDetailPage() {
           </TabsList>
           <div className="flex items-center gap-2">
             {selected.size > 0 && (
-              <Button
-                variant="outline"
-                onClick={handleBulkDownload}
-                disabled={isDownloading}
-              >
-                <HugeiconsIcon
-                  icon={Download04Icon}
-                  strokeWidth={2}
-                  data-icon="inline-start"
-                />
-                {isDownloading ? "Downloading..." : `Download (${selected.size})`}
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleBulkDownload}
+                  disabled={isDownloading}
+                >
+                  <HugeiconsIcon
+                    icon={Download04Icon}
+                    strokeWidth={2}
+                    data-icon="inline-start"
+                  />
+                  {isDownloading ? "Downloading..." : `Download (${selected.size})`}
+                </Button>
+                <Button variant="outline" onClick={() => setDeleteOpen(true)}>
+                  <HugeiconsIcon
+                    icon={Delete02Icon}
+                    strokeWidth={2}
+                    data-icon="inline-start"
+                  />
+                  Delete ({selected.size})
+                </Button>
+              </>
             )}
             <div className="flex rounded-lg border border-border">
               <Button
@@ -238,6 +256,13 @@ export function ProjectDetailPage() {
         fileName={playerAsset?.fileName}
         fileType={playerAsset?.fileType}
       />
+
+      <DeleteAssetDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        assetNames={Array.from(selected)}
+        onComplete={handleDeleteComplete}
+      />
     </div>
   )
 }
@@ -304,11 +329,12 @@ function AssetList({
             >
               <CardHeader>
                 <div className="flex items-center gap-3">
-                  <Checkbox
-                    checked={selected.has(asset.name)}
-                    onCheckedChange={() => toggleSelect(asset.name)}
-                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                  />
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selected.has(asset.name)}
+                      onCheckedChange={() => toggleSelect(asset.name)}
+                    />
+                  </div>
                   <div className="flex flex-1 items-center justify-between">
                     <CardTitle className="text-sm">
                       {asset.file_name}
@@ -374,12 +400,12 @@ function AssetList({
             >
               <CardHeader>
                 <div className="flex items-start gap-2">
-                  <Checkbox
-                    checked={selected.has(asset.name)}
-                    onCheckedChange={() => toggleSelect(asset.name)}
-                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                    className="mt-0.5"
-                  />
+                  <div onClick={(e) => e.stopPropagation()} className="mt-0.5">
+                    <Checkbox
+                      checked={selected.has(asset.name)}
+                      onCheckedChange={() => toggleSelect(asset.name)}
+                    />
+                  </div>
                   <CardTitle className="truncate text-sm">
                     {asset.file_name}
                   </CardTitle>

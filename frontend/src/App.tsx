@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router"
 import { useFrappeAuth } from "frappe-react-sdk"
+import { UserProvider } from "@/context/UserContext"
 import { AppLayout } from "@/components/layout/AppLayout"
 import { DashboardPage } from "@/pages/DashboardPage"
 import { InboxPage } from "@/pages/InboxPage"
@@ -22,7 +23,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return null
   }
 
-  return <>{children}</>
+  return <UserProvider>{children}</UserProvider>
 }
 
 export default function App() {
