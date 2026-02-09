@@ -4,6 +4,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { CloudUploadIcon, Delete02Icon, Download04Icon, GridViewIcon, ListViewIcon, Move01Icon } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   Card,
   CardContent,
@@ -16,6 +17,7 @@ import { MoveAssetDialog } from "@/components/MoveAssetDialog"
 import { DeleteAssetDialog } from "@/components/DeleteAssetDialog"
 import { MediaPlayerDialog } from "@/components/MediaPlayerDialog"
 import { useDownload } from "@/hooks/useDownload"
+import { UserAvatar } from "@/components/UserAvatar"
 import type { VMSAsset } from "@/types"
 
 const categoryVariant: Record<string, "default" | "secondary" | "outline"> = {
@@ -46,9 +48,12 @@ export function InboxPage() {
       "status",
       "file_size",
       "file_type",
+      "uploaded_by",
       "uploaded_at",
       "creation",
-    ],
+      "uploaded_by.full_name as uploader_name",
+      "uploaded_by.user_image as uploader_image",
+    ] as string[],
     filters: [["project", "=", ""]],
     orderBy: { field: "creation", order: "desc" },
     limit: 100,
@@ -179,22 +184,20 @@ export function InboxPage() {
                   : "Select all"}
               </span>
             </div>
-            <div className="flex rounded-lg border border-border">
-              <Button
-                variant={view === "list" ? "secondary" : "ghost"}
-                size="icon-sm"
-                onClick={() => setView("list")}
-              >
+            <ToggleGroup
+              type="single"
+              value={view}
+              onValueChange={(v) => { if (v) setView(v as "list" | "grid") }}
+              variant="outline"
+              size="sm"
+            >
+              <ToggleGroupItem value="list" aria-label="List view">
                 <HugeiconsIcon icon={ListViewIcon} strokeWidth={2} />
-              </Button>
-              <Button
-                variant={view === "grid" ? "secondary" : "ghost"}
-                size="icon-sm"
-                onClick={() => setView("grid")}
-              >
+              </ToggleGroupItem>
+              <ToggleGroupItem value="grid" aria-label="Grid view">
                 <HugeiconsIcon icon={GridViewIcon} strokeWidth={2} />
-              </Button>
-            </div>
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
 
           {view === "list" ? (
@@ -250,23 +253,22 @@ export function InboxPage() {
                       </div>
                     </div>
                   </CardHeader>
-                  {(asset.file_size || asset.uploaded_at) && (
-                    <CardContent className="pl-10">
-                      <div className="flex gap-4 text-xs text-muted-foreground">
-                        {asset.file_size && (
-                          <span>
-                            {(asset.file_size / 1024 / 1024).toFixed(1)} MB
-                          </span>
-                        )}
-                        {asset.uploaded_at && (
-                          <span>
-                            Uploaded{" "}
-                            {new Date(asset.uploaded_at).toLocaleDateString()}
-                          </span>
-                        )}
-                      </div>
-                    </CardContent>
-                  )}
+                  <CardContent className="pl-10">
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <UserAvatar name={asset.uploader_name} image={asset.uploader_image} />
+                      {asset.file_size && (
+                        <span>
+                          {(asset.file_size / 1024 / 1024).toFixed(1)} MB
+                        </span>
+                      )}
+                      {asset.uploaded_at && (
+                        <span>
+                          Uploaded{" "}
+                          {new Date(asset.uploaded_at).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </CardContent>
                 </Card>
               ))}
             </div>
@@ -323,7 +325,8 @@ export function InboxPage() {
                         </Button>
                       )}
                     </div>
-                    <div className="flex gap-3 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <UserAvatar name={asset.uploader_name} image={asset.uploader_image} />
                       {asset.file_size && (
                         <span>
                           {(asset.file_size / 1024 / 1024).toFixed(1)} MB

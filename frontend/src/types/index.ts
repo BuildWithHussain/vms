@@ -20,6 +20,8 @@ export interface VMSAsset {
   status: "Uploading" | "Ready" | "Processing" | "Error"
   category: "Source" | "Cut" | "Review" | "Final"
   uploaded_by: string
+  uploader_name?: string
+  uploader_image?: string | null
   uploaded_at?: string
   duration_seconds?: number
   thumbnail_r2_key?: string

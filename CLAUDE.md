@@ -19,6 +19,8 @@ yarn build            # Build React app to vms/public/frontend/ and copy HTML en
 cd frontend && yarn lint   # Run ESLint on frontend code
 ```
 
+IMPORTANT: ALWAYS INSTALL USE shadcn components if available, don't make your own custom components if shadcn components are available.
+
 ### Backend / Frappe
 
 * to create new DocTypes, use new_doc with bench execute. Then other updates could be done directly in JSON. 
