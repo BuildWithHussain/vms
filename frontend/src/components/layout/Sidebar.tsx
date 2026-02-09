@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { NavLink } from "react-router"
+import { NavLink, useLocation } from "react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   DashboardSquare02Icon,
@@ -7,8 +7,18 @@ import {
   FolderVideoIcon,
   Settings01Icon,
 } from "@hugeicons/core-free-icons"
-import { cn } from "@/lib/utils"
 import { SettingsDialog } from "@/components/SettingsDialog"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/sidebar"
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: DashboardSquare02Icon },
@@ -16,46 +26,71 @@ const navItems = [
   { to: "/projects", label: "Projects", icon: FolderVideoIcon },
 ]
 
-export function Sidebar() {
+export function AppSidebar() {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const { setOpenMobile } = useSidebar()
+  const location = useLocation()
 
   return (
-    <aside className="flex h-full w-56 flex-col border-r border-sidebar-border bg-sidebar">
-      <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
+    <Sidebar>
+      <SidebarHeader className="border-b border-sidebar-border px-4 py-3">
         <span className="text-lg font-bold text-sidebar-foreground">VMS</span>
-      </div>
-      <nav className="flex-1 space-y-1 p-3">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === "/"}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-              )
-            }
-          >
-            <HugeiconsIcon icon={item.icon} strokeWidth={2} className="size-5" />
-            {item.label}
-          </NavLink>
-        ))}
-        <button
-          onClick={() => setSettingsOpen(true)}
-          className={cn(
-            "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-            "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-          )}
-        >
-          <HugeiconsIcon icon={Settings01Icon} strokeWidth={2} className="size-5" />
-          Settings
-        </button>
-      </nav>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {navItems.map((item) => {
+                const isActive =
+                  item.to === "/"
+                    ? location.pathname === "/"
+                    : location.pathname.startsWith(item.to)
+
+                return (
+                  <SidebarMenuItem key={item.to}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      render={
+                        <NavLink
+                          to={item.to}
+                          end={item.to === "/"}
+                          onClick={() => setOpenMobile(false)}
+                        />
+                      }
+                      tooltip={item.label}
+                    >
+                      <HugeiconsIcon
+                        icon={item.icon}
+                        strokeWidth={2}
+                        className="size-5"
+                      />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => {
+                    setSettingsOpen(true)
+                    setOpenMobile(false)
+                  }}
+                  tooltip="Settings"
+                >
+                  <HugeiconsIcon
+                    icon={Settings01Icon}
+                    strokeWidth={2}
+                    className="size-5"
+                  />
+                  <span>Settings</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-    </aside>
+    </Sidebar>
   )
 }
