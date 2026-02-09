@@ -11,6 +11,7 @@ import {
   ListViewIcon,
 } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
+import { formatBytes } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
@@ -382,7 +383,7 @@ function AssetList({
                   <UserAvatar name={asset.uploader_name} image={asset.uploader_image} />
                   {asset.file_size && (
                     <span>
-                      {(asset.file_size / 1024 / 1024).toFixed(1)} MB
+                      {formatBytes(asset.file_size)}
                     </span>
                   )}
                   {asset.uploaded_at && (
@@ -452,7 +453,7 @@ function AssetList({
                   <UserAvatar name={asset.uploader_name} image={asset.uploader_image} />
                   {asset.file_size && (
                     <span>
-                      {(asset.file_size / 1024 / 1024).toFixed(1)} MB
+                      {formatBytes(asset.file_size)}
                     </span>
                   )}
                   {asset.uploaded_at && (
