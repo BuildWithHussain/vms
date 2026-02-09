@@ -1,5 +1,5 @@
 import { useFrappeGetDoc, useFrappeUpdateDoc, useFrappePostCall, useFrappeGetCall } from "frappe-react-sdk"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { toast } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Settings01Icon, UserGroupIcon, Cancel01Icon, SentIcon } from "@hugeicons/core-free-icons"
@@ -98,13 +98,11 @@ export function SettingsDialog({
 
           {/* Content */}
           <div className="flex flex-1 flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto">
-              {activeSection === "general" ? (
-                <GeneralSection />
-              ) : activeSection === "users" ? (
-                <UsersSection />
-              ) : null}
-            </div>
+            {activeSection === "general" ? (
+              <GeneralSection />
+            ) : activeSection === "users" ? (
+              <UsersSection />
+            ) : null}
           </div>
         </div>
       </DialogContent>
@@ -122,22 +120,27 @@ function GeneralSection() {
   const { call: testConnection, loading: testing } = useFrappePostCall("vms.api.test_r2_connection")
 
   const [form, setForm] = useState<Partial<VMSSettings>>({})
+  const initialForm = useRef<Partial<VMSSettings>>({})
 
   useEffect(() => {
     if (data) {
-      setForm({
+      const values = {
         r2_account_id: data.r2_account_id || "",
         r2_access_key_id: data.r2_access_key_id || "",
         r2_secret_access_key: data.r2_secret_access_key || "",
         r2_bucket_name: data.r2_bucket_name || "",
         r2_public_url: data.r2_public_url || "",
         cloudflare_api_token: data.cloudflare_api_token || "",
-        max_file_size: data.max_file_size || 5368709120,
+        max_file_size: Math.round((data.max_file_size || 5368709120) / (1024 * 1024)),
         presigned_url_expiry: data.presigned_url_expiry || 3600,
         allowed_extensions: data.allowed_extensions || "mp4,mov,avi,mkv,webm,m4v",
-      })
+      }
+      setForm(values)
+      initialForm.current = values
     }
   }, [data])
+
+  const isDirty = JSON.stringify(form) !== JSON.stringify(initialForm.current)
 
   const handleTestConnection = async () => {
     try {
@@ -155,7 +158,10 @@ function GeneralSection() {
 
   const handleSave = async () => {
     try {
-      await updateDoc("VMS Settings", "VMS Settings", form)
+      await updateDoc("VMS Settings", "VMS Settings", {
+        ...form,
+        max_file_size: (form.max_file_size || 0) * 1024 * 1024,
+      })
       await mutate()
       toast.success("Settings saved")
     } catch (e: unknown) {
@@ -272,7 +278,7 @@ function GeneralSection() {
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="max_file_size" className="text-xs">Max File Size (bytes)</Label>
+                  <Label htmlFor="max_file_size" className="text-xs">Max File Size (MB)</Label>
                   <Input
                     id="max_file_size"
                     type="number"
@@ -282,7 +288,7 @@ function GeneralSection() {
                     }
                   />
                   <p className="text-xs text-muted-foreground">
-                    Default: 5 GB (5368709120 bytes)
+                    Default: 5120 MB (5 GB)
                   </p>
                 </div>
                 <div className="space-y-1.5">
@@ -325,13 +331,21 @@ function GeneralSection() {
       </div>
 
       {/* Sticky footer */}
-      <div className="flex justify-end gap-3 border-t border-border px-6 py-3">
-        <Button variant="outline" onClick={handleTestConnection} disabled={testing}>
-          {testing ? "Testing..." : "Test Connection"}
-        </Button>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? "Saving..." : "Save Settings"}
-        </Button>
+      <div className="flex items-center justify-between border-t border-border px-6 py-3">
+        <p className={cn(
+          "text-xs text-muted-foreground transition-opacity",
+          isDirty ? "opacity-100" : "opacity-0"
+        )}>
+          Unsaved changes
+        </p>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={handleTestConnection} disabled={testing}>
+            {testing ? "Testing..." : "Test Connection"}
+          </Button>
+          <Button onClick={handleSave} disabled={saving || !isDirty}>
+            {saving ? "Saving..." : "Save Settings"}
+          </Button>
+        </div>
       </div>
     </>
   )
@@ -405,7 +419,7 @@ function UsersSection() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="flex-1 overflow-y-auto p-6 space-y-6">
       {/* Invite — only visible to admins */}
       {isAdmin && (
         <div className="space-y-4">
