@@ -395,7 +395,7 @@ function UsersSection() {
       await inviteByEmail({
         emails: trimmed,
         roles: ["Video Manager"],
-        redirect_to_path: "/frontend",
+        redirect_to_path: "/vms",
         app_name: "vms",
       })
       toast.success(`Invitation sent to ${trimmed}`)

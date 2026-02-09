@@ -11,7 +11,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <FrappeProvider>
       <ThemeProvider defaultTheme="system" storageKey="vms-ui-theme">
-        <BrowserRouter basename="/frontend">
+        <BrowserRouter basename="/vms">
           <App />
           <Toaster position="top-right" />
         </BrowserRouter>

@@ -8,7 +8,7 @@
     "build": "vite build --base=/assets/vms/frontend/ && yarn copy-html-entry",
     "lint": "eslint .",
     "preview": "vite preview",
-    "copy-html-entry": "cp ../vms/public/frontend/index.html ../vms/www/frontend.html"
+    "copy-html-entry": "cp ../vms/public/frontend/index.html ../vms/www/vms.html"
   },
   "dependencies": {
     "@base-ui/react": "^1.1.0",
