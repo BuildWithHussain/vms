@@ -1,0 +1,118 @@
+{
+ "actions": [],
+ "creation": "2026-02-09 10:21:40.740559",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "r2_section",
+  "r2_account_id",
+  "r2_access_key_id",
+  "r2_secret_access_key",
+  "column_break_oifx",
+  "r2_bucket_name",
+  "r2_public_url",
+  "upload_settings_section",
+  "max_file_size",
+  "presigned_url_expiry",
+  "column_break_mlev",
+  "allowed_extensions"
+ ],
+ "fields": [
+  {
+   "fieldname": "r2_section",
+   "fieldtype": "Section Break",
+   "label": "Cloudflare R2 Settings"
+  },
+  {
+   "fieldname": "r2_account_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "R2 Account ID",
+   "reqd": 1
+  },
+  {
+   "fieldname": "r2_access_key_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "R2 Access Key ID",
+   "reqd": 1
+  },
+  {
+   "fieldname": "r2_secret_access_key",
+   "fieldtype": "Password",
+   "in_list_view": 1,
+   "label": "R2 Secret Access Key",
+   "reqd": 1
+  },
+  {
+   "fieldname": "r2_bucket_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Bucket Name",
+   "reqd": 1
+  },
+  {
+   "description": "Public URL for the R2 bucket (e.g. https://cdn.example.com)",
+   "fieldname": "r2_public_url",
+   "fieldtype": "Data",
+   "label": "Public URL"
+  },
+  {
+   "fieldname": "upload_settings_section",
+   "fieldtype": "Section Break",
+   "label": "Upload Settings"
+  },
+  {
+   "default": "5368709120",
+   "description": "Maximum file size in bytes. Default is 5 GB.",
+   "fieldname": "max_file_size",
+   "fieldtype": "Int",
+   "label": "Max File Size (bytes)"
+  },
+  {
+   "default": "3600",
+   "description": "Presigned URL expiration time in seconds. Default is 1 hour.",
+   "fieldname": "presigned_url_expiry",
+   "fieldtype": "Int",
+   "label": "Presigned URL Expiry (seconds)"
+  },
+  {
+   "default": "mp4,mov,avi,mkv,webm,m4v",
+   "description": "Comma-separated list of allowed file extensions",
+   "fieldname": "allowed_extensions",
+   "fieldtype": "Small Text",
+   "label": "Allowed Extensions"
+  },
+  {
+   "fieldname": "column_break_oifx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_mlev",
+   "fieldtype": "Column Break"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-02-09 10:21:40.740559",
+ "modified_by": "Administrator",
+ "module": "Video Management Solution",
+ "name": "VMS Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}

@@ -86,7 +86,7 @@ app_license = "agpl-3.0"
 # ------------
 
 # before_install = "vms.install.before_install"
-# after_install = "vms.install.after_install"
+after_install = "vms.install.after_install"
 
 # Uninstallation
 # ------------
@@ -120,10 +120,11 @@ app_license = "agpl-3.0"
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
+permission_query_conditions = {
+	"VMS Project": "vms.permissions.get_project_permission_query_conditions",
+	"VMS Asset": "vms.permissions.get_asset_permission_query_conditions",
+}
+
 # has_permission = {
 # 	"Event": "frappe.desk.doctype.event.event.has_permission",
 # }
