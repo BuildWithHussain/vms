@@ -1,8 +1,8 @@
-import { useFrappeGetDoc, useFrappeUpdateDoc, useFrappePostCall, useFrappeGetCall } from "frappe-react-sdk"
+import { useFrappeGetDoc, useFrappeUpdateDoc, useFrappePostCall, useFrappeGetCall, useFrappeAuth, useFrappeFileUpload } from "frappe-react-sdk"
 import { useState, useEffect, useRef } from "react"
 import { toast } from "sonner"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Settings01Icon, UserGroupIcon, Cancel01Icon, SentIcon } from "@hugeicons/core-free-icons"
+import { Settings01Icon, UserGroupIcon, Cancel01Icon, SentIcon, UserCircleIcon, Camera01Icon } from "@hugeicons/core-free-icons"
 import {
   Dialog,
   DialogContent,
@@ -45,6 +45,7 @@ interface PendingInvitation {
 }
 
 const sections = [
+  { id: "profile", label: "Profile", icon: UserCircleIcon },
   { id: "general", label: "General", icon: Settings01Icon },
   { id: "users", label: "Users", icon: UserGroupIcon },
 ] as const
@@ -58,7 +59,7 @@ export function SettingsDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
-  const [activeSection, setActiveSection] = useState<SectionId>("users")
+  const [activeSection, setActiveSection] = useState<SectionId>("profile")
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -98,7 +99,9 @@ export function SettingsDialog({
 
           {/* Content */}
           <div className="flex flex-1 flex-col overflow-hidden">
-            {activeSection === "general" ? (
+            {activeSection === "profile" ? (
+              <ProfileSection />
+            ) : activeSection === "general" ? (
               <GeneralSection />
             ) : activeSection === "users" ? (
               <UsersSection />
@@ -107,6 +110,253 @@ export function SettingsDialog({
         </div>
       </DialogContent>
     </Dialog>
+  )
+}
+
+
+function ProfileSection() {
+  const { currentUser } = useFrappeAuth()
+  const { call: getValue } = useFrappePostCall("frappe.client.get_value")
+  const { call: setValue, loading: saving } = useFrappePostCall("frappe.client.set_value")
+  const { upload } = useFrappeFileUpload()
+
+  const [form, setForm] = useState({ first_name: "", last_name: "", full_name: "", user_image: "" })
+  const initialForm = useRef({ first_name: "", last_name: "", full_name: "", user_image: "" })
+  const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const fetchProfile = async () => {
+    if (!currentUser) return
+    try {
+      const res = await getValue({
+        doctype: "User",
+        fieldname: ["first_name", "last_name", "full_name", "user_image"],
+        filters: { name: currentUser },
+      })
+      const data = res.message || {}
+      const values = {
+        first_name: data.first_name || "",
+        last_name: data.last_name || "",
+        full_name: data.full_name || "",
+        user_image: data.user_image || "",
+      }
+      setForm(values)
+      initialForm.current = values
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchProfile()
+  }, [currentUser])
+
+  const isDirty =
+    form.first_name !== initialForm.current.first_name ||
+    form.last_name !== initialForm.current.last_name
+
+  const handleChange = (field: string, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleSave = async () => {
+    try {
+      await setValue({
+        doctype: "User",
+        name: currentUser,
+        fieldname: {
+          first_name: form.first_name,
+          last_name: form.last_name,
+        },
+      })
+      // Re-fetch to get the auto-generated full_name
+      const res = await getValue({
+        doctype: "User",
+        fieldname: ["first_name", "last_name", "full_name", "user_image"],
+        filters: { name: currentUser },
+      })
+      const data = res.message || {}
+      const values = {
+        first_name: data.first_name || "",
+        last_name: data.last_name || "",
+        full_name: data.full_name || "",
+        user_image: data.user_image || "",
+      }
+      setForm(values)
+      initialForm.current = values
+      toast.success("Profile updated")
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to update profile"
+      toast.error(message)
+    }
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const res = await upload(file, {
+        isPrivate: false,
+        doctype: "User",
+        docname: currentUser!,
+        fieldname: "user_image",
+      })
+      const fileUrl = (res as { file_url: string }).file_url
+      // Save immediately like Buzz does
+      await setValue({
+        doctype: "User",
+        name: currentUser,
+        fieldname: { user_image: fileUrl },
+      })
+      setForm((prev) => ({ ...prev, user_image: fileUrl }))
+      initialForm.current = { ...initialForm.current, user_image: fileUrl }
+      toast.success("Profile photo updated")
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to upload image"
+      toast.error(message)
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
+
+  const handleRemoveImage = async () => {
+    try {
+      await setValue({
+        doctype: "User",
+        name: currentUser,
+        fieldname: { user_image: "" },
+      })
+      setForm((prev) => ({ ...prev, user_image: "" }))
+      initialForm.current = { ...initialForm.current, user_image: "" }
+      toast.success("Profile photo removed")
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to remove image"
+      toast.error(message)
+    }
+  }
+
+  if (loading) {
+    return <div className="p-6 text-muted-foreground">Loading profile...</div>
+  }
+
+  return (
+    <>
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-6 space-y-6">
+          {/* Profile Photo */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold">Profile Photo</h3>
+              <p className="text-xs text-muted-foreground">
+                Your profile photo visible to other team members.
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="relative group">
+                {form.user_image ? (
+                  <img
+                    src={form.user_image}
+                    alt={form.full_name}
+                    className="size-16 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex size-16 items-center justify-center rounded-full bg-muted text-lg font-medium text-muted-foreground">
+                    {(form.full_name || currentUser || "?")[0].toUpperCase()}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <HugeiconsIcon icon={Camera01Icon} strokeWidth={2} className="size-4 text-white" />
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  {uploading ? "Uploading..." : "Change Photo"}
+                </Button>
+                {form.user_image && (
+                  <Button variant="ghost" size="sm" onClick={handleRemoveImage}>
+                    Remove
+                  </Button>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+              />
+            </div>
+          </div>
+
+          {/* Name */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold">Name</h3>
+              <p className="text-xs text-muted-foreground">
+                Your full name is auto-generated from first and last name.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="first_name" className="text-xs">First Name</Label>
+                  <Input
+                    id="first_name"
+                    value={form.first_name}
+                    onChange={(e) => handleChange("first_name", e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="last_name" className="text-xs">Last Name</Label>
+                  <Input
+                    id="last_name"
+                    value={form.last_name}
+                    onChange={(e) => handleChange("last_name", e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="full_name" className="text-xs">Full Name</Label>
+                <Input
+                  id="full_name"
+                  value={form.full_name}
+                  disabled
+                  className="bg-muted"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Auto-generated from first and last name.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sticky footer */}
+      <div className="flex items-center justify-between border-t border-border px-6 py-3">
+        <p className={cn(
+          "text-xs text-muted-foreground transition-opacity",
+          isDirty ? "opacity-100" : "opacity-0"
+        )}>
+          Unsaved changes
+        </p>
+        <Button onClick={handleSave} disabled={saving || !isDirty}>
+          {saving ? "Saving..." : "Save"}
+        </Button>
+      </div>
+    </>
   )
 }
 
