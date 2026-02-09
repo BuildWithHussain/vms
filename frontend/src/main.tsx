@@ -11,7 +11,7 @@ createRoot(document.getElementById("root")!).render(
     <FrappeProvider>
       <BrowserRouter basename="/frontend">
         <App />
-        <Toaster richColors position="bottom-right" />
+        <Toaster position="top-right" />
       </BrowserRouter>
     </FrappeProvider>
   </StrictMode>

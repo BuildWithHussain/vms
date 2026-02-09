@@ -1,14 +1,68 @@
+import requests
+
 import frappe
 from frappe import _
 
-from vms.r2 import generate_presigned_upload_url, generate_presigned_view_url
+from vms.r2 import generate_presigned_download_url, generate_presigned_upload_url, generate_presigned_view_url, get_r2_client
 
 
 @frappe.whitelist()
-def get_upload_url(file_name: str, content_type: str, project: str):
+def test_r2_connection():
+	"""Test R2 credentials by calling head_bucket."""
+	settings = frappe.get_single("VMS Settings")
+	if not settings.r2_account_id or not settings.r2_access_key_id or not settings.r2_bucket_name:
+		frappe.throw(_("R2 credentials are incomplete. Please fill in all required fields."))
+
+	client = get_r2_client()
+	client.head_bucket(Bucket=settings.r2_bucket_name)
+	return {"status": "ok"}
+
+
+@frappe.whitelist()
+def get_bucket_usage():
+	"""Get R2 bucket storage usage via the Cloudflare API."""
+	settings = frappe.get_single("VMS Settings")
+	api_token = settings.get_password("cloudflare_api_token")
+	if not api_token:
+		frappe.throw(_("Cloudflare API Token is not configured in VMS Settings."))
+
+	resp = requests.get(
+		f"https://api.cloudflare.com/client/v4/accounts/{settings.r2_account_id}/r2/buckets/{settings.r2_bucket_name}/usage",
+		headers={"Authorization": f"Bearer {api_token}"},
+		timeout=10,
+	)
+	data = resp.json()
+	if not data.get("success"):
+		errors = data.get("errors", [])
+		msg = errors[0].get("message", "Unknown error") if errors else "Unknown error"
+		frappe.throw(_("Cloudflare API error: {0}").format(msg))
+
+	result = data["result"]
+	return {
+		"payload_size": int(result.get("payloadSize", 0)),
+		"object_count": int(result.get("objectCount", 0)),
+		"metadata_size": int(result.get("metadataSize", 0)),
+	}
+
+
+@frappe.whitelist()
+def fail_upload(asset_name: str):
+	"""Mark an asset as Failed and delete the record."""
+	if not frappe.db.exists("VMS Asset", asset_name):
+		return {"status": "ok"}
+
+	asset = frappe.get_doc("VMS Asset", asset_name)
+	if asset.status == "Uploading":
+		asset.delete(ignore_permissions=True)
+	return {"status": "ok"}
+
+
+@frappe.whitelist()
+def get_upload_url(file_name: str, content_type: str, project: str = None, category: str = "Source"):
 	"""Generate a presigned upload URL for direct upload to R2.
 
 	Returns dict with upload_url, r2_key, and asset_name.
+	If project is omitted, the asset goes to the Inbox.
 	"""
 	settings = frappe.get_single("VMS Settings")
 
@@ -18,25 +72,32 @@ def get_upload_url(file_name: str, content_type: str, project: str):
 	if allowed and ext not in allowed:
 		frappe.throw(_("File type '{0}' is not allowed. Allowed types: {1}").format(ext, ", ".join(allowed)))
 
-	# Validate project exists
-	if not frappe.db.exists("VMS Project", project):
+	# Validate project exists if provided
+	if project and not frappe.db.exists("VMS Project", project):
 		frappe.throw(_("Project {0} does not exist").format(project))
+
+	# Validate category
+	valid_categories = ("Source", "Cut", "Review", "Final")
+	if category not in valid_categories:
+		frappe.throw(_("Invalid category '{0}'. Must be one of: {1}").format(category, ", ".join(valid_categories)))
 
 	# Generate presigned URL
 	upload_url, r2_key = generate_presigned_upload_url(file_name, content_type, project)
 
 	# Create asset record in Uploading status
-	asset = frappe.get_doc(
-		{
-			"doctype": "VMS Asset",
-			"project": project,
-			"file_name": file_name,
-			"r2_key": r2_key,
-			"file_type": content_type,
-			"status": "Uploading",
-			"uploaded_by": frappe.session.user,
-		}
-	)
+	asset_doc = {
+		"doctype": "VMS Asset",
+		"file_name": file_name,
+		"r2_key": r2_key,
+		"file_type": content_type,
+		"status": "Uploading",
+		"category": category,
+		"uploaded_by": frappe.session.user,
+	}
+	if project:
+		asset_doc["project"] = project
+
+	asset = frappe.get_doc(asset_doc)
 	asset.insert(ignore_permissions=True)
 
 	return {
@@ -73,3 +134,43 @@ def get_view_url(asset_name: str):
 	url = generate_presigned_view_url(asset.r2_key)
 
 	return {"url": url}
+
+
+@frappe.whitelist()
+def get_download_url(asset_name: str):
+	"""Get a presigned download URL for an asset (with Content-Disposition: attachment)."""
+	asset = frappe.get_doc("VMS Asset", asset_name)
+
+	if not asset.r2_key:
+		frappe.throw(_("Asset has no R2 key"))
+
+	url = generate_presigned_download_url(asset.r2_key, asset.file_name)
+
+	return {"url": url}
+
+
+@frappe.whitelist()
+def move_asset(asset_name: str, target_project: str):
+	"""Move an asset to a different project (or from Inbox to a project)."""
+	if not frappe.db.exists("VMS Project", target_project):
+		frappe.throw(_("Target project {0} does not exist").format(target_project))
+
+	asset = frappe.get_doc("VMS Asset", asset_name)
+	asset.project = target_project
+	asset.save(ignore_permissions=True)
+
+	return {"status": "ok", "asset_name": asset.name, "project": target_project}
+
+
+@frappe.whitelist()
+def update_asset_category(asset_name: str, category: str):
+	"""Change an asset's category (Source/Cut/Review/Final)."""
+	valid_categories = ("Source", "Cut", "Review", "Final")
+	if category not in valid_categories:
+		frappe.throw(_("Invalid category '{0}'. Must be one of: {1}").format(category, ", ".join(valid_categories)))
+
+	asset = frappe.get_doc("VMS Asset", asset_name)
+	asset.category = category
+	asset.save(ignore_permissions=True)
+
+	return {"status": "ok", "asset_name": asset.name, "category": category}

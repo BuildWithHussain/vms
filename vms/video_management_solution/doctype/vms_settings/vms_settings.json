@@ -11,6 +11,7 @@
   "column_break_oifx",
   "r2_bucket_name",
   "r2_public_url",
+  "cloudflare_api_token",
   "upload_settings_section",
   "max_file_size",
   "presigned_url_expiry",
@@ -56,6 +57,12 @@
    "fieldname": "r2_public_url",
    "fieldtype": "Data",
    "label": "Public URL"
+  },
+  {
+   "description": "Cloudflare API token (Bearer) for analytics endpoints like bucket usage. Create one at dash.cloudflare.com > My Profile > API Tokens.",
+   "fieldname": "cloudflare_api_token",
+   "fieldtype": "Password",
+   "label": "Cloudflare API Token"
   },
   {
    "fieldname": "upload_settings_section",

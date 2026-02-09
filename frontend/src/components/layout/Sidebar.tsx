@@ -1,11 +1,14 @@
+import { useState } from "react"
 import { NavLink } from "react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   DashboardSquare02Icon,
   InboxIcon,
   FolderVideoIcon,
+  Settings01Icon,
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
+import { SettingsDialog } from "@/components/SettingsDialog"
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: DashboardSquare02Icon },
@@ -14,6 +17,8 @@ const navItems = [
 ]
 
 export function Sidebar() {
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
   return (
     <aside className="flex h-full w-56 flex-col border-r border-sidebar-border bg-sidebar">
       <div className="flex h-14 items-center gap-2 border-b border-sidebar-border px-4">
@@ -38,7 +43,19 @@ export function Sidebar() {
             {item.label}
           </NavLink>
         ))}
+        <button
+          onClick={() => setSettingsOpen(true)}
+          className={cn(
+            "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+            "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+          )}
+        >
+          <HugeiconsIcon icon={Settings01Icon} strokeWidth={2} className="size-5" />
+          Settings
+        </button>
       </nav>
+
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </aside>
   )
 }

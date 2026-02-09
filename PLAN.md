@@ -217,9 +217,46 @@ Automatically transcribe videos categorized as **"Review"** or **"Final"** — n
 
 ---
 
-## Phase 4+ (Future — Not Built Now)
+## Phase 4: Thumbnail Generation
+
+Auto-generate thumbnails for video assets using server-side FFmpeg. Thumbnails are displayed in grid/list views for quick visual identification.
+
+### Backend
+
+**1. Thumbnail generation** — `vms/thumbnails.py`
+- `generate_thumbnail(asset_name)` — downloads the first ~5MB of the video from R2 (presigned GET), runs FFmpeg to extract a single frame (e.g. at 1s or 10% into the video), uploads the thumbnail JPEG to R2 at `{prefix}/thumbs/{asset_id}.jpg`, updates `thumbnail_r2_key` on the VMS Asset doc
+- Uses `subprocess` to call FFmpeg: `ffmpeg -ss 1 -i input -vframes 1 -f image2 -q:v 3 thumb.jpg`
+- Requires FFmpeg installed on the server
+
+**2. Background job integration**
+- After `confirm_upload` marks an asset as "Ready", enqueue `generate_thumbnail` via `frappe.enqueue`
+- Thumbnail generation is non-blocking — the asset is usable immediately, thumbnail appears once the job completes
+
+**3. API additions** (in `vms/api.py`)
+- `get_thumbnail_url(asset_name)` → returns presigned GET URL for the thumbnail (or null if not yet generated)
+- Alternatively, serve via Cloudflare Image Transformations for on-the-fly resizing if configured
+
+**4. VMS Settings additions**
+- `thumbnail_frame_offset` (Int, default 1) — seconds into the video to capture the thumbnail frame
+
+### Frontend
+
+- Asset cards (grid and list views) show the thumbnail image when `thumbnail_r2_key` is populated
+- Placeholder icon shown while thumbnail is being generated or if generation failed
+- Fetch thumbnail URLs alongside asset data (batch or per-asset)
+
+### Phase 4 Execution Order
+1. Create `vms/thumbnails.py` (FFmpeg subprocess + R2 upload)
+2. Hook into `confirm_upload` to enqueue thumbnail generation
+3. Add `get_thumbnail_url` API endpoint
+4. Update frontend asset cards to display thumbnails
+5. Test: upload video → thumbnail auto-generates → appears in grid/list views
+
+---
+
+## Phase 5+ (Future — Not Built Now)
+- **Folder support within projects**: R2 is flat (no real folders — just key prefixes). Add a `folder` field to VMS Asset, update R2 key format to `{project}/{folder}/{uuid}.{ext}`, build a folder browser UI in ProjectDetailPage (create/rename/delete folders, drag assets between folders). No R2 API calls needed to "create" folders — just use the prefix.
 - **Video Review**: Timestamped comments (VMS Comment DocType), Frame.io-like review workflow with transcript-linked comments
-- **Thumbnails/Transcoding**: Background jobs with FFmpeg
 - **Version tracking**: Multiple asset versions with comparison
 - **Email notifications**: New uploads, review completions
 - **Transcript search**: Full-text search across all transcriptions to find specific moments across projects
