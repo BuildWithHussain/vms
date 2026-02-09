@@ -37,7 +37,7 @@ export function UploadDialog({
   const [category, setCategory] = useState<string>("Source")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const { files, addFiles, reset, isUploading } = useUpload({
+  const { files, addFiles, cancelFile, reset, isUploading } = useUpload({
     project,
     category,
     onAllComplete: () => {
@@ -73,7 +73,7 @@ export function UploadDialog({
     }
   }
 
-  const allDone = files.length > 0 && files.every((f) => f.status === "done" || f.status === "error")
+  const allDone = files.length > 0 && files.every((f) => f.status === "done" || f.status === "error" || f.status === "cancelled")
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -140,7 +140,7 @@ export function UploadDialog({
           {files.length > 0 && (
             <div className="max-h-60 space-y-2 overflow-y-auto">
               {files.map((item) => (
-                <FileRow key={item.id} item={item} />
+                <FileRow key={item.id} item={item} onCancel={cancelFile} />
               ))}
             </div>
           )}
@@ -156,17 +156,29 @@ export function UploadDialog({
   )
 }
 
-function FileRow({ item }: { item: FileUploadItem }) {
+function FileRow({ item, onCancel }: { item: FileUploadItem; onCancel: (id: string) => void }) {
   const sizeMB = (item.file.size / 1024 / 1024).toFixed(1)
+  const canCancel = item.status === "pending" || item.status === "uploading"
 
   return (
-    <div className="rounded-lg border p-3 space-y-2">
+    <div className={cn("rounded-lg border p-3 space-y-2", item.status === "cancelled" && "opacity-50")}>
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">{item.file.name}</div>
           <div className="text-xs text-muted-foreground">{sizeMB} MB</div>
         </div>
-        <StatusIcon status={item.status} />
+        {canCancel ? (
+          <button
+            type="button"
+            onClick={() => onCancel(item.id)}
+            className="flex size-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            title="Cancel upload"
+          >
+            <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-4" />
+          </button>
+        ) : (
+          <StatusIcon status={item.status} />
+        )}
       </div>
       {(item.status === "uploading" || item.status === "confirming") && (
         <Progress value={item.progress}>
@@ -176,6 +188,9 @@ function FileRow({ item }: { item: FileUploadItem }) {
       )}
       {item.status === "error" && (
         <div className="text-xs text-destructive">{item.error}</div>
+      )}
+      {item.status === "cancelled" && (
+        <div className="text-xs text-muted-foreground">Cancelled</div>
       )}
     </div>
   )

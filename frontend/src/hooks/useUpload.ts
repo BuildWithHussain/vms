@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from "react"
 import { useFrappePostCall } from "frappe-react-sdk"
 
-export type FileUploadStatus = "pending" | "uploading" | "confirming" | "done" | "error"
+export type FileUploadStatus = "pending" | "uploading" | "confirming" | "done" | "error" | "cancelled"
 
 export interface FileUploadItem {
   id: string
@@ -22,6 +22,7 @@ export function useUpload(options?: {
   const [files, setFiles] = useState<FileUploadItem[]>([])
   const activeCount = useRef(0)
   const queueRef = useRef<FileUploadItem[]>([])
+  const xhrMap = useRef<Map<string, XMLHttpRequest>>(new Map())
 
   const { call: getUploadUrl } = useFrappePostCall("vms.api.get_upload_url")
   const { call: confirmUpload } = useFrappePostCall("vms.api.confirm_upload")
@@ -77,6 +78,7 @@ export function useUpload(options?: {
         // Step 2: Upload to R2 via XHR with progress
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest()
+          xhrMap.current.set(item.id, xhr)
           xhr.open("PUT", upload_url)
           xhr.setRequestHeader(
             "Content-Type",
@@ -91,6 +93,7 @@ export function useUpload(options?: {
           }
 
           xhr.onload = () => {
+            xhrMap.current.delete(item.id)
             if (xhr.status >= 200 && xhr.status < 300) {
               resolve()
             } else {
@@ -98,7 +101,14 @@ export function useUpload(options?: {
             }
           }
 
-          xhr.onerror = () => reject(new Error("Network error during upload"))
+          xhr.onerror = () => {
+            xhrMap.current.delete(item.id)
+            reject(new Error("Network error during upload"))
+          }
+          xhr.onabort = () => {
+            xhrMap.current.delete(item.id)
+            reject(new DOMException("Upload cancelled", "AbortError"))
+          }
           xhr.send(item.file)
         })
 
@@ -111,9 +121,13 @@ export function useUpload(options?: {
 
         updateFile(item.id, { status: "done" })
       } catch (e: unknown) {
-        const message =
-          e instanceof Error ? e.message : "Upload failed"
-        updateFile(item.id, { status: "error", error: message })
+        if (e instanceof DOMException && e.name === "AbortError") {
+          updateFile(item.id, { status: "cancelled" })
+        } else {
+          const message =
+            e instanceof Error ? e.message : "Upload failed"
+          updateFile(item.id, { status: "error", error: message })
+        }
         // Clean up the backend asset record if it was created
         if (assetName) {
           failUpload({ asset_name: assetName }).catch(() => {})
@@ -125,6 +139,25 @@ export function useUpload(options?: {
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [options?.project, options?.category]
+  )
+
+  const cancelFile = useCallback(
+    (id: string) => {
+      // If it's still in the queue (pending), just remove it
+      const queueIndex = queueRef.current.findIndex((item) => item.id === id)
+      if (queueIndex !== -1) {
+        queueRef.current.splice(queueIndex, 1)
+        updateFile(id, { status: "cancelled" })
+        return
+      }
+
+      // If it's actively uploading, abort the XHR
+      const xhr = xhrMap.current.get(id)
+      if (xhr) {
+        xhr.abort()
+      }
+    },
+    [updateFile]
   )
 
   const addFiles = useCallback(
@@ -157,5 +190,5 @@ export function useUpload(options?: {
     (f) => f.status === "uploading" || f.status === "confirming" || f.status === "pending"
   )
 
-  return { files, addFiles, reset, isUploading }
+  return { files, addFiles, cancelFile, reset, isUploading }
 }
