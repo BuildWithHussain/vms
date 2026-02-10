@@ -19,7 +19,7 @@
   "uploaded_at",
   "column_break_2",
   "duration_seconds",
-  "thumbnail_r2_key"
+  "thumbnail_url"
  ],
  "fields": [
   {
@@ -108,9 +108,9 @@
    "label": "Duration (seconds)"
   },
   {
-   "fieldname": "thumbnail_r2_key",
+   "fieldname": "thumbnail_url",
    "fieldtype": "Data",
-   "label": "Thumbnail R2 Key"
+   "label": "Thumbnail URL"
   }
  ],
  "links": [],

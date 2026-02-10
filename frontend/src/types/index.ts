@@ -24,7 +24,7 @@ export interface VMSAsset {
   uploader_image?: string | null
   uploaded_at?: string
   duration_seconds?: number
-  thumbnail_r2_key?: string
+  thumbnail_url?: string
   creation: string
   modified: string
 }

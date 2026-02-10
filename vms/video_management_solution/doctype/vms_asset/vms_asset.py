@@ -19,7 +19,7 @@ class VMSAsset(Document):
 		project: DF.Link | None
 		r2_key: DF.Data | None
 		status: DF.Literal["Uploading", "Ready", "Processing", "Error"]
-		thumbnail_r2_key: DF.Data | None
+		thumbnail_url: DF.Data | None
 		uploaded_at: DF.Datetime | None
 		uploaded_by: DF.Link | None
 	# end: auto-generated types

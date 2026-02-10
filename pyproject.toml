@@ -12,6 +12,11 @@ dependencies = [
     "boto3>=1.35.0",
 ]
 
+[deploy.dependencies.apt]
+packages = [
+    "ffmpeg",
+]
+
 [build-system]
 requires = ["flit_core >=3.4,<4"]
 build-backend = "flit_core.buildapi"

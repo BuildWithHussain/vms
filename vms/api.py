@@ -120,6 +120,14 @@ def confirm_upload(asset_name: str, file_size: int):
 	asset.uploaded_at = frappe.utils.now_datetime()
 	asset.save(ignore_permissions=True)
 
+	# Enqueue thumbnail generation as background job
+	frappe.enqueue(
+		"vms.thumbnails.generate_thumbnail",
+		asset_name=asset.name,
+		queue="default",
+		enqueue_after_commit=True,
+	)
+
 	return {"status": "ok", "asset_name": asset.name}
 
 
@@ -190,8 +198,18 @@ def delete_asset(asset_name: str):
 	# Delete R2 objects
 	if asset.r2_key:
 		delete_r2_object(asset.r2_key)
-	if asset.get("thumbnail_r2_key"):
-		delete_r2_object(asset.thumbnail_r2_key)
+
+	# Delete attached thumbnail File doc
+	thumbnail_files = frappe.get_all(
+		"File",
+		filters={
+			"attached_to_doctype": "VMS Asset",
+			"attached_to_name": asset_name,
+		},
+		pluck="name",
+	)
+	for file_name in thumbnail_files:
+		frappe.delete_doc("File", file_name, ignore_permissions=True)
 
 	asset.delete()
 

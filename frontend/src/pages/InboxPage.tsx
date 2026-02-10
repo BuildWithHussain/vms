@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useNavigate } from "react-router"
 import { useFrappeGetDocList } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { CloudUploadIcon, Delete02Icon, Download04Icon, GridViewIcon, ListViewIcon, Move01Icon } from "@hugeicons/core-free-icons"
+import { CloudUploadIcon, Delete02Icon, Download04Icon, Film01Icon, GridViewIcon, ListViewIcon, Move01Icon } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { formatBytes } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -48,6 +48,7 @@ export function InboxPage() {
       "uploaded_by",
       "uploaded_at",
       "creation",
+      "thumbnail_url",
       "uploaded_by.full_name as uploader_name",
       "uploaded_by.user_image as uploader_image",
     ] as string[],
@@ -216,6 +217,15 @@ export function InboxPage() {
                           onCheckedChange={() => toggleSelect(asset.name)}
                         />
                       </div>
+                      <div className="h-10 w-16 shrink-0 overflow-hidden rounded bg-muted">
+                        {asset.thumbnail_url ? (
+                          <img src={asset.thumbnail_url} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
+                            <HugeiconsIcon icon={Film01Icon} size={18} strokeWidth={1.5} />
+                          </div>
+                        )}
+                      </div>
                       <div className="flex flex-1 items-center justify-between gap-2 overflow-hidden">
                         <CardTitle className="truncate text-sm">
                           {asset.file_name}
@@ -273,12 +283,21 @@ export function InboxPage() {
               {assets.map((asset) => (
                 <Card
                   key={asset.name}
-                  className="flex cursor-pointer flex-col transition-shadow hover:shadow-md"
+                  className="flex cursor-pointer flex-col overflow-hidden transition-shadow hover:shadow-md"
                   onClick={() => {
                     if (asset.status === "Ready")
                       navigate(`/review/${asset.name}`)
                   }}
                 >
+                  <div className="aspect-video w-full bg-muted">
+                    {asset.thumbnail_url ? (
+                      <img src={asset.thumbnail_url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
+                        <HugeiconsIcon icon={Film01Icon} size={32} strokeWidth={1.5} />
+                      </div>
+                    )}
+                  </div>
                   <CardHeader>
                     <div className="flex items-start gap-2">
                       <div onClick={(e) => e.stopPropagation()} className="mt-0.5">
