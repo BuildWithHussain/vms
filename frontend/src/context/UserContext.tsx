@@ -27,6 +27,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }>(
     "User",
     currentUser ?? "",
+    currentUser ? undefined : null,
     {
       revalidateOnFocus: false,
     }
