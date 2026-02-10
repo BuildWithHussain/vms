@@ -284,7 +284,7 @@ export function InboxPage() {
               {assets.map((asset) => (
                 <Card
                   key={asset.name}
-                  className="flex cursor-pointer flex-col overflow-hidden transition-shadow hover:shadow-md"
+                  className="flex cursor-pointer flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md"
                   onClick={() => {
                     if (asset.status === "Ready")
                       navigate(`/review/${asset.name}`)
