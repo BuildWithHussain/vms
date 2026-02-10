@@ -26,7 +26,7 @@ interface AnnotationJSON {
 export function useFabricCanvas() {
   const canvasRef = useRef<fabric.Canvas | null>(null)
   const canvasElRef = useRef<HTMLCanvasElement | null>(null)
-  const [activeTool, setActiveTool] = useState<DrawingTool>("arrow")
+  const [activeTool, setActiveTool] = useState<DrawingTool>("freehand")
   const [activeColor, setActiveColor] = useState(ANNOTATION_COLORS[0])
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
