@@ -131,6 +131,25 @@ def confirm_upload(asset_name: str, file_size: int):
 	return {"status": "ok", "asset_name": asset.name}
 
 
+def _create_audit_log(action: str, asset_name: str, file_name: str = None, file_type: str = None, project: str = None, file_size: int = None):
+	"""Create an audit log entry. Never raises — failures are logged silently."""
+	try:
+		doc = frappe.get_doc({
+			"doctype": "VMS Audit Log",
+			"action": action,
+			"asset_name": asset_name,
+			"user": frappe.session.user,
+			"timestamp": frappe.utils.now_datetime(),
+			"file_name": file_name,
+			"file_type": file_type,
+			"project": project,
+			"file_size": file_size,
+		})
+		doc.insert(ignore_permissions=True)
+	except Exception:
+		frappe.logger("vms").warning(f"Failed to create audit log for {action} on {asset_name}")
+
+
 @frappe.whitelist()
 def get_view_url(asset_name: str):
 	"""Get a presigned view URL for streaming an asset."""
@@ -153,6 +172,15 @@ def get_download_url(asset_name: str):
 		frappe.throw(_("Asset has no R2 key"))
 
 	url = generate_presigned_download_url(asset.r2_key, asset.file_name)
+
+	_create_audit_log(
+		action="Download",
+		asset_name=asset.name,
+		file_name=asset.file_name,
+		file_type=asset.file_type,
+		project=asset.project,
+		file_size=asset.file_size,
+	)
 
 	return {"url": url}
 
@@ -196,6 +224,14 @@ def delete_asset(asset_name: str):
 	asset = frappe.get_doc("VMS Asset", asset_name)
 	r2_key = asset.r2_key
 
+	# Capture metadata before deletion for the audit log
+	audit_data = {
+		"file_name": asset.file_name,
+		"file_type": asset.file_type,
+		"project": asset.project,
+		"file_size": asset.file_size,
+	}
+
 	# Delete linked review comments first (they have a required Link to VMS Asset)
 	comments = frappe.get_all(
 		"VMS Review Comment",
@@ -221,6 +257,12 @@ def delete_asset(asset_name: str):
 	# R2 deletion is not, so we do it last to avoid orphaned docs.
 	asset.delete()
 
+	_create_audit_log(
+		action="Delete",
+		asset_name=asset_name,
+		**audit_data,
+	)
+
 	# Only delete from R2 after all DB operations succeed.
 	# Ignore errors (e.g. key already deleted / doesn't exist) so orphaned docs can still be cleaned up.
 	if r2_key:
@@ -244,3 +286,69 @@ def update_asset_category(asset_name: str, category: str):
 	asset.save(ignore_permissions=True)
 
 	return {"status": "ok", "asset_name": asset.name, "category": category}
+
+
+@frappe.whitelist(methods=["GET"])
+def get_audit_logs(
+	action: str = None,
+	user: str = None,
+	search: str = None,
+	from_date: str = None,
+	to_date: str = None,
+	page: int = 1,
+	page_size: int = 20,
+):
+	"""Get paginated audit logs with optional filters."""
+	filters = {}
+	if action:
+		filters["action"] = action
+	if user:
+		filters["user"] = user
+	if search:
+		filters["file_name"] = ["like", f"%{search}%"]
+	if from_date:
+		filters["timestamp"] = [">=", from_date]
+	if to_date:
+		if "timestamp" in filters:
+			filters["timestamp"] = ["between", [from_date, to_date + " 23:59:59"]]
+		else:
+			filters["timestamp"] = ["<=", to_date + " 23:59:59"]
+
+	page = max(1, int(page))
+	page_size = min(100, max(1, int(page_size)))
+	start = (page - 1) * page_size
+
+	total = frappe.db.count("VMS Audit Log", filters=filters)
+
+	logs = frappe.get_all(
+		"VMS Audit Log",
+		filters=filters,
+		fields=["name", "action", "asset_name", "user", "timestamp", "file_name", "file_type", "project", "file_size"],
+		order_by="timestamp desc",
+		start=start,
+		page_length=page_size,
+	)
+
+	# Enrich with user info
+	user_emails = list({log.user for log in logs})
+	user_map = {}
+	if user_emails:
+		users = frappe.get_all(
+			"User",
+			filters={"name": ["in", user_emails]},
+			fields=["name", "full_name", "user_image"],
+		)
+		user_map = {u.name: u for u in users}
+
+	for log in logs:
+		u = user_map.get(log.user, {})
+		log["user_full_name"] = u.get("full_name", log.user)
+		log["user_image"] = u.get("user_image")
+
+	return {
+		"logs": logs,
+		"total": total,
+		"page": page,
+		"page_size": page_size,
+		"total_pages": -(-total // page_size),  # ceil division
+	}

@@ -4,6 +4,7 @@ import {
   DashboardSquare02Icon,
   InboxIcon,
   FolderVideoIcon,
+  Audit01Icon,
   Settings01Icon,
 } from "@hugeicons/core-free-icons"
 import {
@@ -22,6 +23,7 @@ const navItems = [
   { to: "/", label: "Dashboard", icon: DashboardSquare02Icon },
   { to: "/inbox", label: "Inbox", icon: InboxIcon },
   { to: "/projects", label: "Projects", icon: FolderVideoIcon },
+  { to: "/audit-logs", label: "Audit Logs", icon: Audit01Icon },
 ]
 
 export function AppSidebar({ onOpenSettings }: { onOpenSettings: () => void }) {

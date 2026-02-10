@@ -44,6 +44,20 @@ export interface ConfirmUploadResponse {
   asset_name: string
 }
 
+export interface VMSAuditLog {
+  name: string
+  action: "Download" | "Delete"
+  asset_name: string
+  user: string
+  timestamp: string
+  file_name?: string
+  file_type?: string
+  project?: string
+  file_size?: number
+  user_full_name: string
+  user_image?: string | null
+}
+
 export interface VMSReviewComment {
   name: string
   asset: string
