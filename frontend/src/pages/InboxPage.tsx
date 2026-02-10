@@ -34,7 +34,7 @@ export function InboxPage() {
   const [moveOpen, setMoveOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [view, setView] = useState<"list" | "grid">("list")
+  const [view, setView] = useState<"list" | "grid">("grid")
   const { downloadOne, downloadMany, isDownloading } = useDownload()
 
   const { data: assets, mutate } = useFrappeGetDocList<VMSAsset>("VMS Asset", {
@@ -183,6 +183,7 @@ export function InboxPage() {
               </span>
             </div>
             <ToggleGroup
+              className="hidden sm:flex"
               value={[view]}
               onValueChange={(values) => { if (values.length > 0) setView(values[values.length - 1] as "list" | "grid") }}
               variant="outline"

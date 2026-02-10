@@ -69,7 +69,7 @@ export function VideoControls({
         />
       </Button>
 
-      <div className="flex items-center gap-1">
+      <div className="hidden items-center gap-1 md:flex">
         <Button variant="ghost" size="icon-sm" onClick={onToggleMute}>
           <HugeiconsIcon icon={VolumeIcon} strokeWidth={2} size={18} />
         </Button>
@@ -83,14 +83,14 @@ export function VideoControls({
         />
       </div>
 
-      <div className="mx-1 font-mono text-xs text-muted-foreground select-none">
+      <div className="mx-1 font-mono text-[10px] text-muted-foreground select-none md:text-xs">
         {formatTimecode(currentTime)} / {formatTimecode(duration)}
       </div>
 
       <div className="ml-auto flex items-center gap-1">
         <Popover>
           <PopoverTrigger>
-            <Button variant="ghost" size="sm" className="font-mono text-xs" asChild>
+            <Button variant="ghost" size="sm" className="hidden font-mono text-xs md:inline-flex" asChild>
               <span>{playbackRate}x</span>
             </Button>
           </PopoverTrigger>
@@ -115,7 +115,7 @@ export function VideoControls({
           variant="ghost"
           size="icon-sm"
           onClick={onToggleLoop}
-          className={isLooping ? "text-primary" : "text-muted-foreground"}
+          className={`hidden md:inline-flex ${isLooping ? "text-primary" : "text-muted-foreground"}`}
         >
           <HugeiconsIcon
             icon={isLooping ? RepeatIcon : RepeatOffIcon}

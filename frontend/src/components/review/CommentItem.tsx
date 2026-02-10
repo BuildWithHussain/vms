@@ -43,7 +43,16 @@ export function CommentItem({
 
   return (
     <div className={isNested ? "ml-8 border-l pl-3" : ""}>
-      <div className={`group rounded-md px-3 py-2 hover:bg-muted/50 ${comment.is_resolved ? "opacity-60" : ""}`}>
+      <div
+        className={`group cursor-pointer rounded-md px-3 py-2 hover:bg-muted/50 ${comment.is_resolved ? "opacity-60" : ""}`}
+        onClick={() => {
+          if (comment.has_annotation === 1) {
+            onViewAnnotation?.(comment.name)
+          } else if (hasTimestamp) {
+            onSeek(comment.video_timestamp!)
+          }
+        }}
+      >
         <div className="flex items-start gap-2">
           <Avatar size="sm" className="mt-0.5 shrink-0">
             {comment.commenter_image && (
@@ -105,7 +114,7 @@ export function CommentItem({
                 })}
               </span>
 
-              <div className="ml-auto flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+              <div className="ml-auto flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
                 {!isNested && (
                   <Button
                     variant="ghost"

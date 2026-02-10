@@ -41,7 +41,7 @@ export function ProjectDetailPage() {
   const navigate = useNavigate()
   const [uploadOpen, setUploadOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [view, setView] = useState<"list" | "grid">("list")
+  const [view, setView] = useState<"list" | "grid">("grid")
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const { downloadOne, downloadMany, isDownloading } = useDownload()
 
@@ -194,6 +194,7 @@ export function ProjectDetailPage() {
               </>
             )}
             <ToggleGroup
+              className="hidden sm:flex"
               value={[view]}
               onValueChange={(values) => { if (values.length > 0) setView(values[values.length - 1] as "list" | "grid") }}
               variant="outline"

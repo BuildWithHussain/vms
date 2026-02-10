@@ -100,7 +100,7 @@ export function CommentPanel({
   )
 
   return (
-    <div className="flex h-full flex-col border-l">
+    <div className="flex h-full flex-col border-t md:border-t-0 md:border-l">
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3">
         <h3 className="text-sm font-semibold">
