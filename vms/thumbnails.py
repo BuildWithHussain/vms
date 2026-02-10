@@ -3,10 +3,9 @@ import shutil
 import subprocess
 import tempfile
 
+import frappe
 import requests
 from PIL import Image
-
-import frappe
 
 from vms.r2 import generate_presigned_view_url
 
@@ -41,11 +40,16 @@ def _generate_video_thumbnail(video_path, thumb_path, asset_name):
 	result = subprocess.run(
 		[
 			"ffmpeg",
-			"-ss", "1",
-			"-i", video_path,
-			"-vframes", "1",
-			"-f", "image2",
-			"-q:v", "3",
+			"-ss",
+			"1",
+			"-i",
+			video_path,
+			"-vframes",
+			"1",
+			"-f",
+			"image2",
+			"-q:v",
+			"3",
 			thumb_path,
 		],
 		capture_output=True,
@@ -92,14 +96,16 @@ def generate_thumbnail(asset_name):
 		with open(thumb_path, "rb") as f:
 			content = f.read()
 
-		file_doc = frappe.get_doc({
-			"doctype": "File",
-			"file_name": f"{asset_name}.jpg",
-			"attached_to_doctype": "VMS Asset",
-			"attached_to_name": asset_name,
-			"content": content,
-			"is_private": 0,
-		})
+		file_doc = frappe.get_doc(
+			{
+				"doctype": "File",
+				"file_name": f"{asset_name}.jpg",
+				"attached_to_doctype": "VMS Asset",
+				"attached_to_name": asset_name,
+				"content": content,
+				"is_private": 0,
+			}
+		)
 		file_doc.save(ignore_permissions=True)
 
 		asset.reload()

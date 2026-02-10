@@ -1,9 +1,14 @@
-import requests
-
 import frappe
+import requests
 from frappe import _
 
-from vms.r2 import delete_r2_object, generate_presigned_download_url, generate_presigned_upload_url, generate_presigned_view_url, get_r2_client
+from vms.r2 import (
+	delete_r2_object,
+	generate_presigned_download_url,
+	generate_presigned_upload_url,
+	generate_presigned_view_url,
+	get_r2_client,
+)
 
 
 @frappe.whitelist()
@@ -79,7 +84,9 @@ def get_upload_url(file_name: str, content_type: str, project: str = None, categ
 	# Validate category
 	valid_categories = ("Source", "Cut", "Review", "Final")
 	if category not in valid_categories:
-		frappe.throw(_("Invalid category '{0}'. Must be one of: {1}").format(category, ", ".join(valid_categories)))
+		frappe.throw(
+			_("Invalid category '{0}'. Must be one of: {1}").format(category, ", ".join(valid_categories))
+		)
 
 	# Generate presigned URL
 	upload_url, r2_key = generate_presigned_upload_url(file_name, content_type, project)
@@ -131,20 +138,29 @@ def confirm_upload(asset_name: str, file_size: int):
 	return {"status": "ok", "asset_name": asset.name}
 
 
-def _create_audit_log(action: str, asset_name: str, file_name: str = None, file_type: str = None, project: str = None, file_size: int = None):
+def _create_audit_log(
+	action: str,
+	asset_name: str,
+	file_name: str = None,
+	file_type: str = None,
+	project: str = None,
+	file_size: int = None,
+):
 	"""Create an audit log entry. Never raises — failures are logged silently."""
 	try:
-		doc = frappe.get_doc({
-			"doctype": "VMS Audit Log",
-			"action": action,
-			"asset_name": asset_name,
-			"user": frappe.session.user,
-			"timestamp": frappe.utils.now_datetime(),
-			"file_name": file_name,
-			"file_type": file_type,
-			"project": project,
-			"file_size": file_size,
-		})
+		doc = frappe.get_doc(
+			{
+				"doctype": "VMS Audit Log",
+				"action": action,
+				"asset_name": asset_name,
+				"user": frappe.session.user,
+				"timestamp": frappe.utils.now_datetime(),
+				"file_name": file_name,
+				"file_type": file_type,
+				"project": project,
+				"file_size": file_size,
+			}
+		)
 		doc.insert(ignore_permissions=True)
 	except Exception:
 		frappe.logger("vms").warning(f"Failed to create audit log for {action} on {asset_name}")
@@ -279,7 +295,9 @@ def update_asset_category(asset_name: str, category: str):
 	"""Change an asset's category (Source/Cut/Review/Final)."""
 	valid_categories = ("Source", "Cut", "Review", "Final")
 	if category not in valid_categories:
-		frappe.throw(_("Invalid category '{0}'. Must be one of: {1}").format(category, ", ".join(valid_categories)))
+		frappe.throw(
+			_("Invalid category '{0}'. Must be one of: {1}").format(category, ", ".join(valid_categories))
+		)
 
 	asset = frappe.get_doc("VMS Asset", asset_name)
 	asset.category = category
@@ -323,7 +341,17 @@ def get_audit_logs(
 	logs = frappe.get_all(
 		"VMS Audit Log",
 		filters=filters,
-		fields=["name", "action", "asset_name", "user", "timestamp", "file_name", "file_type", "project", "file_size"],
+		fields=[
+			"name",
+			"action",
+			"asset_name",
+			"user",
+			"timestamp",
+			"file_name",
+			"file_type",
+			"project",
+			"file_size",
+		],
 		order_by="timestamp desc",
 		start=start,
 		page_length=page_size,

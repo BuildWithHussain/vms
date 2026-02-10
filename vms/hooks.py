@@ -254,7 +254,9 @@ permission_query_conditions = {
 # ignore_translatable_strings_from = []
 
 
-website_route_rules = [{'from_route': '/vms/<path:app_path>', 'to_route': 'vms'},]
+website_route_rules = [
+	{"from_route": "/vms/<path:app_path>", "to_route": "vms"},
+]
 
 user_invitation = {
 	"allowed_roles": {
