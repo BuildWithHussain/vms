@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useNavigate } from "react-router"
 import { useFrappeGetDocList } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CloudUploadIcon, Delete02Icon, Download04Icon, GridViewIcon, ListViewIcon, Move01Icon } from "@hugeicons/core-free-icons"
@@ -29,6 +30,7 @@ const categoryVariant: Record<string, "default" | "secondary" | "outline"> = {
 }
 
 export function InboxPage() {
+  const navigate = useNavigate()
   const [uploadOpen, setUploadOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
@@ -81,9 +83,9 @@ export function InboxPage() {
     }
   }
 
-  const handleMoveComplete = () => {
+  const handleMoveComplete = (targetProject: string) => {
     setSelected(new Set())
-    mutate()
+    navigate(`/projects/${targetProject}`)
   }
 
   const handleDeleteComplete = () => {

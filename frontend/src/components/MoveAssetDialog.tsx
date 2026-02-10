@@ -24,7 +24,7 @@ interface MoveAssetDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   assetNames: string[]
-  onComplete?: () => void
+  onComplete?: (targetProject: string) => void
 }
 
 export function MoveAssetDialog({
@@ -58,9 +58,10 @@ export function MoveAssetDialog({
       toast.success(
         `Moved ${assetNames.length} asset${assetNames.length > 1 ? "s" : ""} to project`
       )
+      const movedTo = targetProject
       setTargetProject("")
       onOpenChange(false)
-      onComplete?.()
+      onComplete?.(movedTo)
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Failed to move assets"
       toast.error(message)
@@ -83,7 +84,13 @@ export function MoveAssetDialog({
           <Label>Target Project</Label>
           <Select value={targetProject} onValueChange={setTargetProject}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select a project..." />
+              <SelectValue>
+                {(value: string | null) =>
+                  value
+                    ? (projects?.find((p) => p.name === value)?.project_name ?? value)
+                    : "Select a project..."
+                }
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {projects?.map((p) => (
