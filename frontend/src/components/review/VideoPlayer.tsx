@@ -16,7 +16,8 @@ interface VideoPlayerProps {
   replayAnnotation?: string | null
   fabricCanvas: ReturnType<typeof useFabricCanvas>
   onPause?: () => void
-  onCommentMarkerClick?: (commentName: string) => void
+  onCommentMarkerClick?: (commentName: string, timestamp?: number | null) => void
+  token?: string | null
 }
 
 export function VideoPlayer({
@@ -29,6 +30,7 @@ export function VideoPlayer({
   fabricCanvas,
   onPause,
   onCommentMarkerClick,
+  token,
 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -43,10 +45,12 @@ export function VideoPlayer({
   // Fetch video URL
   useEffect(() => {
     if (!assetName) return
-    getViewUrl({ asset_name: assetName }).then((res) => {
+    const params: Record<string, string> = { asset_name: assetName }
+    if (token) params.token = token
+    getViewUrl(params).then((res) => {
       setVideoUrl(res.message.url)
     })
-  }, [assetName, getViewUrl])
+  }, [assetName, token, getViewUrl])
 
   // Expose seek function to parent
   useEffect(() => {

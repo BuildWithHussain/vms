@@ -25,6 +25,8 @@ export interface VMSAsset {
   uploaded_at?: string
   duration_seconds?: number
   thumbnail_url?: string
+  is_public_review?: 0 | 1
+  review_token?: string | null
   creation: string
   modified: string
 }

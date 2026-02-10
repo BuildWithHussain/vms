@@ -2,7 +2,11 @@ import { useFrappeGetCall, useFrappePostCall } from "frappe-react-sdk"
 import { useCallback } from "react"
 import type { VMSReviewComment } from "@/types"
 
-export function useReviewComments(assetId: string | undefined, sortBy: string = "timestamp") {
+export function useReviewComments(
+  assetId: string | undefined,
+  sortBy: string = "timestamp",
+  token?: string | null,
+) {
   const {
     data,
     isLoading,
@@ -13,6 +17,7 @@ export function useReviewComments(assetId: string | undefined, sortBy: string = 
       ? {
           asset_name: assetId,
           sort_by: sortBy,
+          ...(token ? { token } : {}),
         }
       : undefined,
     assetId ? `review-comments-${assetId}-${sortBy}` : undefined,
@@ -41,6 +46,7 @@ export function useReviewComments(assetId: string | undefined, sortBy: string = 
       videoTimestamp?: number | null,
       parentComment?: string | null,
       annotationData?: string | null,
+      guestName?: string | null,
     ) => {
       const result = await callAddComment({
         asset_name: assetId,
@@ -48,11 +54,13 @@ export function useReviewComments(assetId: string | undefined, sortBy: string = 
         video_timestamp: videoTimestamp ?? undefined,
         parent_comment: parentComment ?? undefined,
         annotation_data: annotationData ?? undefined,
+        ...(token ? { token } : {}),
+        ...(guestName ? { guest_name: guestName } : {}),
       })
       mutate()
       return result.message as VMSReviewComment
     },
-    [assetId, callAddComment, mutate],
+    [assetId, token, callAddComment, mutate],
   )
 
   const deleteComment = useCallback(

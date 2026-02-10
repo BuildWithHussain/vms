@@ -12,7 +12,7 @@ interface VideoTimelineProps {
   duration: number
   comments: VMSReviewComment[]
   onSeek: (time: number) => void
-  onCommentMarkerClick?: (commentName: string) => void
+  onCommentMarkerClick?: (commentName: string, timestamp?: number | null) => void
 }
 
 export function VideoTimeline({
@@ -82,7 +82,7 @@ export function VideoTimeline({
                 onClick={(e) => {
                   e.stopPropagation()
                   if (onCommentMarkerClick) {
-                    onCommentMarkerClick(comment.name)
+                    onCommentMarkerClick(comment.name, comment.video_timestamp)
                   } else {
                     onSeek(comment.video_timestamp!)
                   }

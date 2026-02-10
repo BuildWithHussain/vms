@@ -44,14 +44,7 @@ export default function App() {
         <Route path="projects/:projectId" element={<ProjectDetailPage />} />
         <Route path="audit-logs" element={<AuditLogPage />} />
       </Route>
-      <Route
-        path="review/:assetId"
-        element={
-          <ProtectedRoute>
-            <ReviewPage />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="review/:assetId" element={<ReviewPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

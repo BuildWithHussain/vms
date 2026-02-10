@@ -2,9 +2,11 @@ import { useState, useCallback } from "react"
 import { useFrappePostCall } from "frappe-react-sdk"
 import { toast } from "sonner"
 
-export function useDownload() {
+export function useDownload(token?: string | null) {
   const [isDownloading, setIsDownloading] = useState(false)
-  const { call: getDownloadUrl } = useFrappePostCall("vms.api.get_download_url")
+  const { call: getDownloadUrl } = useFrappePostCall(
+    token ? "vms.review_api.get_guest_download_url" : "vms.api.get_download_url",
+  )
 
   const triggerDownload = (url: string, fileName: string) => {
     const a = document.createElement("a")
@@ -19,7 +21,9 @@ export function useDownload() {
     async (assetName: string, fileName?: string) => {
       try {
         setIsDownloading(true)
-        const res = await getDownloadUrl({ asset_name: assetName })
+        const params: Record<string, string> = { asset_name: assetName }
+        if (token) params.token = token
+        const res = await getDownloadUrl(params)
         const { url } = res.message as { url: string }
         triggerDownload(url, fileName || assetName)
       } catch (e: unknown) {
@@ -29,7 +33,7 @@ export function useDownload() {
         setIsDownloading(false)
       }
     },
-    [getDownloadUrl]
+    [token, getDownloadUrl]
   )
 
   const downloadMany = useCallback(
@@ -39,7 +43,9 @@ export function useDownload() {
       try {
         for (const asset of assets) {
           try {
-            const res = await getDownloadUrl({ asset_name: asset.name })
+            const params: Record<string, string> = { asset_name: asset.name }
+            if (token) params.token = token
+            const res = await getDownloadUrl(params)
             const { url } = res.message as { url: string }
             triggerDownload(url, asset.file_name)
             // Small delay between downloads so the browser handles them properly
@@ -57,7 +63,7 @@ export function useDownload() {
         setIsDownloading(false)
       }
     },
-    [getDownloadUrl]
+    [token, getDownloadUrl]
   )
 
   return { downloadOne, downloadMany, isDownloading }

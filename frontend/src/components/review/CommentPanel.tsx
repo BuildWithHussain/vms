@@ -18,9 +18,13 @@ interface CommentPanelProps {
   onStartAnnotation: () => void
   onCancelAnnotation: () => void
   onAnnotationDone: () => void
-  onViewAnnotation: (commentName: string) => void
+  onViewAnnotation: (commentName: string, timestamp?: number | null) => void
   onClearAnnotation: () => void
   fabricCanvas: ReturnType<typeof useFabricCanvas>
+  isGuest?: boolean
+  guestName?: string
+  onSetGuestName?: (name: string) => void
+  token?: string | null
 }
 
 export function CommentPanel({
@@ -35,6 +39,10 @@ export function CommentPanel({
   onViewAnnotation,
   onClearAnnotation,
   fabricCanvas,
+  isGuest = false,
+  guestName = "",
+  onSetGuestName,
+  token,
 }: CommentPanelProps) {
   const [sortBy, setSortBy] = useState<"timestamp" | "recent">("recent")
   const [replyTo, setReplyTo] = useState<{
@@ -50,7 +58,7 @@ export function CommentPanel({
     addComment,
     deleteComment,
     resolveComment,
-  } = useReviewComments(assetId, sortBy)
+  } = useReviewComments(assetId, sortBy, token)
 
   // Build thread tree: top-level comments + their replies
   const threadedComments = useMemo(() => {
@@ -84,13 +92,13 @@ export function CommentPanel({
   )
 
   const handleSubmit = useCallback(
-    async (text: string, timestamp?: number | null, parentComment?: string | null) => {
+    async (text: string, timestamp?: number | null, parentComment?: string | null, _annotationData?: string | null, submittedGuestName?: string | null) => {
       // Auto-capture annotation if still in draw mode
       let annotation = pendingAnnotation
       if (!annotation && annotationMode && fabricCanvas.hasContent()) {
         annotation = fabricCanvas.getAnnotationData()
       }
-      await addComment(text, timestamp, parentComment, annotation)
+      await addComment(text, timestamp, parentComment, annotation, submittedGuestName)
       setReplyTo(null)
       // Clean up annotation state
       if (annotation || pendingAnnotation) onClearAnnotation()
@@ -139,6 +147,7 @@ export function CommentPanel({
                 onResolve={resolveComment}
                 onDelete={deleteComment}
                 onViewAnnotation={onViewAnnotation}
+                isGuest={isGuest}
               />
             ))
           )}
@@ -156,6 +165,9 @@ export function CommentPanel({
         onCancelAnnotation={onCancelAnnotation}
         annotationMode={annotationMode}
         hasAnnotation={!!pendingAnnotation}
+        isGuest={isGuest}
+        guestName={guestName}
+        onSetGuestName={onSetGuestName}
       />
 
       {/* Annotation toolbar — docked below input */}

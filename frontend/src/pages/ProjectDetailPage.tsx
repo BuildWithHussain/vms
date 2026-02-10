@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { useParams, useNavigate } from "react-router"
-import { useFrappeGetDoc, useFrappeGetDocList } from "frappe-react-sdk"
+import { useFrappeGetDoc, useFrappeGetDocList, useFrappePostCall } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowLeft01Icon,
@@ -9,11 +9,17 @@ import {
   Download04Icon,
   Film01Icon,
   GridViewIcon,
+  Link01Icon,
   ListViewIcon,
+  Copy01Icon,
 } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { formatBytes } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   Card,
@@ -27,6 +33,7 @@ import { UploadDialog } from "@/components/UploadDialog"
 import { DeleteAssetDialog } from "@/components/DeleteAssetDialog"
 import { useDownload } from "@/hooks/useDownload"
 import { UserAvatar } from "@/components/UserAvatar"
+import { toast } from "sonner"
 import type { VMSProject, VMSAsset } from "@/types"
 
 const categoryVariant: Record<string, "default" | "secondary" | "outline"> = {
@@ -45,6 +52,8 @@ export function ProjectDetailPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const { downloadOne, downloadMany, isDownloading } = useDownload()
 
+  const { call: callTogglePublicReview } = useFrappePostCall("vms.review_api.toggle_public_review")
+
   const { data: project } = useFrappeGetDoc<VMSProject>(
     "VMS Project",
     projectId!
@@ -62,6 +71,8 @@ export function ProjectDetailPage() {
       "uploaded_at",
       "creation",
       "thumbnail_url",
+      "is_public_review",
+      "review_token",
       "uploaded_by.full_name as uploader_name",
       "uploaded_by.user_image as uploader_image",
     ] as string[],
@@ -69,6 +80,14 @@ export function ProjectDetailPage() {
     orderBy: { field: "creation", order: "desc" },
     limit: 100,
   })
+
+  const handleTogglePublicReview = useCallback(
+    async (assetName: string, enable: boolean) => {
+      await callTogglePublicReview({ asset_name: assetName, enable: enable ? 1 : 0 })
+      mutateAssets()
+    },
+    [callTogglePublicReview, mutateAssets],
+  )
 
   const assetItems = useMemo(
     () => (assets ?? []).filter((a) => a.category === "Source" || a.category === "Cut"),
@@ -228,6 +247,7 @@ export function ProjectDetailPage() {
             toggleSelectAll={() => toggleSelectAll(assetItems)}
             downloadOne={downloadOne}
             onPlay={(name) => navigate(`/review/${name}`)}
+            onTogglePublicReview={handleTogglePublicReview}
             emptyMessage="No source or cut assets yet. Upload some files to get started."
           />
         </TabsContent>
@@ -242,6 +262,7 @@ export function ProjectDetailPage() {
             toggleSelectAll={() => toggleSelectAll(exportItems)}
             downloadOne={downloadOne}
             onPlay={(name) => navigate(`/review/${name}`)}
+            onTogglePublicReview={handleTogglePublicReview}
             emptyMessage="No review or final exports yet. Upload exports to share with your team."
           />
         </TabsContent>
@@ -264,6 +285,82 @@ export function ProjectDetailPage() {
   )
 }
 
+function SharePopover({
+  asset,
+  onToggle,
+}: {
+  asset: VMSAsset
+  onToggle: (assetName: string, enable: boolean) => Promise<void>
+}) {
+  const [toggling, setToggling] = useState(false)
+  const isPublic = asset.is_public_review === 1
+
+  const shareUrl = asset.review_token
+    ? `${window.location.origin}/vms/review/${asset.name}?token=${asset.review_token}`
+    : ""
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      toast.success("Link copied to clipboard")
+    } catch {
+      toast.error("Failed to copy link")
+    }
+  }
+
+  const handleToggle = async (checked: boolean) => {
+    setToggling(true)
+    try {
+      await onToggle(asset.name, checked)
+    } finally {
+      setToggling(false)
+    }
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger
+        className={buttonVariants({ variant: "ghost", size: "icon-sm", className: isPublic ? "text-primary" : "" })}
+        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+        title="Share"
+      >
+        <HugeiconsIcon icon={Link01Icon} strokeWidth={2} size={14} />
+      </PopoverTrigger>
+      <PopoverContent className="w-80" align="end" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label htmlFor={`share-toggle-${asset.name}`} className="text-sm font-medium">
+              Public review link
+            </Label>
+            <Switch
+              id={`share-toggle-${asset.name}`}
+              checked={isPublic}
+              onCheckedChange={handleToggle}
+              disabled={toggling}
+            />
+          </div>
+          {isPublic && shareUrl && (
+            <div className="flex items-center gap-2">
+              <Input
+                value={shareUrl}
+                readOnly
+                className="text-xs"
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+              />
+              <Button variant="outline" size="icon-sm" onClick={handleCopy}>
+                <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} size={14} />
+              </Button>
+            </div>
+          )}
+          {isPublic && !shareUrl && (
+            <p className="text-xs text-muted-foreground">Generating link...</p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 function AssetList({
   items,
   allItems,
@@ -273,6 +370,7 @@ function AssetList({
   toggleSelectAll,
   downloadOne,
   onPlay,
+  onTogglePublicReview,
   emptyMessage,
 }: {
   items: VMSAsset[]
@@ -283,6 +381,7 @@ function AssetList({
   toggleSelectAll: () => void
   downloadOne: (assetName: string, fileName?: string) => void
   onPlay: (assetName: string) => void
+  onTogglePublicReview: (assetName: string, enable: boolean) => Promise<void>
   emptyMessage: string
 }) {
   if (!items.length) {
@@ -347,16 +446,19 @@ function AssetList({
                     </CardTitle>
                     <div className="flex shrink-0 items-center gap-2">
                       {asset.status === "Ready" && (
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={(e: React.MouseEvent) => {
-                            e.stopPropagation()
-                            downloadOne(asset.name, asset.file_name)
-                          }}
-                        >
-                          <HugeiconsIcon icon={Download04Icon} strokeWidth={2} />
-                        </Button>
+                        <>
+                          <SharePopover asset={asset} onToggle={onTogglePublicReview} />
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={(e: React.MouseEvent) => {
+                              e.stopPropagation()
+                              downloadOne(asset.name, asset.file_name)
+                            }}
+                          >
+                            <HugeiconsIcon icon={Download04Icon} strokeWidth={2} />
+                          </Button>
+                        </>
                       )}
                       <Badge
                         variant={categoryVariant[asset.category] ?? "outline"}
@@ -441,18 +543,23 @@ function AssetList({
                       {asset.status}
                     </Badge>
                   </div>
-                  {asset.status === "Ready" && (
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={(e: React.MouseEvent) => {
-                        e.stopPropagation()
-                        downloadOne(asset.name, asset.file_name)
-                      }}
-                    >
-                      <HugeiconsIcon icon={Download04Icon} strokeWidth={2} />
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-1">
+                    {asset.status === "Ready" && (
+                      <>
+                        <SharePopover asset={asset} onToggle={onTogglePublicReview} />
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={(e: React.MouseEvent) => {
+                            e.stopPropagation()
+                            downloadOne(asset.name, asset.file_name)
+                          }}
+                        >
+                          <HugeiconsIcon icon={Download04Icon} strokeWidth={2} />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
                   <UserAvatar name={asset.uploader_name} image={asset.uploader_image} />

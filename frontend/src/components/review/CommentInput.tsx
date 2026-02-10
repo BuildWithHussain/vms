@@ -8,13 +8,16 @@ import { formatTimestamp } from "@/hooks/useVideoPlayer"
 interface CommentInputProps {
   currentTime: number
   replyTo?: { name: string; commenterName: string; timestamp?: number | null } | null
-  onSubmit: (text: string, timestamp?: number | null, parentComment?: string | null, annotationData?: string | null) => Promise<void>
+  onSubmit: (text: string, timestamp?: number | null, parentComment?: string | null, annotationData?: string | null, guestName?: string | null) => Promise<void>
   onCancelReply?: () => void
   isSubmitting: boolean
   onStartAnnotation?: () => void
   onCancelAnnotation?: () => void
   annotationMode?: boolean
   hasAnnotation?: boolean
+  isGuest?: boolean
+  guestName?: string
+  onSetGuestName?: (name: string) => void
 }
 
 export function CommentInput({
@@ -27,10 +30,20 @@ export function CommentInput({
   onCancelAnnotation,
   annotationMode = false,
   hasAnnotation = false,
+  isGuest = false,
+  guestName = "",
+  onSetGuestName,
 }: CommentInputProps) {
   const [text, setText] = useState("")
   const [attachTimestamp, setAttachTimestamp] = useState(true)
+  const [localGuestName, setLocalGuestName] = useState(guestName)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const nameInputRef = useRef<HTMLInputElement>(null)
+
+  // Sync localGuestName when prop changes
+  useEffect(() => {
+    setLocalGuestName(guestName)
+  }, [guestName])
 
   // Focus textarea when replying
   useEffect(() => {
@@ -39,13 +52,34 @@ export function CommentInput({
     }
   }, [replyTo])
 
+  const handleNameBlur = () => {
+    const trimmed = localGuestName.trim()
+    if (trimmed && trimmed !== guestName) {
+      onSetGuestName?.(trimmed)
+    }
+  }
+
   const handleSubmit = async () => {
     const trimmed = text.trim()
     if (!trimmed) return
 
+    // For guests, require a name
+    if (isGuest) {
+      const name = localGuestName.trim()
+      if (!name) {
+        nameInputRef.current?.focus()
+        return
+      }
+      // Persist name on first submit
+      if (name !== guestName) {
+        onSetGuestName?.(name)
+      }
+    }
+
     const ts = attachTimestamp ? currentTime : null
     const parent = replyTo?.name ?? null
-    await onSubmit(trimmed, ts, parent)
+    const nameToSend = isGuest ? localGuestName.trim() : null
+    await onSubmit(trimmed, ts, parent, null, nameToSend)
     setText("")
   }
 
@@ -67,6 +101,26 @@ export function CommentInput({
           <Button variant="ghost" size="icon-sm" onClick={onCancelReply}>
             <HugeiconsIcon icon={Cancel01Icon} size={12} strokeWidth={2} />
           </Button>
+        </div>
+      )}
+
+      {/* Guest name input */}
+      {isGuest && (
+        <div className="mb-2">
+          <input
+            ref={nameInputRef}
+            value={localGuestName}
+            onChange={(e) => setLocalGuestName(e.target.value)}
+            onBlur={handleNameBlur}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault()
+                textareaRef.current?.focus()
+              }
+            }}
+            placeholder="Your name"
+            className="w-full rounded-md border bg-background px-3 py-1.5 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
         </div>
       )}
 

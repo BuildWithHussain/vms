@@ -19,7 +19,11 @@
   "uploaded_at",
   "column_break_2",
   "duration_seconds",
-  "thumbnail_url"
+  "thumbnail_url",
+  "section_break_review",
+  "is_public_review",
+  "column_break_review",
+  "review_token"
  ],
  "fields": [
   {
@@ -111,6 +115,29 @@
    "fieldname": "thumbnail_url",
    "fieldtype": "Data",
    "label": "Thumbnail URL"
+  },
+  {
+   "fieldname": "section_break_review",
+   "fieldtype": "Section Break",
+   "label": "Public Review"
+  },
+  {
+   "fieldname": "is_public_review",
+   "fieldtype": "Check",
+   "label": "Public Review",
+   "default": "0"
+  },
+  {
+   "fieldname": "column_break_review",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "review_token",
+   "fieldtype": "Data",
+   "label": "Review Token",
+   "read_only": 1,
+   "hidden": 1,
+   "unique": 1
   }
  ],
  "links": [],

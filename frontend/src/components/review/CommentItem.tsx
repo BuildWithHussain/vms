@@ -24,8 +24,9 @@ interface CommentItemProps {
   onReply: (parentName: string, timestamp?: number | null) => void
   onResolve: (name: string, resolved: boolean) => void
   onDelete: (name: string) => void
-  onViewAnnotation?: (commentName: string) => void
+  onViewAnnotation?: (commentName: string, timestamp?: number | null) => void
   isNested?: boolean
+  isGuest?: boolean
 }
 
 export function CommentItem({
@@ -37,9 +38,11 @@ export function CommentItem({
   onDelete,
   onViewAnnotation,
   isNested = false,
+  isGuest = false,
 }: CommentItemProps) {
   const [showReplies, setShowReplies] = useState(true)
   const hasTimestamp = comment.video_timestamp != null
+  const isGuestComment = !!comment.guest_name && !comment.commented_by
 
   return (
     <div className={isNested ? "ml-8 border-l pl-3" : ""}>
@@ -47,7 +50,7 @@ export function CommentItem({
         className={`group cursor-pointer rounded-md px-3 py-2 hover:bg-muted/50 ${comment.is_resolved ? "opacity-60" : ""}`}
         onClick={() => {
           if (comment.has_annotation === 1) {
-            onViewAnnotation?.(comment.name)
+            onViewAnnotation?.(comment.name, comment.video_timestamp)
           } else if (hasTimestamp) {
             onSeek(comment.video_timestamp!)
           }
@@ -68,13 +71,16 @@ export function CommentItem({
               <span className="text-sm font-medium truncate">
                 {comment.commenter_name}
               </span>
+              {isGuestComment && (
+                <Badge variant="outline" className="text-[10px] shrink-0">Guest</Badge>
+              )}
               {hasTimestamp && (
                 <Badge
                   variant="secondary"
                   className="cursor-pointer font-mono text-[10px] shrink-0"
                   onClick={() =>
                     comment.has_annotation === 1
-                      ? onViewAnnotation?.(comment.name)
+                      ? onViewAnnotation?.(comment.name, comment.video_timestamp)
                       : onSeek(comment.video_timestamp!)
                   }
                 >
@@ -86,7 +92,7 @@ export function CommentItem({
                 <Badge
                   variant="secondary"
                   className="cursor-pointer text-[10px] shrink-0 gap-0.5"
-                  onClick={() => onViewAnnotation?.(comment.name)}
+                  onClick={() => onViewAnnotation?.(comment.name, comment.video_timestamp)}
                   title="View annotation"
                 >
                   <HugeiconsIcon icon={PenTool01Icon} size={10} strokeWidth={2} />
@@ -125,27 +131,31 @@ export function CommentItem({
                     <HugeiconsIcon icon={MailReply01Icon} size={14} strokeWidth={2} />
                   </Button>
                 )}
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => onResolve(comment.name, comment.is_resolved === 0)}
-                  title={comment.is_resolved ? "Unresolve" : "Resolve"}
-                >
-                  <HugeiconsIcon
-                    icon={CheckmarkCircle02Icon}
-                    size={14}
-                    strokeWidth={2}
-                    className={comment.is_resolved ? "text-green-500" : ""}
-                  />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() => onDelete(comment.name)}
-                  title="Delete"
-                >
-                  <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
-                </Button>
+                {!isGuest && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => onResolve(comment.name, comment.is_resolved === 0)}
+                      title={comment.is_resolved ? "Unresolve" : "Resolve"}
+                    >
+                      <HugeiconsIcon
+                        icon={CheckmarkCircle02Icon}
+                        size={14}
+                        strokeWidth={2}
+                        className={comment.is_resolved ? "text-green-500" : ""}
+                      />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => onDelete(comment.name)}
+                      title="Delete"
+                    >
+                      <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -175,6 +185,7 @@ export function CommentItem({
                 onDelete={onDelete}
                 onViewAnnotation={onViewAnnotation}
                 isNested
+                isGuest={isGuest}
               />
             ))}
         </div>
