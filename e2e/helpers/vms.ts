@@ -58,6 +58,7 @@ export async function createTestProject(
 		project_name,
 		status: options.status ?? "Open",
 		description: options.description || `Test project: ${project_name}`,
+		owner_user: "Administrator",
 	});
 }
 
