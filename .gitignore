@@ -54,3 +54,8 @@ jspm_packages/
 # Aider AI Chat
 .aider*
 vms/public/frontend/assets
+
+# Playwright
+e2e/.auth/
+test-results/
+playwright-report/
