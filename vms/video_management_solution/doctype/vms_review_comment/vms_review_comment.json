@@ -1,0 +1,136 @@
+{
+ "actions": [],
+ "autoname": "naming_series:VMS-CMT-.#####",
+ "creation": "2026-02-10 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "asset",
+  "parent_comment",
+  "column_break_1",
+  "commented_by",
+  "guest_name",
+  "section_break_1",
+  "comment_text",
+  "video_timestamp",
+  "column_break_2",
+  "is_resolved",
+  "has_annotation",
+  "annotation_data"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Series",
+   "options": "VMS-CMT-.#####",
+   "default": "VMS-CMT-.#####"
+  },
+  {
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Asset",
+   "options": "VMS Asset",
+   "reqd": 1
+  },
+  {
+   "fieldname": "parent_comment",
+   "fieldtype": "Link",
+   "label": "Parent Comment",
+   "options": "VMS Review Comment"
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "commented_by",
+   "fieldtype": "Link",
+   "label": "Commented By",
+   "options": "User"
+  },
+  {
+   "fieldname": "guest_name",
+   "fieldtype": "Data",
+   "label": "Guest Name"
+  },
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "comment_text",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Comment Text",
+   "reqd": 1
+  },
+  {
+   "fieldname": "video_timestamp",
+   "fieldtype": "Float",
+   "label": "Video Timestamp",
+   "description": "Seconds into the video"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "is_resolved",
+   "fieldtype": "Check",
+   "label": "Resolved",
+   "default": "0"
+  },
+  {
+   "fieldname": "has_annotation",
+   "fieldtype": "Check",
+   "label": "Has Annotation",
+   "default": "0"
+  },
+  {
+   "fieldname": "annotation_data",
+   "fieldtype": "JSON",
+   "label": "Annotation Data",
+   "hidden": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-02-10 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Video Management Solution",
+ "name": "VMS Review Comment",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Video Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "title_field": "comment_text"
+}

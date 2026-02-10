@@ -1,0 +1,175 @@
+import { useState } from "react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import {
+  CheckmarkCircle02Icon,
+  Delete02Icon,
+  MailReply01Icon,
+  Clock01Icon,
+  PenTool01Icon,
+} from "@hugeicons/core-free-icons"
+import { Button } from "@/components/ui/button"
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { formatTimestamp } from "@/hooks/useVideoPlayer"
+import type { VMSReviewComment } from "@/types"
+
+interface CommentItemProps {
+  comment: VMSReviewComment
+  replies: VMSReviewComment[]
+  onSeek: (time: number) => void
+  onReply: (parentName: string, timestamp?: number | null) => void
+  onResolve: (name: string, resolved: boolean) => void
+  onDelete: (name: string) => void
+  onViewAnnotation?: (commentName: string) => void
+  isNested?: boolean
+}
+
+export function CommentItem({
+  comment,
+  replies,
+  onSeek,
+  onReply,
+  onResolve,
+  onDelete,
+  onViewAnnotation,
+  isNested = false,
+}: CommentItemProps) {
+  const [showReplies, setShowReplies] = useState(true)
+  const hasTimestamp = comment.video_timestamp != null
+
+  return (
+    <div className={isNested ? "ml-8 border-l pl-3" : ""}>
+      <div className={`group rounded-md px-3 py-2 hover:bg-muted/50 ${comment.is_resolved ? "opacity-60" : ""}`}>
+        <div className="flex items-start gap-2">
+          <Avatar size="sm" className="mt-0.5 shrink-0">
+            {comment.commenter_image && (
+              <AvatarImage src={comment.commenter_image} alt={comment.commenter_name} />
+            )}
+            <AvatarFallback>
+              {comment.commenter_name?.[0]?.toUpperCase() ?? "?"}
+            </AvatarFallback>
+          </Avatar>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium truncate">
+                {comment.commenter_name}
+              </span>
+              {hasTimestamp && (
+                <Badge
+                  variant="secondary"
+                  className="cursor-pointer font-mono text-[10px] shrink-0"
+                  onClick={() =>
+                    comment.has_annotation === 1
+                      ? onViewAnnotation?.(comment.name)
+                      : onSeek(comment.video_timestamp!)
+                  }
+                >
+                  <HugeiconsIcon icon={Clock01Icon} size={10} strokeWidth={2} />
+                  {formatTimestamp(comment.video_timestamp!)}
+                </Badge>
+              )}
+              {comment.has_annotation === 1 && (
+                <Badge
+                  variant="secondary"
+                  className="cursor-pointer text-[10px] shrink-0 gap-0.5"
+                  onClick={() => onViewAnnotation?.(comment.name)}
+                  title="View annotation"
+                >
+                  <HugeiconsIcon icon={PenTool01Icon} size={10} strokeWidth={2} />
+                  Drawing
+                </Badge>
+              )}
+              {comment.is_resolved === 1 && (
+                <Badge variant="outline" className="text-[10px] shrink-0">
+                  Resolved
+                </Badge>
+              )}
+            </div>
+
+            <p className="mt-0.5 text-sm text-foreground whitespace-pre-wrap break-words">
+              {comment.comment_text}
+            </p>
+
+            <div className="mt-1 flex items-center gap-1">
+              <span className="text-[10px] text-muted-foreground">
+                {new Date(comment.creation).toLocaleString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+              </span>
+
+              <div className="ml-auto flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                {!isNested && (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => onReply(comment.name, comment.video_timestamp)}
+                    title="Reply"
+                  >
+                    <HugeiconsIcon icon={MailReply01Icon} size={14} strokeWidth={2} />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => onResolve(comment.name, comment.is_resolved === 0)}
+                  title={comment.is_resolved ? "Unresolve" : "Resolve"}
+                >
+                  <HugeiconsIcon
+                    icon={CheckmarkCircle02Icon}
+                    size={14}
+                    strokeWidth={2}
+                    className={comment.is_resolved ? "text-green-500" : ""}
+                  />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => onDelete(comment.name)}
+                  title="Delete"
+                >
+                  <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Replies */}
+      {replies.length > 0 && (
+        <div>
+          {replies.length > 1 && (
+            <button
+              className="ml-8 px-3 py-0.5 text-[11px] text-muted-foreground hover:text-foreground"
+              onClick={() => setShowReplies(!showReplies)}
+            >
+              {showReplies ? "Hide" : "Show"} {replies.length} {replies.length === 1 ? "reply" : "replies"}
+            </button>
+          )}
+          {showReplies &&
+            replies.map((reply) => (
+              <CommentItem
+                key={reply.name}
+                comment={reply}
+                replies={[]}
+                onSeek={onSeek}
+                onReply={onReply}
+                onResolve={onResolve}
+                onDelete={onDelete}
+                onViewAnnotation={onViewAnnotation}
+                isNested
+              />
+            ))}
+        </div>
+      )}
+    </div>
+  )
+}

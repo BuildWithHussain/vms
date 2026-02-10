@@ -6,6 +6,7 @@ import { DashboardPage } from "@/pages/DashboardPage"
 import { InboxPage } from "@/pages/InboxPage"
 import { ProjectsPage } from "@/pages/ProjectsPage"
 import { ProjectDetailPage } from "@/pages/ProjectDetailPage"
+import { ReviewPage } from "@/pages/ReviewPage"
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { currentUser, isLoading } = useFrappeAuth()
@@ -41,6 +42,14 @@ export default function App() {
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="projects/:projectId" element={<ProjectDetailPage />} />
       </Route>
+      <Route
+        path="review/:assetId"
+        element={
+          <ProtectedRoute>
+            <ReviewPage />
+          </ProtectedRoute>
+        }
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

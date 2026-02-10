@@ -43,3 +43,20 @@ export interface ConfirmUploadResponse {
   status: string
   asset_name: string
 }
+
+export interface VMSReviewComment {
+  name: string
+  asset: string
+  parent_comment?: string | null
+  comment_text: string
+  video_timestamp?: number | null
+  commented_by?: string
+  guest_name?: string | null
+  commenter_name: string
+  commenter_image?: string | null
+  is_resolved: 0 | 1
+  has_annotation: 0 | 1
+  annotation_data?: string | null
+  creation: string
+  modified: string
+}

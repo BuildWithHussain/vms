@@ -17,7 +17,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { UploadDialog } from "@/components/UploadDialog"
 import { MoveAssetDialog } from "@/components/MoveAssetDialog"
 import { DeleteAssetDialog } from "@/components/DeleteAssetDialog"
-import { MediaPlayerDialog } from "@/components/MediaPlayerDialog"
 import { useDownload } from "@/hooks/useDownload"
 import { UserAvatar } from "@/components/UserAvatar"
 import type { VMSAsset } from "@/types"
@@ -36,11 +35,6 @@ export function InboxPage() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [view, setView] = useState<"list" | "grid">("list")
-  const [playerAsset, setPlayerAsset] = useState<{
-    name: string
-    fileName: string
-    fileType?: string
-  } | null>(null)
   const { downloadOne, downloadMany, isDownloading } = useDownload()
 
   const { data: assets, mutate } = useFrappeGetDocList<VMSAsset>("VMS Asset", {
@@ -211,7 +205,7 @@ export function InboxPage() {
                   className="cursor-pointer transition-shadow hover:shadow-md"
                   onClick={() => {
                     if (asset.status === "Ready")
-                      setPlayerAsset({ name: asset.name, fileName: asset.file_name, fileType: asset.file_type })
+                      navigate(`/review/${asset.name}`)
                   }}
                 >
                   <CardHeader>
@@ -282,7 +276,7 @@ export function InboxPage() {
                   className="flex cursor-pointer flex-col transition-shadow hover:shadow-md"
                   onClick={() => {
                     if (asset.status === "Ready")
-                      setPlayerAsset({ name: asset.name, fileName: asset.file_name, fileType: asset.file_type })
+                      navigate(`/review/${asset.name}`)
                   }}
                 >
                   <CardHeader>
@@ -368,15 +362,6 @@ export function InboxPage() {
         onComplete={handleDeleteComplete}
       />
 
-      <MediaPlayerDialog
-        open={!!playerAsset}
-        onOpenChange={(open) => {
-          if (!open) setPlayerAsset(null)
-        }}
-        assetName={playerAsset?.name ?? null}
-        fileName={playerAsset?.fileName}
-        fileType={playerAsset?.fileType}
-      />
     </div>
   )
 }

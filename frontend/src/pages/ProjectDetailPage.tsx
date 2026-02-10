@@ -23,7 +23,6 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UploadDialog } from "@/components/UploadDialog"
-import { MediaPlayerDialog } from "@/components/MediaPlayerDialog"
 import { DeleteAssetDialog } from "@/components/DeleteAssetDialog"
 import { useDownload } from "@/hooks/useDownload"
 import { UserAvatar } from "@/components/UserAvatar"
@@ -43,11 +42,6 @@ export function ProjectDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [view, setView] = useState<"list" | "grid">("list")
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [playerAsset, setPlayerAsset] = useState<{
-    name: string
-    fileName: string
-    fileType?: string
-  } | null>(null)
   const { downloadOne, downloadMany, isDownloading } = useDownload()
 
   const { data: project } = useFrappeGetDoc<VMSProject>(
@@ -230,7 +224,7 @@ export function ProjectDetailPage() {
             toggleSelect={toggleSelect}
             toggleSelectAll={() => toggleSelectAll(assetItems)}
             downloadOne={downloadOne}
-            onPlay={(name, fileName, fileType) => setPlayerAsset({ name, fileName, fileType })}
+            onPlay={(name) => navigate(`/review/${name}`)}
             emptyMessage="No source or cut assets yet. Upload some files to get started."
           />
         </TabsContent>
@@ -244,7 +238,7 @@ export function ProjectDetailPage() {
             toggleSelect={toggleSelect}
             toggleSelectAll={() => toggleSelectAll(exportItems)}
             downloadOne={downloadOne}
-            onPlay={(name, fileName, fileType) => setPlayerAsset({ name, fileName, fileType })}
+            onPlay={(name) => navigate(`/review/${name}`)}
             emptyMessage="No review or final exports yet. Upload exports to share with your team."
           />
         </TabsContent>
@@ -255,16 +249,6 @@ export function ProjectDetailPage() {
         onOpenChange={setUploadOpen}
         project={projectId}
         onComplete={() => mutateAssets()}
-      />
-
-      <MediaPlayerDialog
-        open={!!playerAsset}
-        onOpenChange={(open) => {
-          if (!open) setPlayerAsset(null)
-        }}
-        assetName={playerAsset?.name ?? null}
-        fileName={playerAsset?.fileName}
-        fileType={playerAsset?.fileType}
       />
 
       <DeleteAssetDialog
@@ -295,7 +279,7 @@ function AssetList({
   toggleSelect: (name: string) => void
   toggleSelectAll: () => void
   downloadOne: (assetName: string, fileName?: string) => void
-  onPlay: (assetName: string, fileName: string, fileType?: string) => void
+  onPlay: (assetName: string) => void
   emptyMessage: string
 }) {
   if (!items.length) {
@@ -334,7 +318,7 @@ function AssetList({
               size="sm"
               className="cursor-pointer transition-shadow hover:shadow-md"
               onClick={() => {
-                if (asset.status === "Ready") onPlay(asset.name, asset.file_name, asset.file_type)
+                if (asset.status === "Ready") onPlay(asset.name)
               }}
             >
               <CardHeader>
@@ -404,7 +388,7 @@ function AssetList({
               key={asset.name}
               className="flex cursor-pointer flex-col transition-shadow hover:shadow-md"
               onClick={() => {
-                if (asset.status === "Ready") onPlay(asset.name, asset.file_name, asset.file_type)
+                if (asset.status === "Ready") onPlay(asset.name)
               }}
             >
               <CardHeader>

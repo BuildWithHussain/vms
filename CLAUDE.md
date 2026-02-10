@@ -23,7 +23,7 @@ IMPORTANT: ALWAYS INSTALL USE shadcn components if available, don't make your ow
 
 ### Backend / Frappe
 
-* to create new DocTypes, use new_doc with bench execute. Then other updates could be done directly in JSON. 
+IMPORTANT: to create new DocTypes, USE new_doc with bench execute. Then other updates could be done directly in JSON. (Remember DocType is also a DocType). PLUS you will get the boilerplate files are folder structure.
 
 ```bash
 bench start                                    # Start the Frappe development server
