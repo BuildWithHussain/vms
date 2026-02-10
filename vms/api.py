@@ -194,10 +194,16 @@ def get_vms_users():
 def delete_asset(asset_name: str):
 	"""Delete an asset and its R2 object(s)."""
 	asset = frappe.get_doc("VMS Asset", asset_name)
+	r2_key = asset.r2_key
 
-	# Delete R2 objects
-	if asset.r2_key:
-		delete_r2_object(asset.r2_key)
+	# Delete linked review comments first (they have a required Link to VMS Asset)
+	comments = frappe.get_all(
+		"VMS Review Comment",
+		filters={"asset": asset_name},
+		pluck="name",
+	)
+	for comment_name in comments:
+		frappe.delete_doc("VMS Review Comment", comment_name, ignore_permissions=True)
 
 	# Delete attached thumbnail File doc
 	thumbnail_files = frappe.get_all(
@@ -211,7 +217,17 @@ def delete_asset(asset_name: str):
 	for file_name in thumbnail_files:
 		frappe.delete_doc("File", file_name, ignore_permissions=True)
 
+	# Delete the asset doc before R2 — DB operations are transactional,
+	# R2 deletion is not, so we do it last to avoid orphaned docs.
 	asset.delete()
+
+	# Only delete from R2 after all DB operations succeed.
+	# Ignore errors (e.g. key already deleted / doesn't exist) so orphaned docs can still be cleaned up.
+	if r2_key:
+		try:
+			delete_r2_object(r2_key)
+		except Exception:
+			frappe.logger("vms").warning(f"R2 object {r2_key} not found or already deleted")
 
 	return {"status": "ok"}
 
