@@ -164,6 +164,8 @@ export function useFabricCanvas() {
           obj = new fabric.Rect({
             left: pointer.x,
             top: pointer.y,
+            originX: "left",
+            originY: "top",
             width: 0,
             height: 0,
             fill: "transparent",
@@ -176,6 +178,8 @@ export function useFabricCanvas() {
           obj = new fabric.Triangle({
             left: pointer.x,
             top: pointer.y,
+            originX: "left",
+            originY: "top",
             width: 0,
             height: 0,
             fill: "transparent",
