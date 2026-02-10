@@ -34,7 +34,7 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Action",
-   "options": "Download\nDelete",
+   "options": "Download\nDelete\nRename",
    "reqd": 1
   },
   {

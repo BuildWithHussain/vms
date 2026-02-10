@@ -48,7 +48,7 @@ export interface ConfirmUploadResponse {
 
 export interface VMSAuditLog {
   name: string
-  action: "Download" | "Delete"
+  action: "Download" | "Delete" | "Rename"
   asset_name: string
   user: string
   timestamp: string

@@ -291,6 +291,32 @@ def delete_asset(asset_name: str):
 
 
 @frappe.whitelist()
+def rename_asset(asset_name: str, new_file_name: str):
+	"""Rename an asset's display file name (metadata only, no R2 changes)."""
+	new_file_name = (new_file_name or "").strip()
+	if not new_file_name:
+		frappe.throw(_("File name cannot be empty"))
+	if len(new_file_name) > 255:
+		frappe.throw(_("File name must be 255 characters or fewer"))
+
+	asset = frappe.get_doc("VMS Asset", asset_name)
+	old_file_name = asset.file_name
+	asset.file_name = new_file_name
+	asset.save(ignore_permissions=True)
+
+	_create_audit_log(
+		action="Rename",
+		asset_name=asset.name,
+		file_name=new_file_name,
+		file_type=asset.file_type,
+		project=asset.project,
+		file_size=asset.file_size,
+	)
+
+	return {"status": "ok", "asset_name": asset.name, "old_file_name": old_file_name, "new_file_name": new_file_name}
+
+
+@frappe.whitelist()
 def update_asset_category(asset_name: str, category: str):
 	"""Change an asset's category (Source/Cut/Review/Final)."""
 	valid_categories = ("Source", "Cut", "Review", "Final")

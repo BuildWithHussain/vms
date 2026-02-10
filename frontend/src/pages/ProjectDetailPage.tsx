@@ -12,6 +12,7 @@ import {
   Link01Icon,
   ListViewIcon,
   Copy01Icon,
+  PencilEdit01Icon,
 } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { formatBytes } from "@/lib/utils"
@@ -31,6 +32,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UploadDialog } from "@/components/UploadDialog"
 import { DeleteAssetDialog } from "@/components/DeleteAssetDialog"
+import { RenameAssetDialog } from "@/components/RenameAssetDialog"
 import { useDownload } from "@/hooks/useDownload"
 import { UserAvatar } from "@/components/UserAvatar"
 import { toast } from "sonner"
@@ -48,6 +50,7 @@ export function ProjectDetailPage() {
   const navigate = useNavigate()
   const [uploadOpen, setUploadOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [renameOpen, setRenameOpen] = useState(false)
   const [view, setView] = useState<"list" | "grid">("grid")
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const { downloadOne, downloadMany, isDownloading } = useDownload()
@@ -202,6 +205,16 @@ export function ProjectDetailPage() {
                   </span>
                   <span className="hidden sm:inline"> ({selected.size})</span>
                 </Button>
+                {selected.size === 1 && (
+                  <Button variant="outline" size="sm" onClick={() => setRenameOpen(true)}>
+                    <HugeiconsIcon
+                      icon={PencilEdit01Icon}
+                      strokeWidth={2}
+                      data-icon="inline-start"
+                    />
+                    <span className="hidden sm:inline">Rename</span>
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={() => setDeleteOpen(true)}>
                   <HugeiconsIcon
                     icon={Delete02Icon}
@@ -281,6 +294,19 @@ export function ProjectDetailPage() {
         assetNames={Array.from(selected)}
         onComplete={handleDeleteComplete}
       />
+
+      {selected.size === 1 && (() => {
+        const selectedAsset = assets?.find((a) => a.name === Array.from(selected)[0])
+        return selectedAsset ? (
+          <RenameAssetDialog
+            open={renameOpen}
+            onOpenChange={setRenameOpen}
+            assetName={selectedAsset.name}
+            currentFileName={selectedAsset.file_name}
+            onComplete={() => mutateAssets()}
+          />
+        ) : null
+      })()}
     </div>
   )
 }

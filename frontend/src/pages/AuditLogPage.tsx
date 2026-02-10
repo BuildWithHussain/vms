@@ -65,7 +65,7 @@ export function AuditLogPage() {
       <div>
         <h1 className="text-2xl font-bold">Audit Logs</h1>
         <p className="text-sm text-muted-foreground">
-          Track asset downloads and deletions
+          Track asset downloads, deletions, and renames
         </p>
       </div>
 
@@ -100,6 +100,7 @@ export function AuditLogPage() {
             <SelectItem value="all">All actions</SelectItem>
             <SelectItem value="Download">Download</SelectItem>
             <SelectItem value="Delete">Delete</SelectItem>
+            <SelectItem value="Rename">Rename</SelectItem>
           </SelectContent>
         </Select>
         <span className="ml-auto text-sm text-muted-foreground">
@@ -138,7 +139,7 @@ export function AuditLogPage() {
                 <TableRow key={log.name}>
                   <TableCell>
                     <Badge
-                      variant={log.action === "Delete" ? "destructive" : "secondary"}
+                      variant={log.action === "Delete" ? "destructive" : log.action === "Rename" ? "outline" : "secondary"}
                     >
                       {log.action}
                     </Badge>

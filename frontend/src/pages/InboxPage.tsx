@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useNavigate } from "react-router"
 import { useFrappeGetDocList } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { CloudUploadIcon, Delete02Icon, Download04Icon, Film01Icon, GridViewIcon, ListViewIcon, Move01Icon } from "@hugeicons/core-free-icons"
+import { CloudUploadIcon, Delete02Icon, Download04Icon, Film01Icon, GridViewIcon, ListViewIcon, Move01Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { formatBytes } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { UploadDialog } from "@/components/UploadDialog"
 import { MoveAssetDialog } from "@/components/MoveAssetDialog"
 import { DeleteAssetDialog } from "@/components/DeleteAssetDialog"
+import { RenameAssetDialog } from "@/components/RenameAssetDialog"
 import { useDownload } from "@/hooks/useDownload"
 import { UserAvatar } from "@/components/UserAvatar"
 import type { VMSAsset } from "@/types"
@@ -33,6 +34,7 @@ export function InboxPage() {
   const [uploadOpen, setUploadOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [renameOpen, setRenameOpen] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [view, setView] = useState<"list" | "grid">("grid")
   const { downloadOne, downloadMany, isDownloading } = useDownload()
@@ -128,6 +130,16 @@ export function InboxPage() {
                 </span>
                 <span className="hidden sm:inline"> ({selected.size})</span>
               </Button>
+              {selected.size === 1 && (
+                <Button variant="outline" size="sm" onClick={() => setRenameOpen(true)}>
+                  <HugeiconsIcon
+                    icon={PencilEdit01Icon}
+                    strokeWidth={2}
+                    data-icon="inline-start"
+                  />
+                  <span className="hidden sm:inline">Rename</span>
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={() => setMoveOpen(true)}>
                 <HugeiconsIcon
                   icon={Move01Icon}
@@ -381,6 +393,19 @@ export function InboxPage() {
         assetNames={Array.from(selected)}
         onComplete={handleDeleteComplete}
       />
+
+      {selected.size === 1 && (() => {
+        const selectedAsset = assets?.find((a) => a.name === Array.from(selected)[0])
+        return selectedAsset ? (
+          <RenameAssetDialog
+            open={renameOpen}
+            onOpenChange={setRenameOpen}
+            assetName={selectedAsset.name}
+            currentFileName={selectedAsset.file_name}
+            onComplete={() => mutate()}
+          />
+        ) : null
+      })()}
 
     </div>
   )
