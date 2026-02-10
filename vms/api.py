@@ -63,7 +63,7 @@ def fail_upload(asset_name: str):
 
 
 @frappe.whitelist()
-def get_upload_url(file_name: str, content_type: str, project: str = None, category: str = "Source"):
+def get_upload_url(file_name: str, content_type: str, project: str | None = None, category: str = "Source"):
 	"""Generate a presigned upload URL for direct upload to R2.
 
 	Returns dict with upload_url, r2_key, and asset_name.
@@ -141,10 +141,10 @@ def confirm_upload(asset_name: str, file_size: int):
 def _create_audit_log(
 	action: str,
 	asset_name: str,
-	file_name: str = None,
-	file_type: str = None,
-	project: str = None,
-	file_size: int = None,
+	file_name: str | None = None,
+	file_type: str | None = None,
+	project: str | None = None,
+	file_size: int | None = None,
 ):
 	"""Create an audit log entry. Never raises — failures are logged silently."""
 	try:
@@ -308,11 +308,11 @@ def update_asset_category(asset_name: str, category: str):
 
 @frappe.whitelist(methods=["GET"])
 def get_audit_logs(
-	action: str = None,
-	user: str = None,
-	search: str = None,
-	from_date: str = None,
-	to_date: str = None,
+	action: str | None = None,
+	user: str | None = None,
+	search: str | None = None,
+	from_date: str | None = None,
+	to_date: str | None = None,
 	page: int = 1,
 	page_size: int = 20,
 ):
