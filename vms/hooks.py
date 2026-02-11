@@ -135,13 +135,11 @@ permission_query_conditions = {
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"VMS Review Comment": {
+		"after_insert": "vms.notifications.send_comment_notification",
+	},
+}
 
 # Scheduled Tasks
 # ---------------
