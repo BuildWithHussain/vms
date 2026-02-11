@@ -3,7 +3,6 @@ import { useFrappeAuth } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CloudUploadIcon, LogoutIcon, UserCircleIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { UploadDialog } from "@/components/UploadDialog"
 import { ModeToggle } from "@/components/mode-toggle"
@@ -23,10 +22,6 @@ export function Header() {
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-4 md:px-6">
       <div className="flex items-center gap-2">
         <SidebarTrigger className="-ml-1" />
-        <Separator
-          orientation="vertical"
-          className="mr-2 hidden md:block data-[orientation=vertical]:h-4"
-        />
       </div>
       <div className="flex items-center gap-3">
         <Button variant="outline" size="sm" onClick={() => setUploadOpen(true)}>

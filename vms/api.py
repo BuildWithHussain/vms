@@ -313,7 +313,12 @@ def rename_asset(asset_name: str, new_file_name: str):
 		file_size=asset.file_size,
 	)
 
-	return {"status": "ok", "asset_name": asset.name, "old_file_name": old_file_name, "new_file_name": new_file_name}
+	return {
+		"status": "ok",
+		"asset_name": asset.name,
+		"old_file_name": old_file_name,
+		"new_file_name": new_file_name,
+	}
 
 
 @frappe.whitelist()
