@@ -43,6 +43,7 @@ jobs:
             -p 9090:9000 \
             -e MINIO_ROOT_USER=minioadmin \
             -e MINIO_ROOT_PASSWORD=minioadmin \
+            -e MINIO_API_CORS_ALLOW_ORIGIN="*" \
             minio/minio server /data
           # Wait for MinIO to be ready
           timeout 30 bash -c 'until curl -sf http://127.0.0.1:9090/minio/health/live; do sleep 1; done'

@@ -116,7 +116,7 @@ export async function createTestAsset(
 	return createDoc<VMSAsset>(request, "VMS Asset", {
 		project: options.project,
 		file_name,
-		category: options.category ?? "Source",
+		category: options.category ?? "Asset",
 		status: options.status ?? "Ready",
 	});
 }

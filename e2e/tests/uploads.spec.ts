@@ -174,7 +174,7 @@ test.describe("Uploads", () => {
 			content: Buffer.from("final cut content"),
 			content_type: "video/mp4",
 			project: projectName,
-			category: "Final",
+			category: "Deliverable",
 		});
 
 		// Verify the category was set
@@ -183,7 +183,7 @@ test.describe("Uploads", () => {
 		);
 		expect(assetResponse.ok()).toBeTruthy();
 		const assetData = await assetResponse.json();
-		expect(assetData.data.category).toBe("Final");
+		expect(assetData.data.category).toBe("Deliverable");
 
 		// Cleanup
 		await deleteAsset(request, asset_name);
