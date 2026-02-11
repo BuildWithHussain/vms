@@ -144,6 +144,32 @@ export function useUpload(options?: {
     [options?.project, options?.category, options?.folder]
   )
 
+  const retryFile = useCallback(
+    (id: string) => {
+      setFiles((prev) => {
+        const file = prev.find((f) => f.id === id)
+        if (!file || file.status !== "error") return prev
+
+        const retryItem: FileUploadItem = {
+          ...file,
+          status: "pending",
+          progress: 0,
+          error: undefined,
+          assetName: undefined,
+        }
+
+        queueRef.current.push(retryItem)
+        // Kick off processing
+        for (let i = 0; i < MAX_CONCURRENT; i++) {
+          processNext()
+        }
+
+        return prev.map((f) => (f.id === id ? retryItem : f))
+      })
+    },
+    [processNext]
+  )
+
   const cancelFile = useCallback(
     (id: string) => {
       // If it's still in the queue (pending), just remove it
@@ -194,5 +220,5 @@ export function useUpload(options?: {
     (f) => f.status === "uploading" || f.status === "confirming" || f.status === "pending"
   )
 
-  return { files, addFiles, cancelFile, reset, isUploading }
+  return { files, addFiles, cancelFile, retryFile, reset, isUploading }
 }

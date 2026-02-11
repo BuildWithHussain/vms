@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { CloudUploadIcon, Tick02Icon, Cancel01Icon, AlertCircleIcon } from "@hugeicons/core-free-icons"
+import { CloudUploadIcon, Tick02Icon, Cancel01Icon, AlertCircleIcon, RefreshIcon } from "@hugeicons/core-free-icons"
 import {
   Dialog,
   DialogContent,
@@ -63,7 +63,7 @@ export function UploadDialog({
   const [duplicates, setDuplicates] = useState<DuplicateFile[]>([])
   const [nonDuplicates, setNonDuplicates] = useState<File[]>([])
 
-  const { files, addFiles, cancelFile, reset, isUploading } = useUpload({
+  const { files, addFiles, cancelFile, retryFile, reset, isUploading } = useUpload({
     project,
     category,
     folder,
@@ -341,7 +341,7 @@ export function UploadDialog({
           {files.length > 0 && (
             <div className="max-h-60 space-y-2 overflow-y-auto">
               {files.map((item) => (
-                <FileRow key={item.id} item={item} onCancel={cancelFile} />
+                <FileRow key={item.id} item={item} onCancel={cancelFile} onRetry={retryFile} />
               ))}
             </div>
           )}
@@ -357,7 +357,7 @@ export function UploadDialog({
   )
 }
 
-function FileRow({ item, onCancel }: { item: FileUploadItem; onCancel: (id: string) => void }) {
+function FileRow({ item, onCancel, onRetry }: { item: FileUploadItem; onCancel: (id: string) => void; onRetry: (id: string) => void }) {
   const sizeMB = (item.file.size / 1024 / 1024).toFixed(1)
   const canCancel = item.status === "pending" || item.status === "uploading"
   const wasRenamed = item.displayName !== item.file.name
@@ -374,18 +374,30 @@ function FileRow({ item, onCancel }: { item: FileUploadItem; onCancel: (id: stri
             )}
           </div>
         </div>
-        {canCancel ? (
-          <button
-            type="button"
-            onClick={() => onCancel(item.id)}
-            className="flex size-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            title="Cancel upload"
-          >
-            <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-4" />
-          </button>
-        ) : (
-          <StatusIcon status={item.status} />
-        )}
+        <div className="flex items-center gap-1">
+          {item.status === "error" && (
+            <button
+              type="button"
+              onClick={() => onRetry(item.id)}
+              className="flex size-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              title="Retry upload"
+            >
+              <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} className="size-4" />
+            </button>
+          )}
+          {canCancel ? (
+            <button
+              type="button"
+              onClick={() => onCancel(item.id)}
+              className="flex size-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              title="Cancel upload"
+            >
+              <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-4" />
+            </button>
+          ) : (
+            <StatusIcon status={item.status} />
+          )}
+        </div>
       </div>
       {(item.status === "uploading" || item.status === "confirming") && (
         <Progress value={item.progress}>
