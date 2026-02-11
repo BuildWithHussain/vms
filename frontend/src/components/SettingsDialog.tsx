@@ -110,41 +110,38 @@ export function SettingsDialog({
 
 function ProfileSection() {
   const { currentUser } = useFrappeAuth()
-  const { call: getValue } = useFrappePostCall("frappe.client.get_value")
+  const { data: profileData, isLoading, mutate: mutateProfile } = useFrappeGetDoc<{
+    name: string
+    first_name: string
+    last_name: string
+    full_name: string
+    user_image: string
+  }>(
+    "User",
+    currentUser ?? "",
+    currentUser ? undefined : null,
+    { revalidateOnFocus: false }
+  )
   const { call: setValue, loading: saving } = useFrappePostCall("frappe.client.set_value")
   const { upload } = useFrappeFileUpload()
 
   const [form, setForm] = useState({ first_name: "", last_name: "", full_name: "", user_image: "" })
   const initialForm = useRef({ first_name: "", last_name: "", full_name: "", user_image: "" })
-  const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const fetchProfile = async () => {
-    if (!currentUser) return
-    try {
-      const res = await getValue({
-        doctype: "User",
-        fieldname: ["first_name", "last_name", "full_name", "user_image"],
-        filters: { name: currentUser },
-      })
-      const data = res.message || {}
+  useEffect(() => {
+    if (profileData) {
       const values = {
-        first_name: data.first_name || "",
-        last_name: data.last_name || "",
-        full_name: data.full_name || "",
-        user_image: data.user_image || "",
+        first_name: profileData.first_name || "",
+        last_name: profileData.last_name || "",
+        full_name: profileData.full_name || "",
+        user_image: profileData.user_image || "",
       }
       setForm(values)
       initialForm.current = values
-    } finally {
-      setLoading(false)
     }
-  }
-
-  useEffect(() => {
-    fetchProfile()
-  }, [currentUser])
+  }, [profileData])
 
   const isDirty =
     form.first_name !== initialForm.current.first_name ||
@@ -165,20 +162,7 @@ function ProfileSection() {
         },
       })
       // Re-fetch to get the auto-generated full_name
-      const res = await getValue({
-        doctype: "User",
-        fieldname: ["first_name", "last_name", "full_name", "user_image"],
-        filters: { name: currentUser },
-      })
-      const data = res.message || {}
-      const values = {
-        first_name: data.first_name || "",
-        last_name: data.last_name || "",
-        full_name: data.full_name || "",
-        user_image: data.user_image || "",
-      }
-      setForm(values)
-      initialForm.current = values
+      await mutateProfile()
       toast.success("Profile updated")
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Failed to update profile"
@@ -204,8 +188,7 @@ function ProfileSection() {
         name: currentUser,
         fieldname: { user_image: fileUrl },
       })
-      setForm((prev) => ({ ...prev, user_image: fileUrl }))
-      initialForm.current = { ...initialForm.current, user_image: fileUrl }
+      await mutateProfile()
       toast.success("Profile photo updated")
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Failed to upload image"
@@ -223,8 +206,7 @@ function ProfileSection() {
         name: currentUser,
         fieldname: { user_image: "" },
       })
-      setForm((prev) => ({ ...prev, user_image: "" }))
-      initialForm.current = { ...initialForm.current, user_image: "" }
+      await mutateProfile()
       toast.success("Profile photo removed")
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Failed to remove image"
@@ -232,7 +214,7 @@ function ProfileSection() {
     }
   }
 
-  if (loading) {
+  if (isLoading && !profileData) {
     return <div className="p-6 text-muted-foreground">Loading profile...</div>
   }
 
