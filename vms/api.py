@@ -63,7 +63,13 @@ def fail_upload(asset_name: str):
 
 
 @frappe.whitelist()
-def get_upload_url(file_name: str, content_type: str, project: str | None = None, category: str = "Source", folder: str | None = None):
+def get_upload_url(
+	file_name: str,
+	content_type: str,
+	project: str | None = None,
+	category: str = "Source",
+	folder: str | None = None,
+):
 	"""Generate a presigned upload URL for direct upload to R2.
 
 	Returns dict with upload_url, r2_key, and asset_name.
@@ -237,9 +243,7 @@ def create_folder(folder_name: str, project: str):
 		frappe.throw(_("Project {0} does not exist").format(project))
 
 	# Check for duplicate folder name in the same project
-	existing = frappe.db.exists(
-		"VMS Folder", {"folder_name": folder_name, "project": project}
-	)
+	existing = frappe.db.exists("VMS Folder", {"folder_name": folder_name, "project": project})
 	if existing:
 		frappe.throw(_("A folder named '{0}' already exists in this project").format(folder_name))
 
