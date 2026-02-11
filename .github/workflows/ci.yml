@@ -41,14 +41,14 @@ jobs:
       - name: Start MinIO
         run: |
           docker run -d --name minio \
-            -p 9000:9000 \
+            -p 9090:9000 \
             -e MINIO_ROOT_USER=minioadmin \
             -e MINIO_ROOT_PASSWORD=minioadmin \
             minio/minio server /data
-          timeout 30 bash -c 'until curl -sf http://127.0.0.1:9000/minio/health/live; do sleep 1; done'
+          timeout 30 bash -c 'until curl -sf http://127.0.0.1:9090/minio/health/live; do sleep 1; done'
           curl -sL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc
           chmod +x /usr/local/bin/mc
-          mc alias set ci http://127.0.0.1:9000 minioadmin minioadmin
+          mc alias set ci http://127.0.0.1:9090 minioadmin minioadmin
           mc mb ci/vms-media
 
       - name: Find tests
@@ -120,4 +120,4 @@ jobs:
           bench --site test_site run-tests --app vms
         env:
           TYPE: server
-          VMS_S3_ENDPOINT_URL: http://127.0.0.1:9000
+          VMS_S3_ENDPOINT_URL: http://127.0.0.1:9090
