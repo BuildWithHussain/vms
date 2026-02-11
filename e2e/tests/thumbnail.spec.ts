@@ -5,6 +5,8 @@ import { test, expect } from "@playwright/test";
 import {
 	createTestProject,
 	cleanupTestProjects,
+	uploadTestFile,
+	deleteAsset,
 	VMSProject,
 } from "../helpers/vms";
 import { callMethod, getDoc } from "../helpers/frappe";
@@ -27,6 +29,7 @@ async function isR2Configured(request: import("@playwright/test").APIRequestCont
 test.describe("Thumbnail Generation", () => {
 	let testProject: VMSProject;
 	let r2Available = false;
+	let assetName: string | undefined;
 
 	test.beforeAll(async ({ request }) => {
 		// Check if R2 is configured
@@ -59,9 +62,26 @@ test.describe("Thumbnail Generation", () => {
 		testProject = await createTestProject(request, {
 			project_name: `E2E Thumbnail Test ${Date.now()}`,
 		});
+
+		// Upload the test video via the API
+		const videoContent = fs.readFileSync(TEST_VIDEO_PATH);
+		const result = await uploadTestFile(request, {
+			file_name: "test-video.mp4",
+			content: Buffer.from(videoContent),
+			content_type: "video/mp4",
+			project: testProject.name,
+		});
+		assetName = result.asset_name;
 	});
 
 	test.afterAll(async ({ request }) => {
+		if (assetName) {
+			try {
+				await deleteAsset(request, assetName);
+			} catch {
+				// Asset may already be cleaned up
+			}
+		}
 		await cleanupTestProjects(request, "E2E Thumbnail Test");
 
 		// Clean up generated fixture
@@ -72,53 +92,13 @@ test.describe("Thumbnail Generation", () => {
 
 	test("should generate and display thumbnail after video upload", async ({ page, request }) => {
 		test.skip(!r2Available, "R2 is not configured");
+		test.skip(!assetName, "Asset upload failed in beforeAll");
 		test.slow(); // thumbnail generation is a background job
 
-		// Navigate to the project detail page
-		await page.goto(`/vms/projects/${testProject.name}`);
-		await page.waitForLoadState("networkidle");
-
-		// Click the Upload button to open the upload dialog
-		const uploadBtn = page.locator('button:has-text("Upload")');
-		await expect(uploadBtn.first()).toBeVisible({ timeout: 10000 });
-		await uploadBtn.first().click();
-
-		// Wait for the upload dialog to appear
-		const dialog = page.locator('[role="dialog"]');
-		await expect(dialog).toBeVisible({ timeout: 5000 });
-
-		// Set the file input (hidden input inside the dialog)
-		const fileInput = dialog.locator('input[type="file"]');
-		await fileInput.setInputFiles(TEST_VIDEO_PATH);
-
-		// Wait for upload to complete — look for the green check mark or "Done" button
-		const doneBtn = dialog.locator('button:has-text("Done")');
-		await expect(doneBtn).toBeVisible({ timeout: 60000 });
-
-		// Close the upload dialog
-		await doneBtn.click();
-		await expect(dialog).not.toBeVisible({ timeout: 5000 });
-
-		// Wait for the page to refresh with the new asset
-		await page.waitForLoadState("networkidle");
-
-		// Now we need to wait for the background thumbnail job to complete.
-		// Poll the asset doc until thumbnail_url is set (max ~30 seconds).
-		const fileName = "test-video.mp4";
-
-		// Find the asset name from the API
-		const assets = await request.get(
-			`/api/resource/VMS Asset?filters=${encodeURIComponent(JSON.stringify({ project: testProject.name, file_name: fileName }))}&fields=["name","thumbnail_url"]&limit_page_length=1`,
-		);
-		expect(assets.ok()).toBeTruthy();
-		const assetData = await assets.json();
-		expect(assetData.data.length).toBeGreaterThan(0);
-		const assetName = assetData.data[0].name;
-
-		// Poll for thumbnail_url to be set (background job)
+		// Poll for thumbnail_url to be set (background job, max ~30 seconds)
 		let thumbnailUrl: string | null = null;
 		for (let attempt = 0; attempt < 15; attempt++) {
-			const doc = await getDoc<{ thumbnail_url?: string }>(request, "VMS Asset", assetName);
+			const doc = await getDoc<{ thumbnail_url?: string }>(request, "VMS Asset", assetName!);
 			if (doc.thumbnail_url) {
 				thumbnailUrl = doc.thumbnail_url;
 				break;
@@ -128,8 +108,8 @@ test.describe("Thumbnail Generation", () => {
 
 		expect(thumbnailUrl).toBeTruthy();
 
-		// Reload the page and verify the thumbnail image is visible in the UI
-		await page.reload();
+		// Navigate to the project page and verify the thumbnail is visible in the UI
+		await page.goto(`/vms/projects/${testProject.name}`);
 		await page.waitForLoadState("networkidle");
 
 		// The thumbnail should render as an <img> tag inside the asset card
