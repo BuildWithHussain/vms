@@ -822,6 +822,31 @@ function AssetList({
       : [assetName]
     e.dataTransfer.setData("application/vms-assets", JSON.stringify(dragNames))
     e.dataTransfer.effectAllowed = "move"
+
+    // Create a small custom drag image so the browser doesn't capture
+    // the full card (which can include surrounding UI in the ghost)
+    const label = dragNames.length === 1
+      ? (items.find((a) => a.name === dragNames[0])?.file_name ?? "1 item")
+      : `${dragNames.length} items`
+    const ghost = document.createElement("div")
+    ghost.textContent = label
+    Object.assign(ghost.style, {
+      position: "absolute",
+      top: "-9999px",
+      left: "-9999px",
+      padding: "6px 12px",
+      borderRadius: "6px",
+      background: "hsl(var(--primary))",
+      color: "hsl(var(--primary-foreground))",
+      fontSize: "13px",
+      fontWeight: "500",
+      whiteSpace: "nowrap",
+      pointerEvents: "none",
+    })
+    document.body.appendChild(ghost)
+    e.dataTransfer.setDragImage(ghost, 0, 0)
+    // Delay removal so the browser captures the ghost for the drag layer
+    setTimeout(() => ghost.remove(), 100)
   }
 
   const hasFolders = folders && folders.length > 0
@@ -889,7 +914,7 @@ function AssetList({
                   </div>
                   <div className="h-10 w-16 shrink-0 overflow-hidden rounded bg-muted">
                     {asset.thumbnail_url ? (
-                      <img src={asset.thumbnail_url} alt="" className="h-full w-full object-cover" />
+                      <img src={asset.thumbnail_url} alt="" draggable={false} className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
                         <HugeiconsIcon icon={Film01Icon} size={18} strokeWidth={1.5} />
@@ -974,7 +999,7 @@ function AssetList({
             >
               <div className="aspect-video w-full bg-muted">
                 {asset.thumbnail_url ? (
-                  <img src={asset.thumbnail_url} alt="" className="h-full w-full object-cover" />
+                  <img src={asset.thumbnail_url} alt="" draggable={false} className="h-full w-full object-cover" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
                     <HugeiconsIcon icon={Film01Icon} size={32} strokeWidth={1.5} />

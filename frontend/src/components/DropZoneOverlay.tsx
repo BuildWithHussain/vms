@@ -12,21 +12,26 @@ export function DropZoneOverlay({ children, onDrop, disabled }: DropZoneOverlayP
   const [isDragging, setIsDragging] = useState(false)
   const dragCounter = useRef(0)
 
+  const isFileDrag = useCallback((e: React.DragEvent) => {
+    return e.dataTransfer.types.includes("Files") &&
+      !e.dataTransfer.types.includes("application/vms-assets")
+  }, [])
+
   const handleDragEnter = useCallback(
     (e: React.DragEvent) => {
+      if (!isFileDrag(e)) return
       e.preventDefault()
       e.stopPropagation()
       if (disabled) return
       dragCounter.current++
-      if (e.dataTransfer.types.includes("Files")) {
-        setIsDragging(true)
-      }
+      setIsDragging(true)
     },
-    [disabled]
+    [disabled, isFileDrag]
   )
 
   const handleDragLeave = useCallback(
     (e: React.DragEvent) => {
+      if (!isDragging && dragCounter.current === 0) return
       e.preventDefault()
       e.stopPropagation()
       dragCounter.current--
@@ -34,16 +39,18 @@ export function DropZoneOverlay({ children, onDrop, disabled }: DropZoneOverlayP
         setIsDragging(false)
       }
     },
-    []
+    [isDragging]
   )
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (!isFileDrag(e)) return
     e.preventDefault()
     e.stopPropagation()
-  }, [])
+  }, [isFileDrag])
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
+      if (!isDragging && !isFileDrag(e)) return
       e.preventDefault()
       e.stopPropagation()
       dragCounter.current = 0
@@ -54,7 +61,7 @@ export function DropZoneOverlay({ children, onDrop, disabled }: DropZoneOverlayP
         onDrop(droppedFiles)
       }
     },
-    [disabled, onDrop]
+    [disabled, onDrop, isDragging, isFileDrag]
   )
 
   return (
