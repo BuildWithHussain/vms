@@ -278,8 +278,8 @@ export async function uploadTestFile(
 		category?: string;
 	} = {},
 ): Promise<{ asset_name: string; r2_key: string }> {
-	const fileName = options.file_name || `test-file-${Date.now()}.txt`;
-	const contentType = options.content_type || "text/plain";
+	const fileName = options.file_name || `test-file-${Date.now()}.mp4`;
+	const contentType = options.content_type || "video/mp4";
 	const content = options.content || Buffer.from("E2E test file content");
 
 	// Step 1: Get presigned upload URL

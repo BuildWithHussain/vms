@@ -70,9 +70,9 @@ test.describe("Uploads", () => {
 		request,
 	}) => {
 		const { asset_name, r2_key } = await uploadTestFile(request, {
-			file_name: "full-flow-test.txt",
+			file_name: "full-flow-test.mp4",
 			content: Buffer.from("full flow test content"),
-			content_type: "text/plain",
+			content_type: "video/mp4",
 			project: projectName,
 		});
 
@@ -86,10 +86,11 @@ test.describe("Uploads", () => {
 	test("should generate a view URL for an uploaded asset", async ({
 		request,
 	}) => {
+		const testContent = "view test content";
 		const { asset_name } = await uploadTestFile(request, {
-			file_name: "view-test.txt",
-			content: Buffer.from("view test content"),
-			content_type: "text/plain",
+			file_name: "view-test.mp4",
+			content: Buffer.from(testContent),
+			content_type: "video/mp4",
 			project: projectName,
 		});
 
@@ -101,7 +102,7 @@ test.describe("Uploads", () => {
 		const response = await request.get(url);
 		expect(response.ok()).toBeTruthy();
 		const body = await response.text();
-		expect(body).toBe("view test content");
+		expect(body).toBe(testContent);
 
 		// Cleanup
 		await deleteAsset(request, asset_name);
@@ -110,10 +111,11 @@ test.describe("Uploads", () => {
 	test("should generate a download URL for an uploaded asset", async ({
 		request,
 	}) => {
+		const testContent = "download test content";
 		const { asset_name } = await uploadTestFile(request, {
-			file_name: "download-test.txt",
-			content: Buffer.from("download test content"),
-			content_type: "text/plain",
+			file_name: "download-test.mp4",
+			content: Buffer.from(testContent),
+			content_type: "video/mp4",
 			project: projectName,
 		});
 
@@ -121,11 +123,11 @@ test.describe("Uploads", () => {
 		expect(url).toBeTruthy();
 		expect(url).toContain("X-Amz-Signature");
 
-		// Verify the presigned URL returns the file with attachment disposition
+		// Verify the presigned URL returns the file
 		const response = await request.get(url);
 		expect(response.ok()).toBeTruthy();
 		const body = await response.text();
-		expect(body).toBe("download test content");
+		expect(body).toBe(testContent);
 
 		// Cleanup
 		await deleteAsset(request, asset_name);
@@ -134,10 +136,10 @@ test.describe("Uploads", () => {
 	test("should delete an uploaded asset and its R2 object", async ({
 		request,
 	}) => {
-		const { asset_name, r2_key } = await uploadTestFile(request, {
-			file_name: "delete-test.txt",
+		const { asset_name } = await uploadTestFile(request, {
+			file_name: "delete-test.mp4",
 			content: Buffer.from("delete test content"),
-			content_type: "text/plain",
+			content_type: "video/mp4",
 			project: projectName,
 		});
 
@@ -155,9 +157,9 @@ test.describe("Uploads", () => {
 		request,
 	}) => {
 		const { asset_name, r2_key } = await uploadTestFile(request, {
-			file_name: "inbox-test.txt",
+			file_name: "inbox-test.mp4",
 			content: Buffer.from("inbox test content"),
-			content_type: "text/plain",
+			content_type: "video/mp4",
 		});
 
 		expect(r2_key).toMatch(/^inbox\//);
