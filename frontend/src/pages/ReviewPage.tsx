@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from "react-router"
 import { useFrappeGetCall, useFrappePostCall, useFrappeAuth } from "frappe-react-sdk"
 import { useReviewComments } from "@/hooks/useReviewComments"
 import { useFabricCanvas } from "@/hooks/useFabricCanvas"
+import { Spinner } from "@/components/ui/spinner"
 import { ReviewHeader } from "@/components/review/ReviewHeader"
 import { VideoPlayer } from "@/components/review/VideoPlayer"
 import { CommentPanel } from "@/components/review/CommentPanel"
@@ -153,7 +154,7 @@ export function ReviewPage() {
   if (authLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <Spinner className="size-6" />
       </div>
     )
   }
@@ -186,7 +187,7 @@ export function ReviewPage() {
   if (!asset) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <p className="text-muted-foreground">Loading review...</p>
+        <Spinner className="size-6" />
       </div>
     )
   }

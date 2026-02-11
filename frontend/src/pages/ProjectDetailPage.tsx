@@ -44,6 +44,7 @@ import { DropZoneOverlay } from "@/components/DropZoneOverlay"
 import { useDownload } from "@/hooks/useDownload"
 import { UserAvatar } from "@/components/UserAvatar"
 import { toast } from "sonner"
+import { Skeleton } from "@/components/ui/skeleton"
 import type { VMSProject, VMSAsset, VMSFolder } from "@/types"
 
 const categoryVariant: Record<string, "default" | "secondary" | "outline"> = {
@@ -232,7 +233,44 @@ export function ProjectDetailPage() {
   }
 
   if (!project) {
-    return <div className="text-muted-foreground">Loading project...</div>
+    return (
+      <div className="space-y-4 md:space-y-6">
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-8 rounded-md" />
+          <div className="flex-1 space-y-2">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+            </div>
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-20 rounded-md" />
+          <Skeleton className="h-9 w-20 rounded-md" />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="flex flex-col overflow-hidden pt-0">
+              <Skeleton className="aspect-video w-full rounded-none" />
+              <CardHeader>
+                <Skeleton className="h-4 w-3/4" />
+              </CardHeader>
+              <CardContent className="mt-auto space-y-2">
+                <div className="flex gap-1.5">
+                  <Skeleton className="h-5 w-14 rounded-full" />
+                  <Skeleton className="h-5 w-12 rounded-full" />
+                </div>
+                <div className="flex items-center gap-3">
+                  <Skeleton className="size-5 rounded-full" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (

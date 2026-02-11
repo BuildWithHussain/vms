@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router"
 import { useFrappeAuth } from "frappe-react-sdk"
+import { Spinner } from "@/components/ui/spinner"
 import { UserProvider } from "@/context/UserContext"
 import { AppLayout } from "@/components/layout/AppLayout"
 import { DashboardPage } from "@/pages/DashboardPage"
@@ -15,7 +16,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
-        <div className="text-muted-foreground">Loading...</div>
+        <Spinner className="size-6" />
       </div>
     )
   }

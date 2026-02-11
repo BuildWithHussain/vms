@@ -22,6 +22,7 @@ import { RenameAssetDialog } from "@/components/RenameAssetDialog"
 import { MediaPlayerDialog } from "@/components/MediaPlayerDialog"
 import { useDownload } from "@/hooks/useDownload"
 import { UserAvatar } from "@/components/UserAvatar"
+import { Skeleton } from "@/components/ui/skeleton"
 import type { VMSAsset } from "@/types"
 
 const categoryVariant: Record<string, "default" | "secondary" | "outline"> = {
@@ -192,7 +193,27 @@ export function InboxPage() {
       </div>
 
       {!assets ? (
-        <div className="text-muted-foreground">Loading assets...</div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Card key={i} className="flex flex-col overflow-hidden pt-0">
+              <Skeleton className="aspect-video w-full rounded-none" />
+              <CardHeader>
+                <Skeleton className="h-4 w-3/4" />
+              </CardHeader>
+              <CardContent className="mt-auto space-y-2">
+                <div className="flex gap-1.5">
+                  <Skeleton className="h-5 w-14 rounded-full" />
+                  <Skeleton className="h-5 w-12 rounded-full" />
+                </div>
+                <div className="flex items-center gap-3">
+                  <Skeleton className="size-5 rounded-full" />
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : assets.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">

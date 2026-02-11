@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { formatBytes } from "@/lib/utils"
+import { Skeleton } from "@/components/ui/skeleton"
 import type { VMSProject, VMSAsset } from "@/types"
 
 export function DashboardPage() {
@@ -71,11 +72,17 @@ export function DashboardPage() {
           <CardHeader>
             <CardDescription>Inbox</CardDescription>
             <CardTitle className="text-2xl">
-              {inboxCount ?? 0}
-              {(inboxCount ?? 0) > 0 && (
-                <Badge variant="destructive" className="ml-2 text-xs">
-                  New
-                </Badge>
+              {inboxCount === undefined ? (
+                <Skeleton className="h-7 w-8" />
+              ) : (
+                <>
+                  {inboxCount}
+                  {inboxCount > 0 && (
+                    <Badge variant="destructive" className="ml-2 text-xs">
+                      New
+                    </Badge>
+                  )}
+                </>
               )}
             </CardTitle>
           </CardHeader>
@@ -83,21 +90,25 @@ export function DashboardPage() {
         <Card size="sm">
           <CardHeader>
             <CardDescription>Open</CardDescription>
-            <CardTitle className="text-2xl">{openCount ?? 0}</CardTitle>
+            <CardTitle className="text-2xl">
+              {openCount === undefined ? <Skeleton className="h-7 w-8" /> : openCount}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card size="sm">
           <CardHeader>
             <CardDescription>In Progress</CardDescription>
             <CardTitle className="text-2xl">
-              {inProgressCount ?? 0}
+              {inProgressCount === undefined ? <Skeleton className="h-7 w-8" /> : inProgressCount}
             </CardTitle>
           </CardHeader>
         </Card>
         <Card size="sm">
           <CardHeader>
             <CardDescription>Completed</CardDescription>
-            <CardTitle className="text-2xl">{completedCount ?? 0}</CardTitle>
+            <CardTitle className="text-2xl">
+              {completedCount === undefined ? <Skeleton className="h-7 w-8" /> : completedCount}
+            </CardTitle>
           </CardHeader>
         </Card>
         <Card size="sm">
@@ -106,7 +117,7 @@ export function DashboardPage() {
             <CardTitle className="text-2xl">
               {bucketUsage
                 ? formatBytes(bucketUsage.payload_size)
-                : "–"}
+                : <Skeleton className="h-7 w-16" />}
             </CardTitle>
             {bucketUsage && (
               <p className="text-xs text-muted-foreground">
@@ -123,7 +134,19 @@ export function DashboardPage() {
             <CardTitle>Recent Projects</CardTitle>
           </CardHeader>
           <CardContent>
-            {!projects || projects.length === 0 ? (
+            {!projects ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </div>
+                ))}
+              </div>
+            ) : projects.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No projects yet.
               </p>
@@ -156,7 +179,19 @@ export function DashboardPage() {
             <CardTitle>Recent Uploads</CardTitle>
           </CardHeader>
           <CardContent>
-            {!recentAssets || recentAssets.length === 0 ? (
+            {!recentAssets ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-3 w-28" />
+                    </div>
+                    <Skeleton className="h-5 w-14 rounded-full" />
+                  </div>
+                ))}
+              </div>
+            ) : recentAssets.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No uploads yet.
               </p>

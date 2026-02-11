@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Sorting01Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { CommentItem } from "./CommentItem"
 import { CommentInput } from "./CommentInput"
@@ -129,8 +130,20 @@ export function CommentPanel({
       <ScrollArea className="max-h-[40vh] flex-1 overflow-auto md:max-h-none">
         <div className="py-2">
           {isLoading ? (
-            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-              Loading comments...
+            <div className="space-y-4 px-4 py-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex gap-3">
+                  <Skeleton className="size-7 shrink-0 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-3 w-12" />
+                    </div>
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-2/3" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : threadedComments.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useFrappePostCall } from "frappe-react-sdk"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Dialog,
   DialogContent,
@@ -84,8 +85,8 @@ export function MediaPlayerDialog({
             {error}
           </div>
         ) : !mediaUrl ? (
-          <div className="flex items-center justify-center rounded-lg bg-muted py-12 text-sm text-muted-foreground">
-            Loading...
+          <div className="flex items-center justify-center rounded-lg bg-muted py-12">
+            <Spinner className="size-6" />
           </div>
         ) : mediaType === "video" ? (
           <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
