@@ -38,6 +38,19 @@ jobs:
       - name: Clone
         uses: actions/checkout@v6
 
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio server /data
+          timeout 30 bash -c 'until curl -sf http://127.0.0.1:9000/minio/health/live; do sleep 1; done'
+          curl -sL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc
+          chmod +x /usr/local/bin/mc
+          mc alias set ci http://127.0.0.1:9000 minioadmin minioadmin
+          mc mb ci/vms-media
+
       - name: Find tests
         run: |
           echo "Finding tests"
@@ -96,6 +109,10 @@ jobs:
         env:
           CI: 'Yes'
 
+      - name: Configure VMS Settings for MinIO
+        working-directory: /home/runner/frappe-bench
+        run: bench --site test_site execute vms.seed.seed_test_settings
+
       - name: Run Tests
         working-directory: /home/runner/frappe-bench
         run: |
@@ -103,3 +120,4 @@ jobs:
           bench --site test_site run-tests --app vms
         env:
           TYPE: server
+          VMS_S3_ENDPOINT_URL: http://127.0.0.1:9000

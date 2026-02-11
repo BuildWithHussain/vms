@@ -1,5 +1,5 @@
 import { APIRequestContext } from "@playwright/test";
-import { createDoc, deleteDoc, getDoc, getList } from "./frappe";
+import { callMethod, createDoc, deleteDoc, getDoc, getList } from "./frappe";
 
 /**
  * VMS Project document interface.
@@ -150,4 +150,163 @@ export async function cleanupTestProjects(
 			console.warn(`Failed to delete ${project.name}:`, error);
 		}
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Upload helpers
+// ---------------------------------------------------------------------------
+
+interface UploadUrlResponse {
+	upload_url: string;
+	r2_key: string;
+	asset_name: string;
+}
+
+interface ConfirmUploadResponse {
+	status: string;
+	asset_name: string;
+}
+
+interface ViewUrlResponse {
+	url: string;
+}
+
+interface DownloadUrlResponse {
+	url: string;
+}
+
+/**
+ * Request a presigned upload URL from the VMS API.
+ */
+export async function getUploadUrl(
+	request: APIRequestContext,
+	options: {
+		file_name: string;
+		content_type: string;
+		project?: string;
+		category?: string;
+	},
+): Promise<UploadUrlResponse> {
+	return callMethod<UploadUrlResponse>(request, "vms.api.get_upload_url", {
+		file_name: options.file_name,
+		content_type: options.content_type,
+		project: options.project,
+		category: options.category,
+	});
+}
+
+/**
+ * Upload a buffer to the presigned URL (PUT request directly to object storage).
+ */
+export async function uploadToPresignedUrl(
+	request: APIRequestContext,
+	uploadUrl: string,
+	content: Buffer,
+	contentType: string,
+): Promise<void> {
+	const response = await request.put(uploadUrl, {
+		data: content,
+		headers: {
+			"Content-Type": contentType,
+		},
+	});
+
+	if (!response.ok()) {
+		throw new Error(
+			`Upload to presigned URL failed: ${response.status()} ${response.statusText()}`,
+		);
+	}
+}
+
+/**
+ * Confirm an upload after the file has been PUT to object storage.
+ */
+export async function confirmUpload(
+	request: APIRequestContext,
+	assetName: string,
+	fileSize: number,
+): Promise<ConfirmUploadResponse> {
+	return callMethod<ConfirmUploadResponse>(
+		request,
+		"vms.api.confirm_upload",
+		{
+			asset_name: assetName,
+			file_size: fileSize,
+		},
+	);
+}
+
+/**
+ * Get a presigned view URL for an asset.
+ */
+export async function getViewUrl(
+	request: APIRequestContext,
+	assetName: string,
+): Promise<ViewUrlResponse> {
+	return callMethod<ViewUrlResponse>(request, "vms.api.get_view_url", {
+		asset_name: assetName,
+	});
+}
+
+/**
+ * Get a presigned download URL for an asset.
+ */
+export async function getDownloadUrl(
+	request: APIRequestContext,
+	assetName: string,
+): Promise<DownloadUrlResponse> {
+	return callMethod<DownloadUrlResponse>(
+		request,
+		"vms.api.get_download_url",
+		{
+			asset_name: assetName,
+		},
+	);
+}
+
+/**
+ * Full upload flow: get presigned URL → PUT file → confirm upload.
+ * Returns the asset name and r2 key.
+ */
+export async function uploadTestFile(
+	request: APIRequestContext,
+	options: {
+		file_name?: string;
+		content?: Buffer;
+		content_type?: string;
+		project?: string;
+		category?: string;
+	} = {},
+): Promise<{ asset_name: string; r2_key: string }> {
+	const fileName = options.file_name || `test-file-${Date.now()}.txt`;
+	const contentType = options.content_type || "text/plain";
+	const content = options.content || Buffer.from("E2E test file content");
+
+	// Step 1: Get presigned upload URL
+	const { upload_url, r2_key, asset_name } = await getUploadUrl(request, {
+		file_name: fileName,
+		content_type: contentType,
+		project: options.project,
+		category: options.category,
+	});
+
+	// Step 2: PUT file to object storage
+	await uploadToPresignedUrl(request, upload_url, content, contentType);
+
+	// Step 3: Confirm the upload
+	await confirmUpload(request, asset_name, content.length);
+
+	return { asset_name, r2_key };
+}
+
+/**
+ * Delete an asset via the VMS API (cleans up both DB record and object storage).
+ */
+export async function deleteAsset(
+	request: APIRequestContext,
+	assetName: string,
+): Promise<void> {
+	await callMethod(request, "vms.api.delete_asset", {
+		asset_name: assetName,
+	});
 }

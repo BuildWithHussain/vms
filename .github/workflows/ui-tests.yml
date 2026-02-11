@@ -37,6 +37,21 @@ jobs:
       - name: Clone
         uses: actions/checkout@v4
 
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio server /data
+          # Wait for MinIO to be ready
+          timeout 30 bash -c 'until curl -sf http://127.0.0.1:9000/minio/health/live; do sleep 1; done'
+          # Create test bucket using mc
+          curl -sL https://dl.min.io/client/mc/release/linux-amd64/mc -o /usr/local/bin/mc
+          chmod +x /usr/local/bin/mc
+          mc alias set ci http://127.0.0.1:9000 minioadmin minioadmin
+          mc mb ci/vms-media
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -102,6 +117,10 @@ jobs:
           bench --site vms.test set-config allow_tests true
           bench --site vms.test set-config host_name "http://vms.test:8000"
 
+      - name: Configure VMS Settings for MinIO
+        working-directory: /home/runner/frappe-bench
+        run: bench --site vms.test execute vms.seed.seed_test_settings
+
       - name: Start Frappe Server
         working-directory: /home/runner/frappe-bench
         run: |
@@ -111,6 +130,8 @@ jobs:
           echo "Waiting for Frappe server to start..."
           timeout 60 bash -c 'until curl -s http://vms.test:8000 > /dev/null; do sleep 2; done'
           echo "Frappe server is ready!"
+        env:
+          VMS_S3_ENDPOINT_URL: http://127.0.0.1:9000
 
       - name: Install Playwright
         run: |
