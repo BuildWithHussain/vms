@@ -88,7 +88,7 @@
   },
   {
    "fieldname": "file_size",
-   "fieldtype": "Int",
+   "fieldtype": "Long Int",
    "label": "File Size"
   }
  ],
