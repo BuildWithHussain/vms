@@ -38,6 +38,7 @@ import { DeleteAssetDialog } from "@/components/DeleteAssetDialog"
 import { RenameAssetDialog } from "@/components/RenameAssetDialog"
 import { MediaPlayerDialog } from "@/components/MediaPlayerDialog"
 import { CreateFolderDialog } from "@/components/CreateFolderDialog"
+import { RenameFolderDialog } from "@/components/RenameFolderDialog"
 import { MoveToFolderDialog } from "@/components/MoveToFolderDialog"
 import { useDownload } from "@/hooks/useDownload"
 import { UserAvatar } from "@/components/UserAvatar"
@@ -58,6 +59,7 @@ export function ProjectDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
   const [createFolderOpen, setCreateFolderOpen] = useState(false)
+  const [renameFolderOpen, setRenameFolderOpen] = useState(false)
   const [moveToFolderOpen, setMoveToFolderOpen] = useState(false)
   const [previewAsset, setPreviewAsset] = useState<VMSAsset | null>(null)
   const [view, setView] = useState<"list" | "grid">("grid")
@@ -218,6 +220,10 @@ export function ProjectDetailPage() {
     mutateFolders()
   }
 
+  const handleFolderRenamed = () => {
+    mutateFolders()
+  }
+
   if (!project) {
     return <div className="text-muted-foreground">Loading project...</div>
   }
@@ -352,14 +358,24 @@ export function ProjectDetailPage() {
               </Button>
             )}
             {currentFolder && (
-              <Button variant="outline" size="sm" onClick={handleDeleteFolder}>
-                <HugeiconsIcon
-                  icon={Delete02Icon}
-                  strokeWidth={2}
-                  data-icon="inline-start"
-                />
-                <span className="hidden sm:inline">Delete Folder</span>
-              </Button>
+              <>
+                <Button variant="outline" size="sm" onClick={() => setRenameFolderOpen(true)}>
+                  <HugeiconsIcon
+                    icon={PencilEdit01Icon}
+                    strokeWidth={2}
+                    data-icon="inline-start"
+                  />
+                  <span className="hidden sm:inline">Rename</span>
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleDeleteFolder}>
+                  <HugeiconsIcon
+                    icon={Delete02Icon}
+                    strokeWidth={2}
+                    data-icon="inline-start"
+                  />
+                  <span className="hidden sm:inline">Delete Folder</span>
+                </Button>
+              </>
             )}
             <Button size="sm" onClick={() => setUploadOpen(true)}>
               <HugeiconsIcon
@@ -451,6 +467,16 @@ export function ProjectDetailPage() {
         project={projectId!}
         onComplete={handleFolderCreated}
       />
+
+      {currentFolder && currentFolderDoc && (
+        <RenameFolderDialog
+          open={renameFolderOpen}
+          onOpenChange={setRenameFolderOpen}
+          folderName={currentFolder}
+          folderDisplayName={currentFolderDoc.folder_name}
+          onComplete={handleFolderRenamed}
+        />
+      )}
 
       <MoveToFolderDialog
         open={moveToFolderOpen}
