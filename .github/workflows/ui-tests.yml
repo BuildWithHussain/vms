@@ -88,10 +88,10 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-playwright-${{ hashFiles('**/package.json') }}
 
-      - name: Install MariaDB Client
+      - name: Install MariaDB Client and FFmpeg
         run: |
           sudo apt update
-          sudo apt-get install mariadb-client
+          sudo apt-get install mariadb-client ffmpeg
 
       - name: Setup Bench
         run: |
