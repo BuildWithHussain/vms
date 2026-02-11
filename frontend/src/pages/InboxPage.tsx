@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import { useNavigate } from "react-router"
 import { useFrappeGetDocList } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -18,6 +18,7 @@ import { UploadDialog } from "@/components/UploadDialog"
 import { MoveAssetDialog } from "@/components/MoveAssetDialog"
 import { DeleteAssetDialog } from "@/components/DeleteAssetDialog"
 import { RenameAssetDialog } from "@/components/RenameAssetDialog"
+import { MediaPlayerDialog } from "@/components/MediaPlayerDialog"
 import { useDownload } from "@/hooks/useDownload"
 import { UserAvatar } from "@/components/UserAvatar"
 import type { VMSAsset } from "@/types"
@@ -35,6 +36,7 @@ export function InboxPage() {
   const [moveOpen, setMoveOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
+  const [previewAsset, setPreviewAsset] = useState<VMSAsset | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [view, setView] = useState<"list" | "grid">("grid")
   const { downloadOne, downloadMany, isDownloading } = useDownload()
@@ -89,6 +91,18 @@ export function InboxPage() {
     setSelected(new Set())
     mutate()
   }
+
+  const handleAssetClick = useCallback(
+    (asset: VMSAsset) => {
+      if (asset.status !== "Ready") return
+      if (asset.file_type?.startsWith("video/")) {
+        navigate(`/review/${asset.name}`)
+      } else {
+        setPreviewAsset(asset)
+      }
+    },
+    [navigate],
+  )
 
   const handleBulkDownload = () => {
     if (!assets) return
@@ -217,10 +231,7 @@ export function InboxPage() {
                   key={asset.name}
                   size="sm"
                   className="cursor-pointer transition-shadow hover:shadow-md"
-                  onClick={() => {
-                    if (asset.status === "Ready")
-                      navigate(`/review/${asset.name}`)
-                  }}
+                  onClick={() => handleAssetClick(asset)}
                 >
                   <CardHeader>
                     <div className="flex items-center gap-3">
@@ -297,10 +308,7 @@ export function InboxPage() {
                 <Card
                   key={asset.name}
                   className="flex cursor-pointer flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md"
-                  onClick={() => {
-                    if (asset.status === "Ready")
-                      navigate(`/review/${asset.name}`)
-                  }}
+                  onClick={() => handleAssetClick(asset)}
                 >
                   <div className="aspect-video w-full bg-muted">
                     {asset.thumbnail_url ? (
@@ -407,6 +415,13 @@ export function InboxPage() {
         ) : null
       })()}
 
+      <MediaPlayerDialog
+        open={!!previewAsset}
+        onOpenChange={(open) => { if (!open) setPreviewAsset(null) }}
+        assetName={previewAsset?.name ?? null}
+        fileName={previewAsset?.file_name}
+        fileType={previewAsset?.file_type}
+      />
     </div>
   )
 }
