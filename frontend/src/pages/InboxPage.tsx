@@ -385,6 +385,7 @@ export function InboxPage() {
       <UploadDialog
         open={uploadOpen}
         onOpenChange={setUploadOpen}
+        existingFileNames={(assets ?? []).map((a) => a.file_name)}
         onComplete={() => mutate()}
       />
 

@@ -6,6 +6,7 @@ export type FileUploadStatus = "pending" | "uploading" | "confirming" | "done" |
 export interface FileUploadItem {
   id: string
   file: File
+  displayName: string
   status: FileUploadStatus
   progress: number
   error?: string
@@ -61,7 +62,7 @@ export function useUpload(options?: {
         updateFile(item.id, { status: "uploading", progress: 0 })
 
         const res = await getUploadUrl({
-          file_name: item.file.name,
+          file_name: item.displayName,
           content_type: item.file.type || "application/octet-stream",
           project: options?.project || undefined,
           category: options?.category || "Source",
@@ -163,10 +164,11 @@ export function useUpload(options?: {
   )
 
   const addFiles = useCallback(
-    (newFiles: File[]) => {
+    (newFiles: File[], nameOverrides?: Map<File, string>) => {
       const items: FileUploadItem[] = newFiles.map((file) => ({
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         file,
+        displayName: nameOverrides?.get(file) ?? file.name,
         status: "pending" as const,
         progress: 0,
       }))

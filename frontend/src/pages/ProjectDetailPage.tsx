@@ -430,6 +430,7 @@ export function ProjectDetailPage() {
         onOpenChange={setUploadOpen}
         project={projectId}
         folder={currentFolder ?? undefined}
+        existingFileNames={folderAssets.map((a) => a.file_name)}
         onComplete={() => mutateAssets()}
       />
 

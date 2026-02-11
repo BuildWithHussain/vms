@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { CloudUploadIcon, Tick02Icon, Cancel01Icon } from "@hugeicons/core-free-icons"
+import { CloudUploadIcon, Tick02Icon, Cancel01Icon, AlertCircleIcon } from "@hugeicons/core-free-icons"
 import {
   Dialog,
   DialogContent,
@@ -21,12 +21,33 @@ import { Label } from "@/components/ui/label"
 import { useUpload, type FileUploadItem } from "@/hooks/useUpload"
 import { cn } from "@/lib/utils"
 
+interface DuplicateFile {
+  file: File
+  renamedName: string
+  action: "rename" | "skip" | "pending"
+}
+
 interface UploadDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   project?: string
   folder?: string
+  existingFileNames?: string[]
   onComplete?: () => void
+}
+
+function generateUniqueName(name: string, existingNames: Set<string>): string {
+  if (!existingNames.has(name)) return name
+  const dotIndex = name.lastIndexOf(".")
+  const baseName = dotIndex > 0 ? name.slice(0, dotIndex) : name
+  const ext = dotIndex > 0 ? name.slice(dotIndex) : ""
+  let counter = 1
+  let candidate = `${baseName} (${counter})${ext}`
+  while (existingNames.has(candidate)) {
+    counter++
+    candidate = `${baseName} (${counter})${ext}`
+  }
+  return candidate
 }
 
 export function UploadDialog({
@@ -34,10 +55,13 @@ export function UploadDialog({
   onOpenChange,
   project,
   folder,
+  existingFileNames,
   onComplete,
 }: UploadDialogProps) {
   const [category, setCategory] = useState<string>("Source")
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [duplicates, setDuplicates] = useState<DuplicateFile[]>([])
+  const [nonDuplicates, setNonDuplicates] = useState<File[]>([])
 
   const { files, addFiles, cancelFile, reset, isUploading } = useUpload({
     project,
@@ -48,23 +72,101 @@ export function UploadDialog({
     },
   })
 
+  const existingSet = new Set(existingFileNames ?? [])
+
+  const processIncomingFiles = useCallback(
+    (incoming: File[]) => {
+      if (!existingFileNames || existingFileNames.length === 0) {
+        addFiles(incoming)
+        return
+      }
+
+      // Also include names from files already queued in current session
+      const sessionNames = new Set(files.map((f) => f.displayName))
+      const allExisting = new Set([...existingSet, ...sessionNames])
+
+      const dupes: DuplicateFile[] = []
+      const clean: File[] = []
+
+      for (const file of incoming) {
+        if (allExisting.has(file.name)) {
+          dupes.push({
+            file,
+            renamedName: generateUniqueName(file.name, allExisting),
+            action: "pending",
+          })
+        } else {
+          clean.push(file)
+          allExisting.add(file.name)
+        }
+      }
+
+      if (dupes.length === 0) {
+        addFiles(clean)
+      } else {
+        setNonDuplicates(clean)
+        setDuplicates(dupes)
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [existingFileNames, files, addFiles]
+  )
+
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault()
       const droppedFiles = Array.from(e.dataTransfer.files)
-      if (droppedFiles.length > 0) addFiles(droppedFiles)
+      if (droppedFiles.length > 0) processIncomingFiles(droppedFiles)
     },
-    [addFiles]
+    [processIncomingFiles]
   )
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const selected = Array.from(e.target.files ?? [])
-      if (selected.length > 0) addFiles(selected)
+      if (selected.length > 0) processIncomingFiles(selected)
       e.target.value = ""
     },
-    [addFiles]
+    [processIncomingFiles]
   )
+
+  const updateDuplicateAction = (index: number, action: "rename" | "skip") => {
+    setDuplicates((prev) =>
+      prev.map((d, i) => (i === index ? { ...d, action } : d))
+    )
+  }
+
+  const applyAllDuplicateAction = (action: "rename" | "skip") => {
+    setDuplicates((prev) => prev.map((d) => ({ ...d, action })))
+  }
+
+  const confirmDuplicateResolution = () => {
+    const filesToUpload: File[] = [...nonDuplicates]
+    const nameOverrides = new Map<File, string>()
+
+    for (const d of duplicates) {
+      if (d.action === "skip") continue
+      if (d.action === "rename") {
+        filesToUpload.push(d.file)
+        nameOverrides.set(d.file, d.renamedName)
+      }
+    }
+
+    if (filesToUpload.length > 0) {
+      addFiles(filesToUpload, nameOverrides.size > 0 ? nameOverrides : undefined)
+    }
+
+    setDuplicates([])
+    setNonDuplicates([])
+  }
+
+  const cancelDuplicateResolution = () => {
+    setDuplicates([])
+    setNonDuplicates([])
+  }
+
+  const allDuplicatesResolved =
+    duplicates.length > 0 && duplicates.every((d) => d.action !== "pending")
 
   const handleClose = (nextOpen: boolean) => {
     if (!nextOpen && !isUploading) {
@@ -73,6 +175,8 @@ export function UploadDialog({
       }
       reset()
       setCategory("Source")
+      setDuplicates([])
+      setNonDuplicates([])
     }
     if (!isUploading) {
       onOpenChange(nextOpen)
@@ -109,6 +213,97 @@ export function UploadDialog({
             </Select>
           </div>
 
+          {/* Duplicate resolution */}
+          {duplicates.length > 0 && (
+            <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
+              <div className="flex items-center gap-2 text-sm font-medium text-amber-800 dark:text-amber-200">
+                <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2} className="size-4" />
+                {duplicates.length === 1
+                  ? "1 file already exists"
+                  : `${duplicates.length} files already exist`}
+              </div>
+
+              <div className="space-y-2">
+                {duplicates.map((d, i) => (
+                  <div
+                    key={d.file.name}
+                    className="flex items-center justify-between gap-2 rounded-md bg-white/60 p-2 dark:bg-white/5"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm">{d.file.name}</div>
+                      {d.action === "rename" && (
+                        <div className="truncate text-xs text-muted-foreground">
+                          → {d.renamedName}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                      <Button
+                        variant={d.action === "rename" ? "default" : "outline"}
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => updateDuplicateAction(i, "rename")}
+                      >
+                        Rename
+                      </Button>
+                      <Button
+                        variant={d.action === "skip" ? "default" : "outline"}
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => updateDuplicateAction(i, "skip")}
+                      >
+                        Skip
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex gap-1">
+                  {duplicates.length > 1 && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => applyAllDuplicateAction("rename")}
+                      >
+                        Rename All
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => applyAllDuplicateAction("skip")}
+                      >
+                        Skip All
+                      </Button>
+                    </>
+                  )}
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={cancelDuplicateResolution}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-7 text-xs"
+                    disabled={!allDuplicatesResolved}
+                    onClick={confirmDuplicateResolution}
+                  >
+                    Continue
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Drop zone */}
           <div
             onDragOver={(e) => e.preventDefault()}
@@ -116,7 +311,7 @@ export function UploadDialog({
             onClick={() => fileInputRef.current?.click()}
             className={cn(
               "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center transition-colors",
-              isUploading
+              isUploading || duplicates.length > 0
                 ? "pointer-events-none border-muted opacity-50"
                 : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30"
             )}
@@ -165,13 +360,19 @@ export function UploadDialog({
 function FileRow({ item, onCancel }: { item: FileUploadItem; onCancel: (id: string) => void }) {
   const sizeMB = (item.file.size / 1024 / 1024).toFixed(1)
   const canCancel = item.status === "pending" || item.status === "uploading"
+  const wasRenamed = item.displayName !== item.file.name
 
   return (
     <div className={cn("rounded-lg border p-3 space-y-2", item.status === "cancelled" && "opacity-50")}>
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium">{item.file.name}</div>
-          <div className="text-xs text-muted-foreground">{sizeMB} MB</div>
+          <div className="truncate text-sm font-medium">{item.displayName}</div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{sizeMB} MB</span>
+            {wasRenamed && (
+              <span className="text-amber-600 dark:text-amber-400">renamed</span>
+            )}
+          </div>
         </div>
         {canCancel ? (
           <button
