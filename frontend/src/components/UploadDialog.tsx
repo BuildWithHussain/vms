@@ -60,7 +60,7 @@ export function UploadDialog({
   initialFiles,
   onComplete,
 }: UploadDialogProps) {
-  const [category, setCategory] = useState<string>("Source")
+  const [category, setCategory] = useState<string>("Asset")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [duplicates, setDuplicates] = useState<DuplicateFile[]>([])
   const [nonDuplicates, setNonDuplicates] = useState<File[]>([])
@@ -188,7 +188,7 @@ export function UploadDialog({
         onComplete?.()
       }
       reset()
-      setCategory("Source")
+      setCategory("Asset")
       setDuplicates([])
       setNonDuplicates([])
     }
@@ -219,10 +219,9 @@ export function UploadDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Source">Source</SelectItem>
-                <SelectItem value="Cut">Cut</SelectItem>
-                <SelectItem value="Review">Review</SelectItem>
-                <SelectItem value="Final">Final</SelectItem>
+                <SelectItem value="Asset">Asset</SelectItem>
+                <SelectItem value="For Review">For Review</SelectItem>
+                <SelectItem value="Deliverable">Deliverable</SelectItem>
               </SelectContent>
             </Select>
           </div>

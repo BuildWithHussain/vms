@@ -60,8 +60,8 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Category",
-   "options": "Source\nCut\nReview\nFinal",
-   "default": "Source",
+   "options": "Asset\nFor Review\nDeliverable",
+   "default": "Asset",
    "reqd": 1
   },
   {

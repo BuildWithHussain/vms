@@ -48,10 +48,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { VMSProject, VMSAsset, VMSFolder } from "@/types"
 
 const categoryVariant: Record<string, "default" | "secondary" | "outline"> = {
-  Source: "outline",
-  Cut: "secondary",
-  Review: "default",
-  Final: "default",
+  Asset: "outline",
+  "For Review": "default",
+  Deliverable: "secondary",
 }
 
 export function ProjectDetailPage() {
@@ -131,14 +130,14 @@ export function ProjectDetailPage() {
     [assets, currentFolder],
   )
 
-  const assetItems = useMemo(
-    () => folderAssets.filter((a) => a.category === "Source" || a.category === "Cut"),
-    [folderAssets]
+  const forReviewItems = useMemo(
+    () => (assets ?? []).filter((a) => a.category === "For Review"),
+    [assets]
   )
 
-  const exportItems = useMemo(
-    () => folderAssets.filter((a) => a.category === "Review" || a.category === "Final"),
-    [folderAssets]
+  const deliverableItems = useMemo(
+    () => (assets ?? []).filter((a) => a.category === "Deliverable"),
+    [assets]
   )
 
   const toggleSelect = (name: string) => {
@@ -331,14 +330,17 @@ export function ProjectDetailPage() {
         />
       )}
 
-      <Tabs defaultValue="assets">
+      <Tabs defaultValue="all">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <TabsList>
-            <TabsTrigger value="assets">
-              Assets{assetItems.length > 0 ? ` (${assetItems.length})` : ""}
+            <TabsTrigger value="all">
+              All{folderAssets.length > 0 ? ` (${folderAssets.length})` : ""}
             </TabsTrigger>
-            <TabsTrigger value="exports">
-              Exports{exportItems.length > 0 ? ` (${exportItems.length})` : ""}
+            <TabsTrigger value="for-review">
+              For Review{forReviewItems.length > 0 ? ` (${forReviewItems.length})` : ""}
+            </TabsTrigger>
+            <TabsTrigger value="deliverables">
+              Deliverables{deliverableItems.length > 0 ? ` (${deliverableItems.length})` : ""}
             </TabsTrigger>
           </TabsList>
           <div className="flex flex-wrap items-center gap-2">
@@ -446,14 +448,14 @@ export function ProjectDetailPage() {
           </div>
         </div>
 
-        <TabsContent value="assets">
+        <TabsContent value="all">
           <AssetList
-            items={assetItems}
-            allItems={assetItems}
+            items={folderAssets}
+            allItems={folderAssets}
             view={view}
             selected={selected}
             toggleSelect={toggleSelect}
-            toggleSelectAll={() => toggleSelectAll(assetItems)}
+            toggleSelectAll={() => toggleSelectAll(folderAssets)}
             downloadOne={downloadOne}
             onPlay={handleAssetClick}
             onTogglePublicReview={handleTogglePublicReview}
@@ -464,23 +466,38 @@ export function ProjectDetailPage() {
             emptyMessage={
               currentFolder
                 ? "This folder is empty. Upload files or move assets here."
-                : "No source or cut assets yet. Upload some files to get started."
+                : "No assets yet. Upload some files to get started."
             }
           />
         </TabsContent>
 
-        <TabsContent value="exports">
+        <TabsContent value="for-review">
           <AssetList
-            items={exportItems}
-            allItems={exportItems}
+            items={forReviewItems}
+            allItems={forReviewItems}
             view={view}
             selected={selected}
             toggleSelect={toggleSelect}
-            toggleSelectAll={() => toggleSelectAll(exportItems)}
+            toggleSelectAll={() => toggleSelectAll(forReviewItems)}
             downloadOne={downloadOne}
             onPlay={handleAssetClick}
             onTogglePublicReview={handleTogglePublicReview}
-            emptyMessage="No review or final exports yet. Upload exports to share with your team."
+            emptyMessage="No assets marked for review yet."
+          />
+        </TabsContent>
+
+        <TabsContent value="deliverables">
+          <AssetList
+            items={deliverableItems}
+            allItems={deliverableItems}
+            view={view}
+            selected={selected}
+            toggleSelect={toggleSelect}
+            toggleSelectAll={() => toggleSelectAll(deliverableItems)}
+            downloadOne={downloadOne}
+            onPlay={handleAssetClick}
+            onTogglePublicReview={handleTogglePublicReview}
+            emptyMessage="No deliverables yet."
           />
         </TabsContent>
       </Tabs>

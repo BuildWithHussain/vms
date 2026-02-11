@@ -65,7 +65,7 @@ export function useUpload(options?: {
           file_name: item.displayName,
           content_type: item.file.type || "application/octet-stream",
           project: options?.project || undefined,
-          category: options?.category || "Source",
+          category: options?.category || "Asset",
           folder: options?.folder || undefined,
         })
 

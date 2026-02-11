@@ -27,7 +27,7 @@ export interface VMSAsset {
   file_size?: number
   file_type?: string
   status: "Uploading" | "Ready" | "Processing" | "Error"
-  category: "Source" | "Cut" | "Review" | "Final"
+  category: "Asset" | "For Review" | "Deliverable"
   uploaded_by: string
   uploader_name?: string
   uploader_image?: string | null

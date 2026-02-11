@@ -67,7 +67,7 @@ def get_upload_url(
 	file_name: str,
 	content_type: str,
 	project: str | None = None,
-	category: str = "Source",
+	category: str = "Asset",
 	folder: str | None = None,
 ):
 	"""Generate a presigned upload URL for direct upload to R2.
@@ -88,7 +88,7 @@ def get_upload_url(
 		frappe.throw(_("Project {0} does not exist").format(project))
 
 	# Validate category
-	valid_categories = ("Source", "Cut", "Review", "Final")
+	valid_categories = ("Asset", "For Review", "Deliverable")
 	if category not in valid_categories:
 		frappe.throw(
 			_("Invalid category '{0}'. Must be one of: {1}").format(category, ", ".join(valid_categories))
@@ -427,8 +427,8 @@ def rename_asset(asset_name: str, new_file_name: str):
 
 @frappe.whitelist()
 def update_asset_category(asset_name: str, category: str):
-	"""Change an asset's category (Source/Cut/Review/Final)."""
-	valid_categories = ("Source", "Cut", "Review", "Final")
+	"""Change an asset's category (Asset/For Review/Deliverable)."""
+	valid_categories = ("Asset", "For Review", "Deliverable")
 	if category not in valid_categories:
 		frappe.throw(
 			_("Invalid category '{0}'. Must be one of: {1}").format(category, ", ".join(valid_categories))

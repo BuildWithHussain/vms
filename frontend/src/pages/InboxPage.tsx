@@ -26,10 +26,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { VMSAsset } from "@/types"
 
 const categoryVariant: Record<string, "default" | "secondary" | "outline"> = {
-  Source: "outline",
-  Cut: "secondary",
-  Review: "default",
-  Final: "default",
+  Asset: "outline",
+  "For Review": "default",
+  Deliverable: "secondary",
 }
 
 export function InboxPage() {
