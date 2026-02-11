@@ -2,8 +2,9 @@ import { useState } from "react"
 import { useNavigate } from "react-router"
 import { useFrappeGetDocList, useFrappeCreateDoc, useFrappeAuth } from "frappe-react-sdk"
 import { toast } from "sonner"
+import { format } from "date-fns"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { PlusSignIcon } from "@hugeicons/core-free-icons"
+import { PlusSignIcon, Calendar03Icon } from "@hugeicons/core-free-icons"
 import {
   Card,
   CardContent,
@@ -16,6 +17,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { Calendar } from "@/components/ui/calendar"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   Dialog,
   DialogContent,
@@ -25,6 +32,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
 import type { VMSProject } from "@/types"
 
 const statusVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
@@ -40,7 +48,7 @@ export function ProjectsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [projectName, setProjectName] = useState("")
   const [description, setDescription] = useState("")
-  const [dueDate, setDueDate] = useState("")
+  const [dueDate, setDueDate] = useState<Date | undefined>()
 
   const { data: projects, mutate } = useFrappeGetDocList<VMSProject>(
     "VMS Project",
@@ -72,14 +80,14 @@ export function ProjectsPage() {
       const doc = await createDoc("VMS Project", {
         project_name: projectName.trim(),
         description: description.trim() || undefined,
-        due_date: dueDate || undefined,
+        due_date: dueDate ? format(dueDate, "yyyy-MM-dd") : undefined,
         owner_user: currentUser ?? "Administrator",
       } as Record<string, unknown>)
       await mutate()
       setDialogOpen(false)
       setProjectName("")
       setDescription("")
-      setDueDate("")
+      setDueDate(undefined)
       toast.success("Project created")
       navigate(`/projects/${doc.name}`)
     } catch (e: unknown) {
@@ -140,13 +148,31 @@ export function ProjectsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="project-due">Due Date</Label>
-                <Input
-                  id="project-due"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                />
+                <Label>Due Date</Label>
+                <Popover>
+                  <PopoverTrigger
+                    render={
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !dueDate && "text-muted-foreground"
+                        )}
+                      >
+                        <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} data-icon="inline-start" />
+                        {dueDate ? format(dueDate, "PPP") : "Pick a date"}
+                      </Button>
+                    }
+                  />
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dueDate}
+                      onSelect={setDueDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <DialogFooter>
