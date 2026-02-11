@@ -126,7 +126,7 @@ export function CommentPanel({
       </div>
 
       {/* Comment list */}
-      <ScrollArea className="flex-1 overflow-auto">
+      <ScrollArea className="max-h-[40vh] flex-1 overflow-auto md:max-h-none">
         <div className="py-2">
           {isLoading ? (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">

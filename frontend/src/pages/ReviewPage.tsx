@@ -205,7 +205,7 @@ export function ReviewPage() {
         token={token}
       />
 
-      <div className="flex flex-1 flex-col overflow-hidden md:flex-row">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
         {/* Video section */}
         <div className="shrink-0 p-2 md:flex-1 md:p-4" onClick={replayAnnotation ? handleDismissReplay : undefined}>
           <VideoPlayer
@@ -222,7 +222,7 @@ export function ReviewPage() {
         </div>
 
         {/* Comment panel */}
-        <div className="min-h-0 flex-1 md:w-[380px] md:flex-none">
+        <div className="min-h-[50vh] flex-1 md:min-h-0 md:w-[380px] md:flex-none">
           <CommentPanel
             assetId={assetId}
             currentTime={currentTime}

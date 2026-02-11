@@ -41,7 +41,7 @@ Then, find a way to break it into a smaller chunk and only do that chunk (i.e. c
 
 Before committing, run the feedback loops:
 
-- use agent-browser to test on vms.localhost site
+- use agent-browser to test on vms.localhost site (Administrator/admin are credentials) (/vms)
 
 # COMMIT
 
