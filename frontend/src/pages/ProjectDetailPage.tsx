@@ -72,6 +72,7 @@ export function ProjectDetailPage() {
 
   const { call: callTogglePublicReview } = useFrappePostCall("vms.review_api.toggle_public_review")
   const { call: callDeleteFolder } = useFrappePostCall("vms.api.delete_folder")
+  const { call: callMoveToFolder } = useFrappePostCall("vms.api.move_assets_to_folder")
 
   const { data: project } = useFrappeGetDoc<VMSProject>(
     "VMS Project",
@@ -232,6 +233,21 @@ export function ProjectDetailPage() {
     mutateFolders()
   }
 
+  const handleDropToFolder = useCallback(
+    async (assetNames: string[], folderName: string | null) => {
+      try {
+        await callMoveToFolder({ asset_names: JSON.stringify(assetNames), folder: folderName })
+        toast.success(`Moved ${assetNames.length} ${assetNames.length === 1 ? "asset" : "assets"}`)
+        setSelected(new Set())
+        mutateAssets()
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : "Failed to move assets"
+        toast.error(message)
+      }
+    },
+    [callMoveToFolder, mutateAssets],
+  )
+
   if (!project) {
     return (
       <div className="space-y-4 md:space-y-6">
@@ -307,16 +323,12 @@ export function ProjectDetailPage() {
 
       {/* Breadcrumb */}
       {currentFolder && currentFolderDoc && (
-        <div className="flex items-center gap-1.5 text-sm">
-          <button
-            onClick={handleNavigateToRoot}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {project.project_name}
-          </button>
-          <span className="text-muted-foreground">/</span>
-          <span className="font-medium">{currentFolderDoc.folder_name}</span>
-        </div>
+        <BreadcrumbNav
+          projectName={project.project_name}
+          folderName={currentFolderDoc.folder_name}
+          onNavigateToRoot={handleNavigateToRoot}
+          onDropToRoot={(names) => handleDropToFolder(names, null)}
+        />
       )}
 
       <Tabs defaultValue="assets">
@@ -447,6 +459,8 @@ export function ProjectDetailPage() {
             onTogglePublicReview={handleTogglePublicReview}
             folders={currentFolder ? undefined : folders ?? undefined}
             onFolderClick={handleFolderClick}
+            onDropToFolder={currentFolder ? undefined : handleDropToFolder}
+            draggable={(folders ?? []).length > 0 || !!currentFolder}
             emptyMessage={
               currentFolder
                 ? "This folder is empty. Upload files or move assets here."
@@ -622,17 +636,53 @@ function FolderCard({
   folder,
   view,
   onClick,
+  onDrop,
 }: {
   folder: VMSFolder
   view: "list" | "grid"
   onClick: () => void
+  onDrop?: (assetNames: string[]) => void
 }) {
+  const [dragOver, setDragOver] = useState(false)
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes("application/vms-assets")) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+    setDragOver(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return
+    setDragOver(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    const data = e.dataTransfer.getData("application/vms-assets")
+    if (!data) return
+    try {
+      const assetNames: string[] = JSON.parse(data)
+      if (assetNames.length > 0) onDrop?.(assetNames)
+    } catch { /* ignore */ }
+  }
+
+  const dropProps = onDrop ? {
+    onDragOver: handleDragOver,
+    onDragLeave: handleDragLeave,
+    onDrop: handleDrop,
+  } : {}
+
+  const dropHighlight = dragOver ? "ring-2 ring-primary bg-primary/5" : ""
+
   if (view === "list") {
     return (
       <Card
         size="sm"
-        className="cursor-pointer transition-shadow hover:shadow-md"
+        className={`cursor-pointer transition-shadow hover:shadow-md ${dropHighlight}`}
         onClick={onClick}
+        {...dropProps}
       >
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -650,8 +700,9 @@ function FolderCard({
 
   return (
     <Card
-      className="flex cursor-pointer flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md"
+      className={`flex cursor-pointer flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md ${dropHighlight}`}
       onClick={onClick}
+      {...dropProps}
     >
       <div className="flex aspect-video w-full items-center justify-center bg-muted">
         <HugeiconsIcon icon={Folder02Icon} size={48} strokeWidth={1.5} className="text-muted-foreground/40" />
@@ -662,6 +713,56 @@ function FolderCard({
         </CardTitle>
       </CardHeader>
     </Card>
+  )
+}
+
+function BreadcrumbNav({
+  projectName,
+  folderName,
+  onNavigateToRoot,
+  onDropToRoot,
+}: {
+  projectName: string
+  folderName: string
+  onNavigateToRoot: () => void
+  onDropToRoot: (assetNames: string[]) => void
+}) {
+  const [dragOver, setDragOver] = useState(false)
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes("application/vms-assets")) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+    setDragOver(true)
+  }
+
+  const handleDragLeave = () => { setDragOver(false) }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    const data = e.dataTransfer.getData("application/vms-assets")
+    if (!data) return
+    try {
+      const assetNames: string[] = JSON.parse(data)
+      if (assetNames.length > 0) onDropToRoot(assetNames)
+    } catch { /* ignore */ }
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 text-sm">
+      <button
+        onClick={onNavigateToRoot}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`rounded px-1.5 py-0.5 transition-colors ${dragOver ? "bg-primary/10 text-primary ring-1 ring-primary" : "text-muted-foreground hover:text-foreground"}`}
+      >
+        {projectName}
+      </button>
+      <span className="text-muted-foreground">/</span>
+      <span className="font-medium">{folderName}</span>
+    </div>
   )
 }
 
@@ -678,6 +779,8 @@ function AssetList({
   emptyMessage,
   folders,
   onFolderClick,
+  onDropToFolder,
+  draggable: canDragProp,
 }: {
   items: VMSAsset[]
   allItems: VMSAsset[]
@@ -691,7 +794,19 @@ function AssetList({
   emptyMessage: string
   folders?: VMSFolder[]
   onFolderClick?: (folderName: string) => void
+  onDropToFolder?: (assetNames: string[], folderName: string) => void
+  draggable?: boolean
 }) {
+  const canDrag = canDragProp ?? false
+
+  const handleDragStart = (e: React.DragEvent, assetName: string) => {
+    const dragNames = selected.has(assetName) && selected.size > 1
+      ? Array.from(selected)
+      : [assetName]
+    e.dataTransfer.setData("application/vms-assets", JSON.stringify(dragNames))
+    e.dataTransfer.effectAllowed = "move"
+  }
+
   const hasFolders = folders && folders.length > 0
   const hasItems = items.length > 0
 
@@ -733,6 +848,7 @@ function AssetList({
               folder={folder}
               view="list"
               onClick={() => onFolderClick?.(folder.name)}
+              onDrop={onDropToFolder ? (names) => onDropToFolder(names, folder.name) : undefined}
             />
           ))}
           {items.map((asset) => (
@@ -740,6 +856,8 @@ function AssetList({
               key={asset.name}
               size="sm"
               className="cursor-pointer transition-shadow hover:shadow-md"
+              draggable={canDrag}
+              onDragStart={canDrag ? (e: React.DragEvent<HTMLDivElement>) => handleDragStart(e, asset.name) : undefined}
               onClick={() => {
                 if (asset.status === "Ready") onPlay(asset.name)
               }}
@@ -824,12 +942,15 @@ function AssetList({
               folder={folder}
               view="grid"
               onClick={() => onFolderClick?.(folder.name)}
+              onDrop={onDropToFolder ? (names) => onDropToFolder(names, folder.name) : undefined}
             />
           ))}
           {items.map((asset) => (
             <Card
               key={asset.name}
               className="flex cursor-pointer flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md"
+              draggable={canDrag}
+              onDragStart={canDrag ? (e: React.DragEvent<HTMLDivElement>) => handleDragStart(e, asset.name) : undefined}
               onClick={() => {
                 if (asset.status === "Ready") onPlay(asset.name)
               }}
