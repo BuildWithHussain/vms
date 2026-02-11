@@ -33,6 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UploadDialog } from "@/components/UploadDialog"
 import { DeleteAssetDialog } from "@/components/DeleteAssetDialog"
 import { RenameAssetDialog } from "@/components/RenameAssetDialog"
+import { MediaPlayerDialog } from "@/components/MediaPlayerDialog"
 import { useDownload } from "@/hooks/useDownload"
 import { UserAvatar } from "@/components/UserAvatar"
 import { toast } from "sonner"
@@ -51,6 +52,7 @@ export function ProjectDetailPage() {
   const [uploadOpen, setUploadOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
+  const [previewAsset, setPreviewAsset] = useState<VMSAsset | null>(null)
   const [view, setView] = useState<"list" | "grid">("grid")
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const { downloadOne, downloadMany, isDownloading } = useDownload()
@@ -133,6 +135,19 @@ export function ProjectDetailPage() {
     const toDownload = assets.filter((a) => selected.has(a.name))
     downloadMany(toDownload)
   }
+
+  const handleAssetClick = useCallback(
+    (assetName: string) => {
+      const asset = (assets ?? []).find((a) => a.name === assetName)
+      if (!asset || asset.status !== "Ready") return
+      if (asset.file_type?.startsWith("video/")) {
+        navigate(`/review/${assetName}`)
+      } else {
+        setPreviewAsset(asset)
+      }
+    },
+    [assets, navigate],
+  )
 
   const handleDeleteComplete = () => {
     setSelected(new Set())
@@ -259,7 +274,7 @@ export function ProjectDetailPage() {
             toggleSelect={toggleSelect}
             toggleSelectAll={() => toggleSelectAll(assetItems)}
             downloadOne={downloadOne}
-            onPlay={(name) => navigate(`/review/${name}`)}
+            onPlay={handleAssetClick}
             onTogglePublicReview={handleTogglePublicReview}
             emptyMessage="No source or cut assets yet. Upload some files to get started."
           />
@@ -274,7 +289,7 @@ export function ProjectDetailPage() {
             toggleSelect={toggleSelect}
             toggleSelectAll={() => toggleSelectAll(exportItems)}
             downloadOne={downloadOne}
-            onPlay={(name) => navigate(`/review/${name}`)}
+            onPlay={handleAssetClick}
             onTogglePublicReview={handleTogglePublicReview}
             emptyMessage="No review or final exports yet. Upload exports to share with your team."
           />
@@ -307,6 +322,14 @@ export function ProjectDetailPage() {
           />
         ) : null
       })()}
+
+      <MediaPlayerDialog
+        open={!!previewAsset}
+        onOpenChange={(open) => { if (!open) setPreviewAsset(null) }}
+        assetName={previewAsset?.name ?? null}
+        fileName={previewAsset?.file_name}
+        fileType={previewAsset?.file_type}
+      />
     </div>
   )
 }
