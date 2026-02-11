@@ -255,6 +255,7 @@ Auto-generate thumbnails for video assets using server-side FFmpeg. Thumbnails a
 ---
 
 ## Phase 5+ (Future — Not Built Now)
+- **Video Transcoding Pipeline**: Uploaded videos in non-web-friendly formats (ProRes, HEVC in `.mov`, etc.) are served as-is, causing playback issues in Chrome/Firefox (audio plays but no video). Add server-side FFmpeg transcoding to convert uploads to H.264/AAC in MP4 container — the universally supported web format. Flow: after `confirm_upload`, enqueue a background job that downloads from R2, transcodes via FFmpeg (`-c:v libx264 -c:a aac -movflags +faststart`), uploads the transcoded MP4 back to R2, and updates the asset's `r2_key`/`file_type`. Serve the transcoded version for playback while optionally retaining the original for download. Add `transcoding_status` field to VMS Asset and a progress indicator in the frontend.
 - **Folder support within projects**: R2 is flat (no real folders — just key prefixes). Add a `folder` field to VMS Asset, update R2 key format to `{project}/{folder}/{uuid}.{ext}`, build a folder browser UI in ProjectDetailPage (create/rename/delete folders, drag assets between folders). No R2 API calls needed to "create" folders — just use the prefix.
 - **Video Review**: Timestamped comments (VMS Comment DocType), Frame.io-like review workflow with transcript-linked comments
 - **Version tracking**: Multiple asset versions with comparison

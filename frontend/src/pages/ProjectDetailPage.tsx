@@ -8,6 +8,9 @@ import {
   Delete02Icon,
   Download04Icon,
   Film01Icon,
+  Folder02Icon,
+  FolderAddIcon,
+  FolderTransferIcon,
   GridViewIcon,
   Link01Icon,
   ListViewIcon,
@@ -34,10 +37,12 @@ import { UploadDialog } from "@/components/UploadDialog"
 import { DeleteAssetDialog } from "@/components/DeleteAssetDialog"
 import { RenameAssetDialog } from "@/components/RenameAssetDialog"
 import { MediaPlayerDialog } from "@/components/MediaPlayerDialog"
+import { CreateFolderDialog } from "@/components/CreateFolderDialog"
+import { MoveToFolderDialog } from "@/components/MoveToFolderDialog"
 import { useDownload } from "@/hooks/useDownload"
 import { UserAvatar } from "@/components/UserAvatar"
 import { toast } from "sonner"
-import type { VMSProject, VMSAsset } from "@/types"
+import type { VMSProject, VMSAsset, VMSFolder } from "@/types"
 
 const categoryVariant: Record<string, "default" | "secondary" | "outline"> = {
   Source: "outline",
@@ -52,12 +57,16 @@ export function ProjectDetailPage() {
   const [uploadOpen, setUploadOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
+  const [createFolderOpen, setCreateFolderOpen] = useState(false)
+  const [moveToFolderOpen, setMoveToFolderOpen] = useState(false)
   const [previewAsset, setPreviewAsset] = useState<VMSAsset | null>(null)
   const [view, setView] = useState<"list" | "grid">("grid")
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [currentFolder, setCurrentFolder] = useState<string | null>(null)
   const { downloadOne, downloadMany, isDownloading } = useDownload()
 
   const { call: callTogglePublicReview } = useFrappePostCall("vms.review_api.toggle_public_review")
+  const { call: callDeleteFolder } = useFrappePostCall("vms.api.delete_folder")
 
   const { data: project } = useFrappeGetDoc<VMSProject>(
     "VMS Project",
@@ -78,6 +87,7 @@ export function ProjectDetailPage() {
       "thumbnail_url",
       "is_public_review",
       "review_token",
+      "folder",
       "uploaded_by.full_name as uploader_name",
       "uploaded_by.user_image as uploader_image",
     ] as string[],
@@ -85,6 +95,18 @@ export function ProjectDetailPage() {
     orderBy: { field: "creation", order: "desc" },
     limit: 100,
   })
+
+  const { data: folders, mutate: mutateFolders } = useFrappeGetDocList<VMSFolder>("VMS Folder", {
+    fields: ["name", "folder_name", "creation"],
+    filters: [["project", "=", projectId!]],
+    orderBy: { field: "folder_name", order: "asc" },
+    limit: 100,
+  })
+
+  const currentFolderDoc = useMemo(
+    () => (folders ?? []).find((f) => f.name === currentFolder) ?? null,
+    [folders, currentFolder],
+  )
 
   const handleTogglePublicReview = useCallback(
     async (assetName: string, enable: boolean) => {
@@ -94,14 +116,23 @@ export function ProjectDetailPage() {
     [callTogglePublicReview, mutateAssets],
   )
 
+  // Filter assets by current folder
+  const folderAssets = useMemo(
+    () =>
+      (assets ?? []).filter((a) =>
+        currentFolder ? a.folder === currentFolder : !a.folder
+      ),
+    [assets, currentFolder],
+  )
+
   const assetItems = useMemo(
-    () => (assets ?? []).filter((a) => a.category === "Source" || a.category === "Cut"),
-    [assets]
+    () => folderAssets.filter((a) => a.category === "Source" || a.category === "Cut"),
+    [folderAssets]
   )
 
   const exportItems = useMemo(
-    () => (assets ?? []).filter((a) => a.category === "Review" || a.category === "Final"),
-    [assets]
+    () => folderAssets.filter((a) => a.category === "Review" || a.category === "Final"),
+    [folderAssets]
   )
 
   const toggleSelect = (name: string) => {
@@ -154,12 +185,46 @@ export function ProjectDetailPage() {
     mutateAssets()
   }
 
+  const handleFolderClick = (folderName: string) => {
+    setCurrentFolder(folderName)
+    setSelected(new Set())
+  }
+
+  const handleNavigateToRoot = () => {
+    setCurrentFolder(null)
+    setSelected(new Set())
+  }
+
+  const handleDeleteFolder = async () => {
+    if (!currentFolder) return
+    try {
+      await callDeleteFolder({ folder_name: currentFolder })
+      toast.success("Folder deleted")
+      setCurrentFolder(null)
+      mutateFolders()
+      mutateAssets()
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to delete folder"
+      toast.error(message)
+    }
+  }
+
+  const handleMoveToFolderComplete = () => {
+    setSelected(new Set())
+    mutateAssets()
+  }
+
+  const handleFolderCreated = () => {
+    mutateFolders()
+  }
+
   if (!project) {
     return <div className="text-muted-foreground">Loading project...</div>
   }
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {/* Header */}
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
@@ -186,6 +251,20 @@ export function ProjectDetailPage() {
             />
           </CardContent>
         </Card>
+      )}
+
+      {/* Breadcrumb */}
+      {currentFolder && currentFolderDoc && (
+        <div className="flex items-center gap-1.5 text-sm">
+          <button
+            onClick={handleNavigateToRoot}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {project.project_name}
+          </button>
+          <span className="text-muted-foreground">/</span>
+          <span className="font-medium">{currentFolderDoc.folder_name}</span>
+        </div>
       )}
 
       <Tabs defaultValue="assets">
@@ -230,6 +309,14 @@ export function ProjectDetailPage() {
                     <span className="hidden sm:inline">Rename</span>
                   </Button>
                 )}
+                <Button variant="outline" size="sm" onClick={() => setMoveToFolderOpen(true)}>
+                  <HugeiconsIcon
+                    icon={FolderTransferIcon}
+                    strokeWidth={2}
+                    data-icon="inline-start"
+                  />
+                  <span className="hidden sm:inline">Move ({selected.size})</span>
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => setDeleteOpen(true)}>
                   <HugeiconsIcon
                     icon={Delete02Icon}
@@ -254,6 +341,26 @@ export function ProjectDetailPage() {
                 <HugeiconsIcon icon={GridViewIcon} strokeWidth={2} />
               </ToggleGroupItem>
             </ToggleGroup>
+            {!currentFolder && (
+              <Button variant="outline" size="sm" onClick={() => setCreateFolderOpen(true)}>
+                <HugeiconsIcon
+                  icon={FolderAddIcon}
+                  strokeWidth={1.5}
+                  data-icon="inline-start"
+                />
+                <span className="hidden sm:inline">New Folder</span>
+              </Button>
+            )}
+            {currentFolder && (
+              <Button variant="outline" size="sm" onClick={handleDeleteFolder}>
+                <HugeiconsIcon
+                  icon={Delete02Icon}
+                  strokeWidth={2}
+                  data-icon="inline-start"
+                />
+                <span className="hidden sm:inline">Delete Folder</span>
+              </Button>
+            )}
             <Button size="sm" onClick={() => setUploadOpen(true)}>
               <HugeiconsIcon
                 icon={CloudUploadIcon}
@@ -276,7 +383,13 @@ export function ProjectDetailPage() {
             downloadOne={downloadOne}
             onPlay={handleAssetClick}
             onTogglePublicReview={handleTogglePublicReview}
-            emptyMessage="No source or cut assets yet. Upload some files to get started."
+            folders={currentFolder ? undefined : folders ?? undefined}
+            onFolderClick={handleFolderClick}
+            emptyMessage={
+              currentFolder
+                ? "This folder is empty. Upload files or move assets here."
+                : "No source or cut assets yet. Upload some files to get started."
+            }
           />
         </TabsContent>
 
@@ -300,6 +413,7 @@ export function ProjectDetailPage() {
         open={uploadOpen}
         onOpenChange={setUploadOpen}
         project={projectId}
+        folder={currentFolder ?? undefined}
         onComplete={() => mutateAssets()}
       />
 
@@ -329,6 +443,22 @@ export function ProjectDetailPage() {
         assetName={previewAsset?.name ?? null}
         fileName={previewAsset?.file_name}
         fileType={previewAsset?.file_type}
+      />
+
+      <CreateFolderDialog
+        open={createFolderOpen}
+        onOpenChange={setCreateFolderOpen}
+        project={projectId!}
+        onComplete={handleFolderCreated}
+      />
+
+      <MoveToFolderDialog
+        open={moveToFolderOpen}
+        onOpenChange={setMoveToFolderOpen}
+        assetNames={Array.from(selected)}
+        project={projectId!}
+        currentFolder={currentFolder}
+        onComplete={handleMoveToFolderComplete}
       />
     </div>
   )
@@ -410,6 +540,53 @@ function SharePopover({
   )
 }
 
+function FolderCard({
+  folder,
+  view,
+  onClick,
+}: {
+  folder: VMSFolder
+  view: "list" | "grid"
+  onClick: () => void
+}) {
+  if (view === "list") {
+    return (
+      <Card
+        size="sm"
+        className="cursor-pointer transition-shadow hover:shadow-md"
+        onClick={onClick}
+      >
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-16 shrink-0 items-center justify-center rounded bg-muted">
+              <HugeiconsIcon icon={Folder02Icon} size={20} strokeWidth={1.5} className="text-muted-foreground" />
+            </div>
+            <CardTitle className="truncate text-sm">
+              {folder.folder_name}
+            </CardTitle>
+          </div>
+        </CardHeader>
+      </Card>
+    )
+  }
+
+  return (
+    <Card
+      className="flex cursor-pointer flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md"
+      onClick={onClick}
+    >
+      <div className="flex aspect-video w-full items-center justify-center bg-muted">
+        <HugeiconsIcon icon={Folder02Icon} size={48} strokeWidth={1.5} className="text-muted-foreground/40" />
+      </div>
+      <CardHeader>
+        <CardTitle className="truncate text-sm">
+          {folder.folder_name}
+        </CardTitle>
+      </CardHeader>
+    </Card>
+  )
+}
+
 function AssetList({
   items,
   allItems,
@@ -421,6 +598,8 @@ function AssetList({
   onPlay,
   onTogglePublicReview,
   emptyMessage,
+  folders,
+  onFolderClick,
 }: {
   items: VMSAsset[]
   allItems: VMSAsset[]
@@ -432,8 +611,13 @@ function AssetList({
   onPlay: (assetName: string) => void
   onTogglePublicReview: (assetName: string, enable: boolean) => Promise<void>
   emptyMessage: string
+  folders?: VMSFolder[]
+  onFolderClick?: (folderName: string) => void
 }) {
-  if (!items.length) {
+  const hasFolders = folders && folders.length > 0
+  const hasItems = items.length > 0
+
+  if (!hasFolders && !hasItems) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -447,22 +631,32 @@ function AssetList({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center px-3 py-1">
-        <div className="flex items-center gap-3">
-          <Checkbox
-            checked={allSelected}
-            onCheckedChange={toggleSelectAll}
-          />
-          <span className="text-sm text-muted-foreground">
-            {selected.size > 0
-              ? `${allItems.filter((a) => selected.has(a.name)).length} of ${allItems.length} selected`
-              : "Select all"}
-          </span>
+      {hasItems && (
+        <div className="flex items-center px-3 py-1">
+          <div className="flex items-center gap-3">
+            <Checkbox
+              checked={allSelected}
+              onCheckedChange={toggleSelectAll}
+            />
+            <span className="text-sm text-muted-foreground">
+              {selected.size > 0
+                ? `${allItems.filter((a) => selected.has(a.name)).length} of ${allItems.length} selected`
+                : "Select all"}
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
       {view === "list" ? (
         <div className="space-y-2">
+          {hasFolders && folders.map((folder) => (
+            <FolderCard
+              key={folder.name}
+              folder={folder}
+              view="list"
+              onClick={() => onFolderClick?.(folder.name)}
+            />
+          ))}
           {items.map((asset) => (
             <Card
               key={asset.name}
@@ -546,6 +740,14 @@ function AssetList({
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {hasFolders && folders.map((folder) => (
+            <FolderCard
+              key={folder.name}
+              folder={folder}
+              view="grid"
+              onClick={() => onFolderClick?.(folder.name)}
+            />
+          ))}
           {items.map((asset) => (
             <Card
               key={asset.name}

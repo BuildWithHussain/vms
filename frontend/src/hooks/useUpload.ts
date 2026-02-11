@@ -17,6 +17,7 @@ const MAX_CONCURRENT = 2
 export function useUpload(options?: {
   project?: string
   category?: string
+  folder?: string
   onAllComplete?: () => void
 }) {
   const [files, setFiles] = useState<FileUploadItem[]>([])
@@ -64,6 +65,7 @@ export function useUpload(options?: {
           content_type: item.file.type || "application/octet-stream",
           project: options?.project || undefined,
           category: options?.category || "Source",
+          folder: options?.folder || undefined,
         })
 
         const { upload_url, asset_name } = res.message as {
@@ -138,7 +140,7 @@ export function useUpload(options?: {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [options?.project, options?.category]
+    [options?.project, options?.category, options?.folder]
   )
 
   const cancelFile = useCallback(

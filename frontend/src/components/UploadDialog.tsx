@@ -25,6 +25,7 @@ interface UploadDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   project?: string
+  folder?: string
   onComplete?: () => void
 }
 
@@ -32,6 +33,7 @@ export function UploadDialog({
   open,
   onOpenChange,
   project,
+  folder,
   onComplete,
 }: UploadDialogProps) {
   const [category, setCategory] = useState<string>("Source")
@@ -40,6 +42,7 @@ export function UploadDialog({
   const { files, addFiles, cancelFile, reset, isUploading } = useUpload({
     project,
     category,
+    folder,
     onAllComplete: () => {
       onComplete?.()
     },

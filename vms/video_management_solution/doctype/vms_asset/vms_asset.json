@@ -7,6 +7,7 @@
  "field_order": [
   "naming_series",
   "project",
+  "folder",
   "file_name",
   "category",
   "status",
@@ -40,6 +41,12 @@
    "in_list_view": 1,
    "label": "Project",
    "options": "VMS Project"
+  },
+  {
+   "fieldname": "folder",
+   "fieldtype": "Link",
+   "label": "Folder",
+   "options": "VMS Folder"
   },
   {
    "fieldname": "file_name",
@@ -141,7 +148,7 @@
   }
  ],
  "links": [],
- "modified": "2026-02-09 11:00:00.000000",
+ "modified": "2026-02-11 19:05:00.000000",
  "modified_by": "Administrator",
  "module": "Video Management Solution",
  "name": "VMS Asset",

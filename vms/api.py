@@ -63,7 +63,7 @@ def fail_upload(asset_name: str):
 
 
 @frappe.whitelist()
-def get_upload_url(file_name: str, content_type: str, project: str | None = None, category: str = "Source"):
+def get_upload_url(file_name: str, content_type: str, project: str | None = None, category: str = "Source", folder: str | None = None):
 	"""Generate a presigned upload URL for direct upload to R2.
 
 	Returns dict with upload_url, r2_key, and asset_name.
@@ -91,6 +91,16 @@ def get_upload_url(file_name: str, content_type: str, project: str | None = None
 	# Generate presigned URL
 	upload_url, r2_key = generate_presigned_upload_url(file_name, content_type, project)
 
+	# Validate folder belongs to the project (if provided)
+	if folder:
+		if not project:
+			frappe.throw(_("Cannot specify a folder without a project"))
+		folder_doc = frappe.db.get_value("VMS Folder", folder, ["project"], as_dict=True)
+		if not folder_doc:
+			frappe.throw(_("Folder {0} does not exist").format(folder))
+		if folder_doc.project != project:
+			frappe.throw(_("Folder does not belong to this project"))
+
 	# Create asset record in Uploading status
 	asset_doc = {
 		"doctype": "VMS Asset",
@@ -103,6 +113,8 @@ def get_upload_url(file_name: str, content_type: str, project: str | None = None
 	}
 	if project:
 		asset_doc["project"] = project
+	if folder:
+		asset_doc["folder"] = folder
 
 	asset = frappe.get_doc(asset_doc)
 	asset.insert(ignore_permissions=True)
@@ -209,9 +221,97 @@ def move_asset(asset_name: str, target_project: str):
 
 	asset = frappe.get_doc("VMS Asset", asset_name)
 	asset.project = target_project
+	asset.folder = None  # clear folder when moving to a different project
 	asset.save(ignore_permissions=True)
 
 	return {"status": "ok", "asset_name": asset.name, "project": target_project}
+
+
+@frappe.whitelist()
+def create_folder(folder_name: str, project: str):
+	"""Create a folder within a project."""
+	folder_name = (folder_name or "").strip()
+	if not folder_name:
+		frappe.throw(_("Folder name cannot be empty"))
+	if not frappe.db.exists("VMS Project", project):
+		frappe.throw(_("Project {0} does not exist").format(project))
+
+	# Check for duplicate folder name in the same project
+	existing = frappe.db.exists(
+		"VMS Folder", {"folder_name": folder_name, "project": project}
+	)
+	if existing:
+		frappe.throw(_("A folder named '{0}' already exists in this project").format(folder_name))
+
+	doc = frappe.get_doc(
+		{
+			"doctype": "VMS Folder",
+			"folder_name": folder_name,
+			"project": project,
+		}
+	)
+	doc.insert(ignore_permissions=True)
+
+	return {"name": doc.name, "folder_name": doc.folder_name, "project": doc.project}
+
+
+@frappe.whitelist()
+def rename_folder(folder_name_id: str, new_name: str):
+	"""Rename a folder."""
+	new_name = (new_name or "").strip()
+	if not new_name:
+		frappe.throw(_("Folder name cannot be empty"))
+
+	folder = frappe.get_doc("VMS Folder", folder_name_id)
+
+	# Check for duplicate name in same project
+	existing = frappe.db.exists(
+		"VMS Folder", {"folder_name": new_name, "project": folder.project, "name": ["!=", folder.name]}
+	)
+	if existing:
+		frappe.throw(_("A folder named '{0}' already exists in this project").format(new_name))
+
+	folder.folder_name = new_name
+	folder.save(ignore_permissions=True)
+
+	return {"name": folder.name, "folder_name": folder.folder_name}
+
+
+@frappe.whitelist()
+def delete_folder(folder_name: str):
+	"""Delete a folder and move its assets back to the project root."""
+	folder = frappe.get_doc("VMS Folder", folder_name)
+
+	# Move all assets in this folder back to project root (folder = None)
+	frappe.db.set_value(
+		"VMS Asset",
+		{"folder": folder_name},
+		"folder",
+		None,
+		update_modified=False,
+	)
+
+	folder.delete(ignore_permissions=True)
+	return {"status": "ok"}
+
+
+@frappe.whitelist()
+def move_assets_to_folder(asset_names: str | list, folder: str | None = None):
+	"""Move assets into a folder (or back to project root if folder is None)."""
+	if isinstance(asset_names, str):
+		import json
+
+		asset_names = json.loads(asset_names)
+
+	if folder and not frappe.db.exists("VMS Folder", folder):
+		frappe.throw(_("Folder {0} does not exist").format(folder))
+
+	for asset_name in asset_names:
+		asset = frappe.get_doc("VMS Asset", asset_name)
+		asset.folder = folder
+		asset.save(ignore_permissions=True)
+
+	return {"status": "ok", "count": len(asset_names)}
 
 
 @frappe.whitelist()

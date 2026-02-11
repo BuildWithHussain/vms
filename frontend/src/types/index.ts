@@ -10,9 +10,18 @@ export interface VMSProject {
   modified: string
 }
 
+export interface VMSFolder {
+  name: string
+  folder_name: string
+  project: string
+  creation: string
+  modified: string
+}
+
 export interface VMSAsset {
   name: string
   project?: string
+  folder?: string
   file_name: string
   r2_key: string
   file_size?: number
