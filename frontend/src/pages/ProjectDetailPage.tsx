@@ -40,6 +40,7 @@ import { MediaPlayerDialog } from "@/components/MediaPlayerDialog"
 import { CreateFolderDialog } from "@/components/CreateFolderDialog"
 import { RenameFolderDialog } from "@/components/RenameFolderDialog"
 import { MoveToFolderDialog } from "@/components/MoveToFolderDialog"
+import { DropZoneOverlay } from "@/components/DropZoneOverlay"
 import { useDownload } from "@/hooks/useDownload"
 import { UserAvatar } from "@/components/UserAvatar"
 import { toast } from "sonner"
@@ -61,6 +62,7 @@ export function ProjectDetailPage() {
   const [createFolderOpen, setCreateFolderOpen] = useState(false)
   const [renameFolderOpen, setRenameFolderOpen] = useState(false)
   const [moveToFolderOpen, setMoveToFolderOpen] = useState(false)
+  const [droppedFiles, setDroppedFiles] = useState<File[]>([])
   const [previewAsset, setPreviewAsset] = useState<VMSAsset | null>(null)
   const [view, setView] = useState<"list" | "grid">("grid")
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -216,6 +218,11 @@ export function ProjectDetailPage() {
     mutateAssets()
   }
 
+  const handlePageDrop = useCallback((files: File[]) => {
+    setDroppedFiles(files)
+    setUploadOpen(true)
+  }, [])
+
   const handleFolderCreated = () => {
     mutateFolders()
   }
@@ -229,6 +236,7 @@ export function ProjectDetailPage() {
   }
 
   return (
+    <DropZoneOverlay onDrop={handlePageDrop}>
     <div className="space-y-4 md:space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
@@ -427,10 +435,14 @@ export function ProjectDetailPage() {
 
       <UploadDialog
         open={uploadOpen}
-        onOpenChange={setUploadOpen}
+        onOpenChange={(open) => {
+          setUploadOpen(open)
+          if (!open) setDroppedFiles([])
+        }}
         project={projectId}
         folder={currentFolder ?? undefined}
         existingFileNames={folderAssets.map((a) => a.file_name)}
+        initialFiles={droppedFiles.length > 0 ? droppedFiles : undefined}
         onComplete={() => mutateAssets()}
       />
 
@@ -488,6 +500,7 @@ export function ProjectDetailPage() {
         onComplete={handleMoveToFolderComplete}
       />
     </div>
+    </DropZoneOverlay>
   )
 }
 

@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react"
+import { DropZoneOverlay } from "@/components/DropZoneOverlay"
 import { useNavigate } from "react-router"
 import { useFrappeGetDocList } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -38,6 +39,7 @@ export function InboxPage() {
   const [renameOpen, setRenameOpen] = useState(false)
   const [previewAsset, setPreviewAsset] = useState<VMSAsset | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [droppedFiles, setDroppedFiles] = useState<File[]>([])
   const [view, setView] = useState<"list" | "grid">("grid")
   const { downloadOne, downloadMany, isDownloading } = useDownload()
 
@@ -110,9 +112,15 @@ export function InboxPage() {
     downloadMany(toDownload)
   }
 
+  const handlePageDrop = useCallback((files: File[]) => {
+    setDroppedFiles(files)
+    setUploadOpen(true)
+  }, [])
+
   const allSelected = assets && assets.length > 0 && selected.size === assets.length
 
   return (
+    <DropZoneOverlay onDrop={handlePageDrop}>
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -384,8 +392,12 @@ export function InboxPage() {
 
       <UploadDialog
         open={uploadOpen}
-        onOpenChange={setUploadOpen}
+        onOpenChange={(open) => {
+          setUploadOpen(open)
+          if (!open) setDroppedFiles([])
+        }}
         existingFileNames={(assets ?? []).map((a) => a.file_name)}
+        initialFiles={droppedFiles.length > 0 ? droppedFiles : undefined}
         onComplete={() => mutate()}
       />
 
@@ -424,5 +436,6 @@ export function InboxPage() {
         fileType={previewAsset?.file_type}
       />
     </div>
+    </DropZoneOverlay>
   )
 }

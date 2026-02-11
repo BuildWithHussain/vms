@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react"
+import { useRef, useState, useCallback, useEffect } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CloudUploadIcon, Tick02Icon, Cancel01Icon, AlertCircleIcon, RefreshIcon } from "@hugeicons/core-free-icons"
 import {
@@ -33,6 +33,7 @@ interface UploadDialogProps {
   project?: string
   folder?: string
   existingFileNames?: string[]
+  initialFiles?: File[]
   onComplete?: () => void
 }
 
@@ -56,12 +57,14 @@ export function UploadDialog({
   project,
   folder,
   existingFileNames,
+  initialFiles,
   onComplete,
 }: UploadDialogProps) {
   const [category, setCategory] = useState<string>("Source")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [duplicates, setDuplicates] = useState<DuplicateFile[]>([])
   const [nonDuplicates, setNonDuplicates] = useState<File[]>([])
+  const initialFilesProcessed = useRef(false)
 
   const { files, addFiles, cancelFile, retryFile, reset, isUploading } = useUpload({
     project,
@@ -73,6 +76,17 @@ export function UploadDialog({
   })
 
   const existingSet = new Set(existingFileNames ?? [])
+
+  // Process initial files when dialog opens with them (e.g. from page-level drop)
+  useEffect(() => {
+    if (open && initialFiles && initialFiles.length > 0 && !initialFilesProcessed.current) {
+      initialFilesProcessed.current = true
+      processIncomingFiles(initialFiles)
+    }
+    if (!open) {
+      initialFilesProcessed.current = false
+    }
+  }, [open, initialFiles]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const processIncomingFiles = useCallback(
     (incoming: File[]) => {
