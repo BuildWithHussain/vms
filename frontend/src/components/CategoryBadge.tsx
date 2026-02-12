@@ -8,6 +8,8 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 
 const CATEGORIES = ["Asset", "For Review", "Deliverable"] as const
@@ -50,8 +52,9 @@ export function CategoryBadge({
         className="cursor-pointer"
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
       >
-        <Badge variant={categoryVariant[current] ?? "outline"}>
+        <Badge variant={categoryVariant[current] ?? "outline"} className="gap-1">
           {current}
+          <HugeiconsIcon icon={ArrowDown01Icon} size={12} strokeWidth={2} />
         </Badge>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-36" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
