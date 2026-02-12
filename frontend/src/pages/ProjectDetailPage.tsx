@@ -41,17 +41,12 @@ import { CreateFolderDialog } from "@/components/CreateFolderDialog"
 import { RenameFolderDialog } from "@/components/RenameFolderDialog"
 import { MoveToFolderDialog } from "@/components/MoveToFolderDialog"
 import { DropZoneOverlay } from "@/components/DropZoneOverlay"
+import { CategoryBadge } from "@/components/CategoryBadge"
 import { useDownload } from "@/hooks/useDownload"
 import { UserAvatar } from "@/components/UserAvatar"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { VMSProject, VMSAsset, VMSFolder } from "@/types"
-
-const categoryVariant: Record<string, "default" | "secondary" | "outline"> = {
-  Asset: "outline",
-  "For Review": "default",
-  Deliverable: "secondary",
-}
 
 export function ProjectDetailPage() {
   const { projectId } = useParams()
@@ -459,6 +454,7 @@ export function ProjectDetailPage() {
             downloadOne={downloadOne}
             onPlay={handleAssetClick}
             onTogglePublicReview={handleTogglePublicReview}
+            onCategoryChanged={() => mutateAssets()}
             folders={currentFolder ? undefined : folders ?? undefined}
             onFolderClick={handleFolderClick}
             onDropToFolder={currentFolder ? undefined : handleDropToFolder}
@@ -482,6 +478,7 @@ export function ProjectDetailPage() {
             downloadOne={downloadOne}
             onPlay={handleAssetClick}
             onTogglePublicReview={handleTogglePublicReview}
+            onCategoryChanged={() => mutateAssets()}
             emptyMessage="No assets marked for review yet."
           />
         </TabsContent>
@@ -497,6 +494,7 @@ export function ProjectDetailPage() {
             downloadOne={downloadOne}
             onPlay={handleAssetClick}
             onTogglePublicReview={handleTogglePublicReview}
+            onCategoryChanged={() => mutateAssets()}
             emptyMessage="No deliverables yet."
           />
         </TabsContent>
@@ -793,6 +791,7 @@ function AssetList({
   downloadOne,
   onPlay,
   onTogglePublicReview,
+  onCategoryChanged,
   emptyMessage,
   folders,
   onFolderClick,
@@ -808,6 +807,7 @@ function AssetList({
   downloadOne: (assetName: string, fileName?: string) => void
   onPlay: (assetName: string) => void
   onTogglePublicReview: (assetName: string, enable: boolean) => Promise<void>
+  onCategoryChanged?: () => void
   emptyMessage: string
   folders?: VMSFolder[]
   onFolderClick?: (folderName: string) => void
@@ -941,11 +941,11 @@ function AssetList({
                           </Button>
                         </>
                       )}
-                      <Badge
-                        variant={categoryVariant[asset.category] ?? "outline"}
-                      >
-                        {asset.category}
-                      </Badge>
+                      <CategoryBadge
+                        assetName={asset.name}
+                        category={asset.category}
+                        onChanged={onCategoryChanged}
+                      />
                       <Badge
                         variant={
                           asset.status === "Ready" ? "secondary" : "outline"
@@ -1022,11 +1022,11 @@ function AssetList({
               <CardContent className="mt-auto space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex flex-wrap gap-1.5">
-                    <Badge
-                      variant={categoryVariant[asset.category] ?? "outline"}
-                    >
-                      {asset.category}
-                    </Badge>
+                    <CategoryBadge
+                      assetName={asset.name}
+                      category={asset.category}
+                      onChanged={onCategoryChanged}
+                    />
                     <Badge
                       variant={
                         asset.status === "Ready" ? "secondary" : "outline"

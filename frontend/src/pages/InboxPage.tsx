@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react"
 import { DropZoneOverlay } from "@/components/DropZoneOverlay"
+import { CategoryBadge } from "@/components/CategoryBadge"
 import { useNavigate } from "react-router"
 import { useFrappeGetDocList } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -24,12 +25,6 @@ import { useDownload } from "@/hooks/useDownload"
 import { UserAvatar } from "@/components/UserAvatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { VMSAsset } from "@/types"
-
-const categoryVariant: Record<string, "default" | "secondary" | "outline"> = {
-  Asset: "outline",
-  "For Review": "default",
-  Deliverable: "secondary",
-}
 
 export function InboxPage() {
   const navigate = useNavigate()
@@ -295,11 +290,11 @@ export function InboxPage() {
                               <HugeiconsIcon icon={Download04Icon} strokeWidth={2} />
                             </Button>
                           )}
-                          <Badge
-                            variant={categoryVariant[asset.category] ?? "outline"}
-                          >
-                            {asset.category}
-                          </Badge>
+                          <CategoryBadge
+                            assetName={asset.name}
+                            category={asset.category}
+                            onChanged={() => mutate()}
+                          />
                           <Badge
                             variant={
                               asset.status === "Ready" ? "secondary" : "outline"
@@ -363,11 +358,11 @@ export function InboxPage() {
                   <CardContent className="mt-auto space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="flex flex-wrap gap-1.5">
-                        <Badge
-                          variant={categoryVariant[asset.category] ?? "outline"}
-                        >
-                          {asset.category}
-                        </Badge>
+                        <CategoryBadge
+                          assetName={asset.name}
+                          category={asset.category}
+                          onChanged={() => mutate()}
+                        />
                         <Badge
                           variant={
                             asset.status === "Ready" ? "secondary" : "outline"
