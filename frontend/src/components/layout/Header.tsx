@@ -1,10 +1,11 @@
 import { useState } from "react"
 import { useFrappeAuth } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { CloudUploadIcon, LogoutIcon, UserCircleIcon } from "@hugeicons/core-free-icons"
+import { CloudUploadIcon, LogoutIcon, UserCircleIcon, Notification01Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { UploadDialog } from "@/components/UploadDialog"
+import { NotificationSheet, useNotifications } from "@/components/NotificationSheet"
 import { ModeToggle } from "@/components/mode-toggle"
 import { useUser } from "@/context/UserContext"
 
@@ -12,6 +13,8 @@ export function Header() {
   const { logout } = useFrappeAuth()
   const { user } = useUser()
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const { unreadCount } = useNotifications()
 
   const handleLogout = () => {
     logout()
@@ -28,6 +31,19 @@ export function Header() {
           <HugeiconsIcon icon={CloudUploadIcon} strokeWidth={1.5} data-icon="inline-start" />
           <span className="hidden sm:inline">Upload</span>
         </Button>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => setNotificationsOpen(true)}
+          className="relative"
+        >
+          <HugeiconsIcon icon={Notification01Icon} strokeWidth={2} />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </Button>
         <div className="hidden items-center gap-2 text-sm text-muted-foreground sm:flex">
           <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} className="size-5" />
           <span>{user?.full_name || user?.email}</span>
@@ -38,6 +54,7 @@ export function Header() {
         </Button>
       </div>
       <UploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />
+      <NotificationSheet open={notificationsOpen} onOpenChange={setNotificationsOpen} />
     </header>
   )
 }
