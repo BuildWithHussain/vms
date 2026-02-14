@@ -11,6 +11,7 @@ from vms.r2 import generate_presigned_view_url
 
 IMAGE_MIME_PREFIXES = ("image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp", "image/tiff")
 THUMB_MAX_WIDTH = 640
+THUMB_QUALITY = 60
 
 
 def _is_image(file_type):
@@ -26,17 +27,17 @@ def _download_file(presigned_url, dest_path):
 
 
 def _generate_image_thumbnail(src_path, thumb_path):
-	"""Resize image to max THUMB_MAX_WIDTH wide, save as JPEG."""
+	"""Resize image to max THUMB_MAX_WIDTH wide, save as WebP."""
 	img = Image.open(src_path)
 	img = img.convert("RGB")
 	if img.width > THUMB_MAX_WIDTH:
 		ratio = THUMB_MAX_WIDTH / img.width
 		img = img.resize((THUMB_MAX_WIDTH, int(img.height * ratio)), Image.LANCZOS)
-	img.save(thumb_path, "JPEG", quality=80)
+	img.save(thumb_path, "WEBP", quality=THUMB_QUALITY)
 
 
 def _generate_video_thumbnail(video_path, thumb_path, asset_name):
-	"""Extract a single frame at 1s using FFmpeg."""
+	"""Extract a single frame at 1s using FFmpeg, output as WebP."""
 	result = subprocess.run(
 		[
 			"ffmpeg",
@@ -46,10 +47,10 @@ def _generate_video_thumbnail(video_path, thumb_path, asset_name):
 			video_path,
 			"-vframes",
 			"1",
-			"-f",
-			"image2",
-			"-q:v",
-			"3",
+			"-c:v",
+			"libwebp",
+			"-quality",
+			str(THUMB_QUALITY),
 			thumb_path,
 		],
 		capture_output=True,
@@ -65,7 +66,7 @@ def _generate_video_thumbnail(video_path, thumb_path, asset_name):
 
 
 def generate_thumbnail(asset_name):
-	"""Generate a JPEG thumbnail from an asset (runs as background job).
+	"""Generate a WebP thumbnail from an asset (runs as background job).
 
 	For videos: extracts a single frame at 1s using FFmpeg.
 	For images: resizes to max 640px wide.
@@ -83,7 +84,7 @@ def generate_thumbnail(asset_name):
 		presigned_url = generate_presigned_view_url(asset.r2_key)
 		ext = asset.file_name.rsplit(".", 1)[-1].lower() if "." in asset.file_name else "bin"
 		src_path = os.path.join(tmp_dir, f"input.{ext}")
-		thumb_path = os.path.join(tmp_dir, "thumb.jpg")
+		thumb_path = os.path.join(tmp_dir, "thumb.webp")
 
 		_download_file(presigned_url, src_path)
 
@@ -99,7 +100,7 @@ def generate_thumbnail(asset_name):
 		file_doc = frappe.get_doc(
 			{
 				"doctype": "File",
-				"file_name": f"{asset_name}.jpg",
+				"file_name": f"{asset_name}.webp",
 				"attached_to_doctype": "VMS Asset",
 				"attached_to_name": asset_name,
 				"content": content,
