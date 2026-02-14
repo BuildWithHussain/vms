@@ -166,7 +166,7 @@ export function AppSidebar({ onOpenSettings }: { onOpenSettings: () => void }) {
                     {user?.full_name ? getInitials(user.full_name) : "?"}
                   </AvatarFallback>
                 </Avatar>
-                <span className="truncate text-sm">{user?.email}</span>
+                <span className="truncate text-sm">{user?.full_name}</span>
                 <HugeiconsIcon icon={ArrowUp01Icon} strokeWidth={2} className="ml-auto size-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent
