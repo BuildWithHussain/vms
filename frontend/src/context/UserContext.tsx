@@ -1,4 +1,4 @@
-import { createContext, useContext } from "react"
+import { createContext, use } from "react"
 import { useFrappeAuth, useFrappeGetDoc } from "frappe-react-sdk"
 
 interface UserData {
@@ -49,5 +49,5 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useUser() {
-  return useContext(UserContext)
+  return use(UserContext)
 }
