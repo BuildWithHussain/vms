@@ -50,11 +50,12 @@ function uploadPart(
     xhr.onload = () => {
       xhrRef.current = null
       if (xhr.status >= 200 && xhr.status < 300) {
-        const etag = xhr.getResponseHeader("ETag")
-        if (!etag) {
+        const rawEtag = xhr.getResponseHeader("ETag")
+        if (!rawEtag) {
           reject(new Error("Server did not return ETag for part"))
         } else {
-          resolve(etag)
+          // S3/R2 returns ETags with surrounding quotes — strip them
+          resolve(rawEtag.replace(/^"|"$/g, ""))
         }
       } else {
         reject(new Error(`Part upload failed with status ${xhr.status}`))

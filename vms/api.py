@@ -183,6 +183,17 @@ def complete_multipart(asset_name: str, upload_id: str, parts: str | list):
 	if isinstance(parts, str):
 		parts = json.loads(parts)
 
+	if not parts:
+		frappe.throw(_("No parts provided for multipart completion"))
+
+	# Sanitize ETags — S3/R2 requires them without surrounding quotes
+	for part in parts:
+		if isinstance(part.get("ETag"), str):
+			part["ETag"] = part["ETag"].strip('"')
+
+	# Sort by part number to ensure correct order
+	parts = sorted(parts, key=lambda p: p["PartNumber"])
+
 	asset = frappe.get_doc("VMS Asset", asset_name)
 	if asset.status != "Uploading":
 		frappe.throw(_("Asset is not in Uploading status"))
