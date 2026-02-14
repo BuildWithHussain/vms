@@ -23,7 +23,7 @@ TL;DR - build a tiny, end-to-end slice of the feature first, then expand it out.
 3. Polish and quick wins
 4. Refactors
 
-If all tasks are complete, output COMPLETE.
+If all tasks are complete, output COMPLETE. Then push the commits.
 
 ## EXPLORATION
 
