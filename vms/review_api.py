@@ -288,30 +288,35 @@ def toggle_public_review(asset_name: str, enable: int):
 def get_mentionable_users():
 	"""Get list of users who can be @mentioned in comments.
 
-	Returns all users with Video Manager or System Manager role.
+	Returns only users with VMS-related roles (Video Manager or System Manager).
 	"""
+	vms_roles = ["Video Manager", "System Manager"]
+
+	# Get distinct users who have at least one VMS role
+	user_emails = list(
+		set(
+			frappe.get_all(
+				"Has Role",
+				filters={
+					"role": ["in", vms_roles],
+					"parenttype": "User",
+				},
+				pluck="parent",
+			)
+		)
+	)
+
+	if not user_emails:
+		return []
+
 	users = frappe.get_all(
 		"User",
 		filters={
 			"enabled": 1,
-			"user_type": "System User",
-			"name": ["not in", ["Guest", "Administrator"]],
+			"name": ["in", user_emails],
 		},
 		fields=["name", "full_name", "user_image"],
 	)
-
-	# Also include Administrator with proper name
-	admin = frappe.db.get_value(
-		"User", "Administrator", ["full_name", "user_image"], as_dict=True
-	)
-	if admin:
-		users.append(
-			{
-				"name": "Administrator",
-				"full_name": admin.full_name or "Administrator",
-				"user_image": admin.user_image,
-			}
-		)
 
 	return users
 
