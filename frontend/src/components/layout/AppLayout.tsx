@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Outlet } from "react-router"
 import { AppSidebar } from "./Sidebar"
 import { Header } from "./Header"
@@ -18,6 +18,14 @@ export function AppLayout() {
     setSettingsOpen(true)
   }
 
+  // Refs for dialog state — read inside keydown handler without re-subscribing
+  const settingsOpenRef = useRef(settingsOpen)
+  const uploadOpenRef = useRef(uploadOpen)
+  const commandPaletteOpenRef = useRef(commandPalette.open)
+  settingsOpenRef.current = settingsOpen
+  uploadOpenRef.current = uploadOpen
+  commandPaletteOpenRef.current = commandPalette.open
+
   // Global keyboard shortcuts (single-key, no modifiers)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -26,7 +34,7 @@ export function AppLayout() {
       const tag = (e.target as HTMLElement)?.tagName
       if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return
       // Skip if any dialog is open
-      if (settingsOpen || uploadOpen || commandPalette.open) return
+      if (settingsOpenRef.current || uploadOpenRef.current || commandPaletteOpenRef.current) return
 
       if (e.key === "u" || e.key === "U") {
         e.preventDefault()
@@ -35,7 +43,7 @@ export function AppLayout() {
     }
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [settingsOpen, uploadOpen, commandPalette.open])
+  }, [])
 
   return (
     <SidebarProvider>
