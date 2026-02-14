@@ -642,3 +642,23 @@ def search_assets(query: str, project: str | None = None, limit: int = 10):
 		r["project_name"] = project_map.get(r.get("project"), r.get("project"))
 
 	return {"results": results}
+
+
+@frappe.whitelist(methods=["GET"])
+def search_projects(query: str, limit: int = 5):
+	"""Search VMS projects by name."""
+	query = (query or "").strip()
+	if not query:
+		return {"results": []}
+
+	limit = min(20, max(1, int(limit)))
+
+	results = frappe.get_all(
+		"VMS Project",
+		filters={"project_name": ["like", f"%{query}%"]},
+		fields=["name", "project_name", "status"],
+		order_by="modified desc",
+		page_length=limit,
+	)
+
+	return {"results": results}

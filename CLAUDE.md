@@ -8,7 +8,7 @@ VMS (Video Management Solution) is a Frappe application with a React frontend. I
 
 ## Testing
 
-After building a frontend feature, test using the agent-browser, the site name is vms.localhost:8000. For backend testing etc. using bench CLI (execute, etc.)
+After building a frontend feature, test using the agent-browser, the site name is vms.localhost:8000/vms. For backend testing etc. using bench CLI (execute, etc.)
 
 ## Common Commands
 

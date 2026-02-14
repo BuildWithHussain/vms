@@ -41,6 +41,12 @@ interface SearchResult {
   file_type?: string
 }
 
+interface ProjectResult {
+  name: string
+  project_name: string
+  status?: string
+}
+
 export function CommandPalette({
   open,
   onOpenChange,
@@ -76,6 +82,21 @@ export function CommandPalette({
 
   const searchResults = searchData?.message?.results || []
 
+  // Search projects when query has 2+ chars and not already in a project context
+  const shouldSearchProjects = shouldSearch && !currentProjectId
+  const { data: projectSearchData } = useFrappeGetCall<{
+    message: { results: ProjectResult[] }
+  }>(
+    shouldSearchProjects ? "vms.api.search_projects" : null,
+    shouldSearchProjects
+      ? { query: query.trim(), limit: 5 }
+      : undefined,
+    undefined,
+    { revalidateOnFocus: false }
+  )
+
+  const projectResults = projectSearchData?.message?.results || []
+
   const runCommand = useCallback(
     (command: () => void) => {
       onOpenChange(false)
@@ -104,7 +125,10 @@ export function CommandPalette({
           onValueChange={setQuery}
         />
         <CommandList>
-          <CommandEmpty>No results found.</CommandEmpty>
+          {/* Hide empty state when forceMount results exist */}
+          {!(shouldSearch && (searchResults.length > 0 || projectResults.length > 0)) && (
+            <CommandEmpty>No results found.</CommandEmpty>
+          )}
 
           {/* Search Results */}
           {shouldSearch && searchResults.length > 0 && (
@@ -138,6 +162,41 @@ export function CommandPalette({
                     {result.category && (
                       <span className="text-xs text-muted-foreground">
                         {result.category}
+                      </span>
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              <CommandSeparator />
+            </>
+          )}
+
+          {/* Project Search Results */}
+          {shouldSearchProjects && projectResults.length > 0 && (
+            <>
+              <CommandGroup heading="Projects" forceMount>
+                {projectResults.map((project) => (
+                  <CommandItem
+                    key={project.name}
+                    value={`project-${project.name}`}
+                    forceMount
+                    onSelect={() =>
+                      runCommand(() =>
+                        navigate(`/projects/${project.name}`)
+                      )
+                    }
+                  >
+                    <HugeiconsIcon
+                      icon={FolderVideoIcon}
+                      strokeWidth={2}
+                      className="size-4"
+                    />
+                    <span className="flex-1 truncate">
+                      {project.project_name}
+                    </span>
+                    {project.status && (
+                      <span className="text-xs text-muted-foreground">
+                        {project.status}
                       </span>
                     )}
                   </CommandItem>
