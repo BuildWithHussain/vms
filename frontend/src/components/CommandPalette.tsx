@@ -93,7 +93,7 @@ export function CommandPalette({
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <Command shouldFilter={!shouldSearch}>
+      <Command>
         <CommandInput
           placeholder={
             currentProjectId
@@ -111,11 +111,13 @@ export function CommandPalette({
             <>
               <CommandGroup
                 heading={currentProjectId ? "Files in project" : "Files"}
+                forceMount
               >
                 {searchResults.map((result) => (
                   <CommandItem
                     key={result.name}
                     value={`file-${result.name}`}
+                    forceMount
                     onSelect={() =>
                       runCommand(() =>
                         navigate(`/review/${result.name}`)
@@ -148,6 +150,8 @@ export function CommandPalette({
           {/* Navigation Commands */}
           <CommandGroup heading="Navigation">
             <CommandItem
+              value="dashboard"
+              keywords={["home", "overview"]}
               onSelect={() => runCommand(() => navigate("/"))}
             >
               <HugeiconsIcon
@@ -158,6 +162,8 @@ export function CommandPalette({
               <span>Go to Dashboard</span>
             </CommandItem>
             <CommandItem
+              value="inbox"
+              keywords={["messages", "notifications"]}
               onSelect={() => runCommand(() => navigate("/inbox"))}
             >
               <HugeiconsIcon
@@ -168,6 +174,8 @@ export function CommandPalette({
               <span>Go to Inbox</span>
             </CommandItem>
             <CommandItem
+              value="projects"
+              keywords={["folders", "videos"]}
               onSelect={() => runCommand(() => navigate("/projects"))}
             >
               <HugeiconsIcon
@@ -178,6 +186,8 @@ export function CommandPalette({
               <span>Go to Projects</span>
             </CommandItem>
             <CommandItem
+              value="audit logs"
+              keywords={["history", "activity"]}
               onSelect={() => runCommand(() => navigate("/audit-logs"))}
             >
               <HugeiconsIcon
@@ -194,6 +204,8 @@ export function CommandPalette({
           {/* Actions */}
           <CommandGroup heading="Actions">
             <CommandItem
+              value="upload files"
+              keywords={["add", "import"]}
               onSelect={() =>
                 runCommand(() => onOpenUpload())
               }
@@ -207,6 +219,8 @@ export function CommandPalette({
               <CommandShortcut>U</CommandShortcut>
             </CommandItem>
             <CommandItem
+              value="settings"
+              keywords={["preferences", "config"]}
               onSelect={() =>
                 runCommand(() => onOpenSettings())
               }
@@ -219,6 +233,8 @@ export function CommandPalette({
               <span>Open Settings</span>
             </CommandItem>
             <CommandItem
+              value="invite user"
+              keywords={["add user", "team"]}
               onSelect={() =>
                 runCommand(() => {
                   onOpenSettings()
@@ -234,6 +250,8 @@ export function CommandPalette({
               <span>Invite User</span>
             </CommandItem>
             <CommandItem
+              value="profile"
+              keywords={["account", "user", "me"]}
               onSelect={() =>
                 runCommand(() => onOpenSettings())
               }
