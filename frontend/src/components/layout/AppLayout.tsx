@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Outlet } from "react-router"
 import { AppSidebar } from "./Sidebar"
 import { Header } from "./Header"
@@ -17,6 +17,25 @@ export function AppLayout() {
     setSettingsTab(tab)
     setSettingsOpen(true)
   }
+
+  // Global keyboard shortcuts (single-key, no modifiers)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if any modifier is held or if typing in an input
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return
+      // Skip if any dialog is open
+      if (settingsOpen || uploadOpen || commandPalette.open) return
+
+      if (e.key === "u" || e.key === "U") {
+        e.preventDefault()
+        setUploadOpen(true)
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [settingsOpen, uploadOpen, commandPalette.open])
 
   return (
     <SidebarProvider>
