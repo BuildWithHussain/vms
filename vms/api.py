@@ -5,8 +5,12 @@ import requests
 from frappe import _
 
 from vms.r2 import (
+	abort_multipart_upload,
+	complete_multipart_upload,
+	create_multipart_upload,
 	delete_r2_object,
 	generate_presigned_download_url,
+	generate_presigned_part_url,
 	generate_presigned_upload_url,
 	generate_presigned_view_url,
 	get_r2_client,
@@ -64,20 +68,35 @@ def fail_upload(asset_name: str):
 	return {"status": "ok"}
 
 
+# 100 MB threshold — files larger than this use multipart upload
+MULTIPART_THRESHOLD = 100 * 1024 * 1024
+# 50 MB per part (R2/S3 minimum is 5 MB, max 5 GB per part)
+MULTIPART_PART_SIZE = 50 * 1024 * 1024
+
+
 @frappe.whitelist()
 def get_upload_url(
 	file_name: str,
 	content_type: str,
+	file_size: int = 0,
 	project: str | None = None,
 	category: str = "Asset",
 	folder: str | None = None,
 ):
 	"""Generate a presigned upload URL for direct upload to R2.
 
-	Returns dict with upload_url, r2_key, and asset_name.
+	For files > 100 MB, initiates a multipart upload instead.
+	Returns dict with upload_url (or upload_id for multipart), r2_key, and asset_name.
 	If project is omitted, the asset goes to the Inbox.
 	"""
 	settings = frappe.get_single("VMS Settings")
+	file_size = int(file_size or 0)
+
+	# Validate file size against settings
+	max_size = int(settings.max_file_size or 0)
+	if max_size and file_size and file_size > max_size:
+		max_gb = round(max_size / (1024**3), 1)
+		frappe.throw(_("File size exceeds the maximum allowed size of {0} GB").format(max_gb))
 
 	# Validate file extension
 	ext = file_name.rsplit(".", 1)[-1].lower() if "." in file_name else ""
@@ -96,9 +115,6 @@ def get_upload_url(
 			_("Invalid category '{0}'. Must be one of: {1}").format(category, ", ".join(valid_categories))
 		)
 
-	# Generate presigned URL
-	upload_url, r2_key = generate_presigned_upload_url(file_name, content_type, project)
-
 	# Validate folder belongs to the project (if provided)
 	if folder:
 		if not project:
@@ -108,6 +124,14 @@ def get_upload_url(
 			frappe.throw(_("Folder {0} does not exist").format(folder))
 		if folder_doc.project != project:
 			frappe.throw(_("Folder does not belong to this project"))
+
+	# Decide: single PUT vs multipart
+	use_multipart = file_size > MULTIPART_THRESHOLD
+
+	if use_multipart:
+		r2_key, upload_id = create_multipart_upload(file_name, content_type, project)
+	else:
+		upload_url, r2_key = generate_presigned_upload_url(file_name, content_type, project)
 
 	# Create asset record in Uploading status
 	asset_doc = {
@@ -127,11 +151,62 @@ def get_upload_url(
 	asset = frappe.get_doc(asset_doc)
 	asset.insert(ignore_permissions=True)
 
-	return {
-		"upload_url": upload_url,
+	result = {
 		"r2_key": r2_key,
 		"asset_name": asset.name,
+		"multipart": use_multipart,
 	}
+
+	if use_multipart:
+		result["upload_id"] = upload_id
+		result["part_size"] = MULTIPART_PART_SIZE
+	else:
+		result["upload_url"] = upload_url
+
+	return result
+
+
+@frappe.whitelist()
+def get_part_upload_url(r2_key: str, upload_id: str, part_number: int):
+	"""Get a presigned URL for uploading a single part of a multipart upload."""
+	part_number = int(part_number)
+	if part_number < 1:
+		frappe.throw(_("Part number must be >= 1"))
+
+	url = generate_presigned_part_url(r2_key, upload_id, part_number)
+	return {"url": url}
+
+
+@frappe.whitelist()
+def complete_multipart(asset_name: str, upload_id: str, parts: str | list):
+	"""Complete a multipart upload by combining all parts."""
+	if isinstance(parts, str):
+		parts = json.loads(parts)
+
+	asset = frappe.get_doc("VMS Asset", asset_name)
+	if asset.status != "Uploading":
+		frappe.throw(_("Asset is not in Uploading status"))
+
+	complete_multipart_upload(asset.r2_key, upload_id, parts)
+
+	return {"status": "ok"}
+
+
+@frappe.whitelist()
+def abort_multipart(asset_name: str, upload_id: str):
+	"""Abort a multipart upload and clean up."""
+	if not frappe.db.exists("VMS Asset", asset_name):
+		return {"status": "ok"}
+
+	asset = frappe.get_doc("VMS Asset", asset_name)
+	if asset.status == "Uploading":
+		try:
+			abort_multipart_upload(asset.r2_key, upload_id)
+		except Exception:
+			frappe.logger("vms").warning(f"Failed to abort multipart upload for {asset_name}")
+		asset.delete(ignore_permissions=True)
+
+	return {"status": "ok"}
 
 
 @frappe.whitelist()
@@ -571,14 +646,8 @@ def get_audit_log_filters():
 		project_info = {p.name: p.project_name for p in project_docs}
 
 	return {
-		"users": [
-			{"value": name, "label": user_info.get(name, name)}
-			for name in user_names
-		],
-		"projects": [
-			{"value": pid, "label": project_info.get(pid, pid)}
-			for pid in project_ids
-		],
+		"users": [{"value": name, "label": user_info.get(name, name)} for name in user_names],
+		"projects": [{"value": pid, "label": project_info.get(pid, pid)} for pid in project_ids],
 	}
 
 
