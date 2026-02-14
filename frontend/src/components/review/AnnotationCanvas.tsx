@@ -1,12 +1,11 @@
 import { useRef, useEffect, useCallback } from "react"
-import type { useFabricCanvas } from "@/hooks/useFabricCanvas"
+import { useReviewContext } from "@/hooks/useReviewContext"
 
 interface AnnotationCanvasProps {
   videoContainerRef: React.RefObject<HTMLDivElement | null>
   isActive: boolean
   readOnly?: boolean
   annotationData?: string | null
-  fabricCanvas: ReturnType<typeof useFabricCanvas>
 }
 
 export function AnnotationCanvas({
@@ -14,8 +13,8 @@ export function AnnotationCanvas({
   isActive,
   readOnly = false,
   annotationData,
-  fabricCanvas,
 }: AnnotationCanvasProps) {
+  const { fabricCanvas } = useReviewContext()
   const canvasWrapperRef = useRef<HTMLDivElement>(null)
   const canvasElRef = useRef<HTMLCanvasElement>(null)
   const initializedRef = useRef(false)

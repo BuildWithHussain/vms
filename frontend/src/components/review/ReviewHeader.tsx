@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useDownload } from "@/hooks/useDownload"
+import { useReviewContext } from "@/hooks/useReviewContext"
 import { toast } from "sonner"
 
 interface ReviewHeaderProps {
@@ -16,11 +17,9 @@ interface ReviewHeaderProps {
   fileName: string
   category?: string
   project?: { name: string; project_name: string } | null
-  isGuest?: boolean
   isPublicReview?: boolean
   reviewToken?: string | null
   onTogglePublicReview?: (enable: boolean) => Promise<void>
-  token?: string | null
 }
 
 export function ReviewHeader({
@@ -28,13 +27,12 @@ export function ReviewHeader({
   fileName,
   category,
   project,
-  isGuest = false,
   isPublicReview = false,
   reviewToken,
   onTogglePublicReview,
-  token,
 }: ReviewHeaderProps) {
   const navigate = useNavigate()
+  const { isGuest, token } = useReviewContext()
   const { downloadOne, isDownloading } = useDownload(token)
   const [toggling, setToggling] = useState(false)
 

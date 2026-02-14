@@ -8,43 +8,22 @@ import { CommentItem } from "./CommentItem"
 import { CommentInput } from "./CommentInput"
 import { AnnotationToolbar } from "./AnnotationToolbar"
 import { useReviewComments } from "@/hooks/useReviewComments"
-import type { useFabricCanvas } from "@/hooks/useFabricCanvas"
+import { useReviewContext } from "@/hooks/useReviewContext"
 
-interface CommentPanelProps {
-  assetId: string
-  currentTime: number
-  onSeek: (time: number) => void
-  annotationMode: boolean
-  pendingAnnotation: string | null
-  onStartAnnotation: () => void
-  onCancelAnnotation: () => void
-  onAnnotationDone: () => void
-  onViewAnnotation: (commentName: string, timestamp?: number | null) => void
-  onClearAnnotation: () => void
-  fabricCanvas: ReturnType<typeof useFabricCanvas>
-  isGuest?: boolean
-  guestName?: string
-  onSetGuestName?: (name: string) => void
-  token?: string | null
-}
+export function CommentPanel() {
+  const {
+    assetId,
+    token,
+    isGuest,
+    annotationMode,
+    pendingAnnotation,
+    finishAnnotation,
+    viewAnnotation,
+    clearPendingAnnotation,
+    fabricCanvas,
+    seekTo,
+  } = useReviewContext()
 
-export function CommentPanel({
-  assetId,
-  currentTime,
-  onSeek,
-  annotationMode,
-  pendingAnnotation,
-  onStartAnnotation,
-  onCancelAnnotation,
-  onAnnotationDone,
-  onViewAnnotation,
-  onClearAnnotation,
-  fabricCanvas,
-  isGuest = false,
-  guestName = "",
-  onSetGuestName,
-  token,
-}: CommentPanelProps) {
   const [sortBy, setSortBy] = useState<"timestamp" | "recent">("recent")
   const [replyTo, setReplyTo] = useState<{
     name: string
@@ -102,10 +81,10 @@ export function CommentPanel({
       await addComment(text, timestamp, parentComment, annotation, submittedGuestName)
       setReplyTo(null)
       // Clean up annotation state
-      if (annotation || pendingAnnotation) onClearAnnotation()
-      if (annotationMode) onAnnotationDone()
+      if (annotation || pendingAnnotation) clearPendingAnnotation()
+      if (annotationMode) finishAnnotation()
     },
-    [addComment, pendingAnnotation, annotationMode, fabricCanvas, onClearAnnotation, onAnnotationDone],
+    [addComment, pendingAnnotation, annotationMode, fabricCanvas, clearPendingAnnotation, finishAnnotation],
   )
 
   return (
@@ -155,11 +134,11 @@ export function CommentPanel({
                 key={comment.name}
                 comment={comment}
                 replies={replies}
-                onSeek={onSeek}
+                onSeek={seekTo}
                 onReply={handleReply}
                 onResolve={resolveComment}
                 onDelete={deleteComment}
-                onViewAnnotation={onViewAnnotation}
+                onViewAnnotation={viewAnnotation}
                 isGuest={isGuest}
               />
             ))
@@ -169,18 +148,10 @@ export function CommentPanel({
 
       {/* Input */}
       <CommentInput
-        currentTime={currentTime}
         replyTo={replyTo}
         onSubmit={handleSubmit}
         onCancelReply={() => setReplyTo(null)}
         isSubmitting={isAdding}
-        onStartAnnotation={onStartAnnotation}
-        onCancelAnnotation={onCancelAnnotation}
-        annotationMode={annotationMode}
-        hasAnnotation={!!pendingAnnotation}
-        isGuest={isGuest}
-        guestName={guestName}
-        onSetGuestName={onSetGuestName}
       />
 
       {/* Annotation toolbar — docked below input */}
@@ -194,7 +165,7 @@ export function CommentPanel({
           onColorChange={fabricCanvas.changeColor}
           onUndo={fabricCanvas.undo}
           onRedo={fabricCanvas.redo}
-          onBack={onAnnotationDone}
+          onBack={finishAnnotation}
         />
       )}
     </div>

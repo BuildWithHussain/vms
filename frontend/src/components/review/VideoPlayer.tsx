@@ -1,37 +1,27 @@
 import { useRef, useEffect, useState, useCallback } from "react"
 import { useFrappePostCall } from "frappe-react-sdk"
 import { useVideoPlayer } from "@/hooks/useVideoPlayer"
+import { useReviewContext } from "@/hooks/useReviewContext"
 import { VideoControls } from "./VideoControls"
 import { VideoTimeline } from "./VideoTimeline"
 import { AnnotationCanvas } from "./AnnotationCanvas"
-import type { VMSReviewComment } from "@/types"
-import type { useFabricCanvas } from "@/hooks/useFabricCanvas"
 
 interface VideoPlayerProps {
   assetName: string
-  comments: VMSReviewComment[]
-  onTimeUpdate?: (time: number) => void
-  seekToRef?: React.MutableRefObject<((time: number) => void) | null>
-  annotationMode?: boolean
-  replayAnnotation?: string | null
-  fabricCanvas: ReturnType<typeof useFabricCanvas>
-  onPause?: () => void
-  onCommentMarkerClick?: (commentName: string, timestamp?: number | null) => void
-  token?: string | null
 }
 
-export function VideoPlayer({
-  assetName,
-  comments,
-  onTimeUpdate,
-  seekToRef,
-  annotationMode = false,
-  replayAnnotation,
-  fabricCanvas,
-  onPause,
-  onCommentMarkerClick,
-  token,
-}: VideoPlayerProps) {
+export function VideoPlayer({ assetName }: VideoPlayerProps) {
+  const {
+    comments,
+    setCurrentTime,
+    seekToRef,
+    annotationMode,
+    replayAnnotation,
+    fabricCanvas,
+    viewAnnotation,
+    token,
+  } = useReviewContext()
+
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const videoWrapperRef = useRef<HTMLDivElement>(null)
@@ -52,28 +42,25 @@ export function VideoPlayer({
     })
   }, [assetName, token, getViewUrl])
 
-  // Expose seek function to parent
+  // Expose seek function to parent via context ref
   useEffect(() => {
-    if (seekToRef) {
-      seekToRef.current = (time: number) => {
-        player.seek(time)
-        videoRef.current?.pause()
-      }
+    seekToRef.current = (time: number) => {
+      player.seek(time)
+      videoRef.current?.pause()
     }
   }, [seekToRef, player])
 
-  // Notify parent of time updates
+  // Notify context of time updates (drift-based replay dismissal handled in context)
   useEffect(() => {
-    onTimeUpdate?.(player.currentTime)
-  }, [player.currentTime, onTimeUpdate])
+    setCurrentTime(player.currentTime)
+  }, [player.currentTime, setCurrentTime])
 
   // Pause video when annotation mode activates
   useEffect(() => {
     if (annotationMode || replayAnnotation) {
       videoRef.current?.pause()
-      onPause?.()
     }
-  }, [annotationMode, replayAnnotation, onPause])
+  }, [annotationMode, replayAnnotation])
 
   // Fullscreen
   const toggleFullscreen = useCallback(() => {
@@ -127,7 +114,6 @@ export function VideoPlayer({
           isActive={isCanvasActive}
           readOnly={!!replayAnnotation}
           annotationData={replayAnnotation}
-          fabricCanvas={fabricCanvas}
         />
       </div>
 
@@ -137,7 +123,7 @@ export function VideoPlayer({
           duration={player.duration}
           comments={comments}
           onSeek={player.seek}
-          onCommentMarkerClick={onCommentMarkerClick}
+          onCommentMarkerClick={viewAnnotation}
         />
         <VideoControls
           isPlaying={player.isPlaying}

@@ -4,37 +4,35 @@ import { MailSend01Icon, Clock01Icon, Cancel01Icon, PenTool01Icon } from "@hugei
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { formatTimestamp } from "@/hooks/useVideoPlayer"
+import { useReviewContext } from "@/hooks/useReviewContext"
 import { CommentEditor, type CommentEditorHandle } from "./CommentEditor"
 
 interface CommentInputProps {
-  currentTime: number
   replyTo?: { name: string; commenterName: string; timestamp?: number | null } | null
   onSubmit: (text: string, timestamp?: number | null, parentComment?: string | null, annotationData?: string | null, guestName?: string | null) => Promise<void>
   onCancelReply?: () => void
   isSubmitting: boolean
-  onStartAnnotation?: () => void
-  onCancelAnnotation?: () => void
-  annotationMode?: boolean
-  hasAnnotation?: boolean
-  isGuest?: boolean
-  guestName?: string
-  onSetGuestName?: (name: string) => void
 }
 
 export function CommentInput({
-  currentTime,
   replyTo,
   onSubmit,
   onCancelReply,
   isSubmitting,
-  onStartAnnotation,
-  onCancelAnnotation,
-  annotationMode = false,
-  hasAnnotation = false,
-  isGuest = false,
-  guestName = "",
-  onSetGuestName,
 }: CommentInputProps) {
+  const {
+    currentTime,
+    annotationMode,
+    pendingAnnotation,
+    startAnnotation,
+    cancelAnnotation,
+    isGuest,
+    guestName,
+    setGuestName,
+  } = useReviewContext()
+
+  const hasAnnotation = !!pendingAnnotation
+
   const [attachTimestamp, setAttachTimestamp] = useState(true)
   const [localGuestName, setLocalGuestName] = useState(guestName)
   const editorRef = useRef<CommentEditorHandle>(null)
@@ -55,7 +53,7 @@ export function CommentInput({
   const handleNameBlur = () => {
     const trimmed = localGuestName.trim()
     if (trimmed && trimmed !== guestName) {
-      onSetGuestName?.(trimmed)
+      setGuestName(trimmed)
     }
   }
 
@@ -71,7 +69,7 @@ export function CommentInput({
       }
       // Persist name on first submit
       if (name !== guestName) {
-        onSetGuestName?.(name)
+        setGuestName(name)
       }
     }
 
@@ -128,7 +126,7 @@ export function CommentInput({
             <Button
               variant={hasAnnotation || annotationMode ? "secondary" : "ghost"}
               size="icon-sm"
-              onClick={annotationMode ? onCancelAnnotation : onStartAnnotation}
+              onClick={annotationMode ? cancelAnnotation : startAnnotation}
               title={annotationMode ? "Cancel annotation" : "Draw annotation"}
               className={hasAnnotation || annotationMode ? "text-primary" : ""}
             >

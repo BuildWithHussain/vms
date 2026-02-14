@@ -1,9 +1,9 @@
-import { useRef, useState, useCallback } from "react"
+import { useCallback } from "react"
 import { useParams, useSearchParams } from "react-router"
 import { useFrappeGetCall, useFrappePostCall, useFrappeAuth } from "frappe-react-sdk"
-import { useReviewComments } from "@/hooks/useReviewComments"
-import { useFabricCanvas } from "@/hooks/useFabricCanvas"
 import { Spinner } from "@/components/ui/spinner"
+import { ReviewProvider } from "@/contexts/ReviewContext"
+import { useReviewContext } from "@/hooks/useReviewContext"
 import { ReviewHeader } from "@/components/review/ReviewHeader"
 import { VideoPlayer } from "@/components/review/VideoPlayer"
 import { CommentPanel } from "@/components/review/CommentPanel"
@@ -31,30 +31,6 @@ export function ReviewPage() {
 
   const isGuest = !currentUser || currentUser === "Guest"
 
-  const [currentTime, setCurrentTime] = useState(0)
-  const seekToRef = useRef<((time: number) => void) | null>(null)
-
-  // Guest name state (persisted in localStorage)
-  const [guestName, setGuestName] = useState<string>(
-    () => localStorage.getItem("vms_guest_name") || "",
-  )
-  const handleSetGuestName = useCallback((name: string) => {
-    setGuestName(name)
-    localStorage.setItem("vms_guest_name", name)
-  }, [])
-
-  // Annotation state
-  const [annotationMode, setAnnotationMode] = useState(false)
-  const [pendingAnnotation, setPendingAnnotation] = useState<string | null>(null)
-  const [replayAnnotation, setReplayAnnotation] = useState<string | null>(null)
-  const replayTimestampRef = useRef<number | null>(null)
-
-  const fabricCanvas = useFabricCanvas()
-
-  const { call: fetchAnnotation } = useFrappePostCall("vms.review_api.get_annotation_data")
-
-  const { call: callTogglePublicReview } = useFrappePostCall("vms.review_api.toggle_public_review")
-
   const { data: reviewData, error: reviewError, mutate: mutateReviewData } = useFrappeGetCall<{ message: ReviewData }>(
     "vms.review_api.get_review_data",
     assetId
@@ -64,91 +40,7 @@ export function ReviewPage() {
     { revalidateOnFocus: false },
   )
 
-  const { comments } = useReviewComments(assetId, "timestamp", token)
-
   const asset = reviewData?.message
-
-  const handleTogglePublicReview = useCallback(
-    async (enable: boolean) => {
-      if (!assetId) return
-      await callTogglePublicReview({ asset_name: assetId, enable: enable ? 1 : 0 })
-      mutateReviewData()
-    },
-    [assetId, callTogglePublicReview, mutateReviewData],
-  )
-
-  const handleSeek = useCallback((time: number) => {
-    seekToRef.current?.(time)
-    setReplayAnnotation(null)
-    replayTimestampRef.current = null
-  }, [])
-
-  const handleTimeUpdate = useCallback((time: number) => {
-    setCurrentTime(time)
-    if (replayTimestampRef.current != null && Math.abs(time - replayTimestampRef.current) > 0.5) {
-      setReplayAnnotation(null)
-      replayTimestampRef.current = null
-    }
-  }, [])
-
-  const handleStartAnnotation = useCallback(() => {
-    setAnnotationMode(true)
-    setReplayAnnotation(null)
-    replayTimestampRef.current = null
-  }, [])
-
-  const handleCancelAnnotation = useCallback(() => {
-    setAnnotationMode(false)
-  }, [])
-
-  const handleAnnotationDone = useCallback(() => {
-    const data = fabricCanvas.getAnnotationData()
-    setPendingAnnotation(data)
-    setAnnotationMode(false)
-  }, [fabricCanvas])
-
-  const handleViewAnnotation = useCallback(
-    async (commentName: string, timestamp?: number | null) => {
-      if (timestamp != null) {
-        seekToRef.current?.(timestamp)
-      }
-
-      try {
-        const res = await fetchAnnotation({
-          comment_name: commentName,
-          ...(token ? { token } : {}),
-        })
-        const annotationData = res.message?.annotation_data
-        if (annotationData) {
-          setAnnotationMode(false)
-          setReplayAnnotation(annotationData)
-          replayTimestampRef.current = timestamp ?? null
-        }
-      } catch {
-        // ignore fetch errors
-      }
-    },
-    [fetchAnnotation, token],
-  )
-
-  const handleDismissReplay = useCallback(() => {
-    setReplayAnnotation(null)
-    replayTimestampRef.current = null
-  }, [])
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (replayAnnotation) {
-          setReplayAnnotation(null)
-          replayTimestampRef.current = null
-        } else if (annotationMode) {
-          setAnnotationMode(false)
-        }
-      }
-    },
-    [replayAnnotation, annotationMode],
-  )
 
   // Auth loading state
   if (authLoading) {
@@ -193,54 +85,65 @@ export function ReviewPage() {
   }
 
   return (
+    <ReviewProvider assetId={assetId} token={token} isGuest={isGuest}>
+      <ReviewPageInner asset={asset} mutateReviewData={mutateReviewData} />
+    </ReviewProvider>
+  )
+}
+
+function ReviewPageInner({
+  asset,
+  mutateReviewData,
+}: {
+  asset: ReviewData
+  mutateReviewData: () => void
+}) {
+  const { replayAnnotation, annotationMode, dismissReplay, cancelAnnotation } = useReviewContext()
+
+  const { call: callTogglePublicReview } = useFrappePostCall("vms.review_api.toggle_public_review")
+
+  const handleTogglePublicReview = useCallback(
+    async (enable: boolean) => {
+      await callTogglePublicReview({ asset_name: asset.name, enable: enable ? 1 : 0 })
+      mutateReviewData()
+    },
+    [asset.name, callTogglePublicReview, mutateReviewData],
+  )
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (replayAnnotation) {
+          dismissReplay()
+        } else if (annotationMode) {
+          cancelAnnotation()
+        }
+      }
+    },
+    [replayAnnotation, annotationMode, dismissReplay, cancelAnnotation],
+  )
+
+  return (
     <div className="flex h-screen flex-col bg-background" onKeyDown={handleKeyDown} tabIndex={-1}>
       <ReviewHeader
         assetName={asset.name}
         fileName={asset.file_name}
         category={asset.category}
         project={asset.project}
-        isGuest={isGuest}
         isPublicReview={asset.is_public_review === 1}
         reviewToken={asset.review_token}
         onTogglePublicReview={handleTogglePublicReview}
-        token={token}
       />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
         {/* Video section */}
-        <div className="shrink-0 p-2 md:flex-1 md:p-4" onClick={replayAnnotation ? handleDismissReplay : undefined}>
-          <VideoPlayer
-            assetName={asset.name}
-            comments={comments}
-            onTimeUpdate={handleTimeUpdate}
-            seekToRef={seekToRef}
-            annotationMode={annotationMode}
-            replayAnnotation={replayAnnotation}
-            fabricCanvas={fabricCanvas}
-            onCommentMarkerClick={handleViewAnnotation}
-            token={token}
-          />
+        <div className="shrink-0 p-2 md:flex-1 md:p-4" onClick={replayAnnotation ? dismissReplay : undefined}>
+          <VideoPlayer assetName={asset.name} />
         </div>
 
         {/* Comment panel */}
         <div className="min-h-[50vh] flex-1 md:min-h-0 md:w-[380px] md:flex-none">
-          <CommentPanel
-            assetId={assetId}
-            currentTime={currentTime}
-            onSeek={handleSeek}
-            annotationMode={annotationMode}
-            pendingAnnotation={pendingAnnotation}
-            onStartAnnotation={handleStartAnnotation}
-            onCancelAnnotation={handleCancelAnnotation}
-            onAnnotationDone={handleAnnotationDone}
-            onViewAnnotation={handleViewAnnotation}
-            onClearAnnotation={() => setPendingAnnotation(null)}
-            fabricCanvas={fabricCanvas}
-            isGuest={isGuest}
-            guestName={guestName}
-            onSetGuestName={handleSetGuestName}
-            token={token}
-          />
+          <CommentPanel />
         </div>
       </div>
     </div>
