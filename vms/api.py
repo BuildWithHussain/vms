@@ -613,15 +613,13 @@ def search_assets(query: str, project: str | None = None, limit: int = 10):
 					"file_type": item.get("file_type"),
 				}
 			)
-
-		return {"results": results, "summary": result.get("summary")}
 	except Exception:
 		# Fallback to SQL LIKE search if index doesn't exist
 		like_filters = {"file_name": ["like", f"%{query}%"], "status": ["!=", "Uploading"]}
 		if project:
 			like_filters["project"] = project
 
-		assets = frappe.get_all(
+		results = frappe.get_all(
 			"VMS Asset",
 			filters=like_filters,
 			fields=["name", "file_name", "project", "category", "file_type"],
@@ -629,4 +627,18 @@ def search_assets(query: str, project: str | None = None, limit: int = 10):
 			page_length=limit,
 		)
 
-		return {"results": assets}
+	# Enrich with project names
+	project_ids = list({r.get("project") or r["project"] for r in results if r.get("project")})
+	project_map = {}
+	if project_ids:
+		project_docs = frappe.get_all(
+			"VMS Project",
+			filters={"name": ["in", project_ids]},
+			fields=["name", "project_name"],
+		)
+		project_map = {p.name: p.project_name for p in project_docs}
+
+	for r in results:
+		r["project_name"] = project_map.get(r.get("project"), r.get("project"))
+
+	return {"results": results}

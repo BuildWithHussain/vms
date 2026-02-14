@@ -36,6 +36,7 @@ interface SearchResult {
   name: string
   file_name: string
   project?: string
+  project_name?: string
   category?: string
   file_type?: string
 }
@@ -127,6 +128,11 @@ export function CommandPalette({
                       className="size-4"
                     />
                     <span className="flex-1 truncate">{result.file_name}</span>
+                    {!currentProjectId && result.project_name && (
+                      <span className="text-xs text-muted-foreground">
+                        in {result.project_name}
+                      </span>
+                    )}
                     {result.category && (
                       <span className="text-xs text-muted-foreground">
                         {result.category}
