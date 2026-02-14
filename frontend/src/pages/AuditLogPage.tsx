@@ -1,7 +1,24 @@
 import { useState } from "react"
 import { useFrappeGetCall } from "frappe-react-sdk"
+import { format } from "date-fns"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Search01Icon, Audit01Icon } from "@hugeicons/core-free-icons"
+import {
+  Search01Icon,
+  Audit01Icon,
+  ArrowUpDownIcon,
+  ArrowUp01Icon,
+  ArrowDown01Icon,
+  Calendar01Icon,
+  Cancel01Icon,
+} from "@hugeicons/core-free-icons"
+import {
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ColumnDef,
+  type SortingState,
+} from "@tanstack/react-table"
 import {
   Empty,
   EmptyDescription,
@@ -27,16 +44,161 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import { UserAvatar } from "@/components/UserAvatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatBytes } from "@/lib/utils"
 import type { VMSAuditLog } from "@/types"
+import type { DateRange } from "react-day-picker"
+
+const columns: ColumnDef<VMSAuditLog>[] = [
+  {
+    accessorKey: "action",
+    header: "Action",
+    cell: ({ row }) => {
+      const action = row.getValue<string>("action")
+      return (
+        <Badge
+          variant={
+            action === "Delete"
+              ? "destructive"
+              : action === "Rename"
+                ? "outline"
+                : "secondary"
+          }
+        >
+          {action}
+        </Badge>
+      )
+    },
+    enableSorting: false,
+  },
+  {
+    accessorKey: "file_name",
+    header: ({ column }) => (
+      <SortableHeader column={column} label="File Name" />
+    ),
+    cell: ({ row }) => (
+      <span className="max-w-[200px] truncate font-medium block">
+        {row.original.file_name || row.original.asset_name}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "project_name",
+    header: "Project",
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">
+        {row.original.project_name || "—"}
+      </span>
+    ),
+    enableSorting: false,
+  },
+  {
+    accessorKey: "user_full_name",
+    header: "User",
+    cell: ({ row }) => (
+      <div className="flex items-center gap-2">
+        <UserAvatar
+          name={row.original.user_full_name}
+          image={row.original.user_image}
+        />
+        <span className="text-sm">{row.original.user_full_name}</span>
+      </div>
+    ),
+    enableSorting: false,
+  },
+  {
+    accessorKey: "timestamp",
+    header: ({ column }) => (
+      <SortableHeader column={column} label="Timestamp" />
+    ),
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">
+        {formatTimestamp(row.getValue("timestamp"))}
+      </span>
+    ),
+  },
+  {
+    accessorKey: "file_size",
+    header: ({ column }) => (
+      <SortableHeader column={column} label="Size" className="justify-end" />
+    ),
+    cell: ({ row }) => {
+      const size = row.getValue<number | undefined>("file_size")
+      return (
+        <span className="text-right text-muted-foreground block">
+          {size ? formatBytes(size) : "—"}
+        </span>
+      )
+    },
+  },
+]
+
+function SortableHeader({
+  column,
+  label,
+  className = "",
+}: {
+  column: { toggleSorting: (desc?: boolean) => void; getIsSorted: () => false | "asc" | "desc" }
+  label: string
+  className?: string
+}) {
+  const sorted = column.getIsSorted()
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      className={`-ml-3 h-8 ${className}`}
+      onClick={() => column.toggleSorting(sorted === "asc")}
+    >
+      {label}
+      <HugeiconsIcon
+        icon={
+          sorted === "asc"
+            ? ArrowUp01Icon
+            : sorted === "desc"
+              ? ArrowDown01Icon
+              : ArrowUpDownIcon
+        }
+        className="ml-1 size-3.5"
+      />
+    </Button>
+  )
+}
+
+function formatTimestamp(ts: string) {
+  const d = new Date(ts)
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
 
 export function AuditLogPage() {
   const [action, setAction] = useState<string>("")
+  const [user, setUser] = useState<string>("")
+  const [project, setProject] = useState<string>("")
   const [search, setSearch] = useState("")
+  const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const [page, setPage] = useState(1)
+  const [sorting, setSorting] = useState<SortingState>([])
   const pageSize = 20
+
+  const { data: filterData } = useFrappeGetCall<{
+    message: {
+      users: { value: string; label: string }[]
+      projects: { value: string; label: string }[]
+    }
+  }>("vms.api.get_audit_log_filters")
 
   const { data, isLoading } = useFrappeGetCall<{
     message: {
@@ -48,7 +210,13 @@ export function AuditLogPage() {
     }
   }>("vms.api.get_audit_logs", {
     action: action && action !== "all" ? action : undefined,
+    user: user && user !== "all" ? user : undefined,
+    project: project && project !== "all" ? project : undefined,
     search: search || undefined,
+    from_date: dateRange?.from
+      ? format(dateRange.from, "yyyy-MM-dd")
+      : undefined,
+    to_date: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
     page,
     page_size: pageSize,
   })
@@ -56,16 +224,34 @@ export function AuditLogPage() {
   const logs = data?.message?.logs ?? []
   const total = data?.message?.total ?? 0
   const totalPages = data?.message?.total_pages ?? 1
+  const users = filterData?.message?.users ?? []
+  const projects = filterData?.message?.projects ?? []
 
-  function formatTimestamp(ts: string) {
-    const d = new Date(ts)
-    return d.toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
+  const hasActiveFilters =
+    (action && action !== "all") ||
+    (user && user !== "all") ||
+    (project && project !== "all") ||
+    search ||
+    dateRange?.from
+
+  const table = useReactTable({
+    data: logs,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    onSortingChange: setSorting,
+    state: { sorting },
+    manualPagination: true,
+    pageCount: totalPages,
+  })
+
+  function clearFilters() {
+    setAction("")
+    setUser("")
+    setProject("")
+    setSearch("")
+    setDateRange(undefined)
+    setPage(1)
   }
 
   return (
@@ -91,7 +277,7 @@ export function AuditLogPage() {
               setSearch(e.target.value)
               setPage(1)
             }}
-            className="w-64 pl-9"
+            className="w-56 pl-9"
           />
         </div>
         <Select
@@ -101,7 +287,7 @@ export function AuditLogPage() {
             setPage(1)
           }}
         >
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-36">
             <SelectValue placeholder="All actions" />
           </SelectTrigger>
           <SelectContent>
@@ -111,6 +297,51 @@ export function AuditLogPage() {
             <SelectItem value="Rename">Rename</SelectItem>
           </SelectContent>
         </Select>
+        <Select
+          value={user}
+          onValueChange={(v) => {
+            setUser(v)
+            setPage(1)
+          }}
+        >
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="All users" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All users</SelectItem>
+            {users.map((u) => (
+              <SelectItem key={u.value} value={u.value}>
+                {u.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={project}
+          onValueChange={(v) => {
+            setProject(v)
+            setPage(1)
+          }}
+        >
+          <SelectTrigger className="w-44">
+            <SelectValue placeholder="All projects" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All projects</SelectItem>
+            {projects.map((p) => (
+              <SelectItem key={p.value} value={p.value}>
+                {p.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <DateRangePicker value={dateRange} onChange={(range) => { setDateRange(range); setPage(1) }} />
+        {hasActiveFilters && (
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
+            <HugeiconsIcon icon={Cancel01Icon} className="mr-1 size-3.5" />
+            Clear
+          </Button>
+        )}
         <span className="ml-auto text-sm text-muted-foreground">
           {total} {total === 1 ? "entry" : "entries"}
         </span>
@@ -120,43 +351,62 @@ export function AuditLogPage() {
       <div className="rounded-md border">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Action</TableHead>
-              <TableHead>File Name</TableHead>
-              <TableHead>Project</TableHead>
-              <TableHead>User</TableHead>
-              <TableHead>Timestamp</TableHead>
-              <TableHead className="text-right">Size</TableHead>
-            </TableRow>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id}>
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
           </TableHeader>
           <TableBody>
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell>
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-32" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-20" />
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Skeleton className="size-6 rounded-full" />
                       <Skeleton className="h-4 w-24" />
                     </div>
                   </TableCell>
-                  <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                  <TableCell className="text-right"><Skeleton className="ml-auto h-4 w-16" /></TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-28" />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Skeleton className="ml-auto h-4 w-16" />
+                  </TableCell>
                 </TableRow>
               ))
-            ) : logs.length === 0 ? (
+            ) : table.getRowModel().rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="p-0">
+                <TableCell colSpan={columns.length} className="p-0">
                   <Empty className="border-0">
                     <EmptyHeader>
                       <EmptyMedia variant="icon">
-                        <HugeiconsIcon icon={Audit01Icon} strokeWidth={1.5} />
+                        <HugeiconsIcon
+                          icon={Audit01Icon}
+                          strokeWidth={1.5}
+                        />
                       </EmptyMedia>
                       <EmptyTitle>No audit logs found</EmptyTitle>
                       <EmptyDescription>
-                        {search || (action && action !== "all")
+                        {hasActiveFilters
                           ? "Try adjusting your filters."
                           : "Activity will appear here as assets are downloaded, deleted, or renamed."}
                       </EmptyDescription>
@@ -165,36 +415,16 @@ export function AuditLogPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              logs.map((log) => (
-                <TableRow key={log.name}>
-                  <TableCell>
-                    <Badge
-                      variant={log.action === "Delete" ? "destructive" : log.action === "Rename" ? "outline" : "secondary"}
-                    >
-                      {log.action}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate font-medium">
-                    {log.file_name || log.asset_name}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {log.project || "—"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <UserAvatar
-                        name={log.user_full_name}
-                        image={log.user_image}
-                      />
-                      <span className="text-sm">{log.user_full_name}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatTimestamp(log.timestamp)}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {log.file_size ? formatBytes(log.file_size) : "—"}
-                  </TableCell>
+              table.getRowModel().rows.map((row) => (
+                <TableRow key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </TableCell>
+                  ))}
                 </TableRow>
               ))
             )}
@@ -227,5 +457,45 @@ export function AuditLogPage() {
         </div>
       )}
     </div>
+  )
+}
+
+function DateRangePicker({
+  value,
+  onChange,
+}: {
+  value: DateRange | undefined
+  onChange: (range: DateRange | undefined) => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  const label = value?.from
+    ? value.to
+      ? `${format(value.from, "MMM d, yyyy")} – ${format(value.to, "MMM d, yyyy")}`
+      : format(value.from, "MMM d, yyyy")
+    : "Date range"
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        className="inline-flex h-9 items-center gap-2 rounded-md border border-input bg-background px-3 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+      >
+        <HugeiconsIcon icon={Calendar01Icon} className="size-4" />
+        <span>{label}</span>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="range"
+          selected={value}
+          onSelect={(range) => {
+            onChange(range)
+            if (range?.from && range?.to) {
+              setOpen(false)
+            }
+          }}
+          numberOfMonths={2}
+        />
+      </PopoverContent>
+    </Popover>
   )
 }

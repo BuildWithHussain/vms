@@ -64,6 +64,7 @@ export interface VMSAuditLog {
   file_name?: string
   file_type?: string
   project?: string
+  project_name?: string
   file_size?: number
   user_full_name: string
   user_image?: string | null

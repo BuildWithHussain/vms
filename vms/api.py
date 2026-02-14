@@ -445,6 +445,7 @@ def update_asset_category(asset_name: str, category: str):
 def get_audit_logs(
 	action: str | None = None,
 	user: str | None = None,
+	project: str | None = None,
 	search: str | None = None,
 	from_date: str | None = None,
 	to_date: str | None = None,
@@ -457,6 +458,8 @@ def get_audit_logs(
 		filters["action"] = action
 	if user:
 		filters["user"] = user
+	if project:
+		filters["project"] = project
 	if search:
 		filters["file_name"] = ["like", f"%{search}%"]
 	if from_date:
@@ -503,10 +506,22 @@ def get_audit_logs(
 		)
 		user_map = {u.name: u for u in users}
 
+	# Enrich with project titles
+	project_ids = list({log.project for log in logs if log.project})
+	project_map = {}
+	if project_ids:
+		projects = frappe.get_all(
+			"VMS Project",
+			filters={"name": ["in", project_ids]},
+			fields=["name", "project_name"],
+		)
+		project_map = {p.name: p.project_name for p in projects}
+
 	for log in logs:
 		u = user_map.get(log.user, {})
 		log["user_full_name"] = u.get("full_name", log.user)
 		log["user_image"] = u.get("user_image")
+		log["project_name"] = project_map.get(log.project, log.project)
 
 	return {
 		"logs": logs,
@@ -514,4 +529,50 @@ def get_audit_logs(
 		"page": page,
 		"page_size": page_size,
 		"total_pages": -(-total // page_size),  # ceil division
+	}
+
+
+@frappe.whitelist(methods=["GET"])
+def get_audit_log_filters():
+	"""Get distinct users and projects for audit log filter dropdowns."""
+	users = frappe.get_all(
+		"VMS Audit Log",
+		fields=["distinct user as name"],
+		order_by="user asc",
+	)
+	user_names = [u.name for u in users]
+	user_info = {}
+	if user_names:
+		user_docs = frappe.get_all(
+			"User",
+			filters={"name": ["in", user_names]},
+			fields=["name", "full_name"],
+		)
+		user_info = {u.name: u.full_name for u in user_docs}
+
+	projects = frappe.get_all(
+		"VMS Audit Log",
+		fields=["distinct project as name"],
+		filters={"project": ["is", "set"]},
+		order_by="project asc",
+	)
+	project_ids = [p.name for p in projects]
+	project_info = {}
+	if project_ids:
+		project_docs = frappe.get_all(
+			"VMS Project",
+			filters={"name": ["in", project_ids]},
+			fields=["name", "project_name"],
+		)
+		project_info = {p.name: p.project_name for p in project_docs}
+
+	return {
+		"users": [
+			{"value": name, "label": user_info.get(name, name)}
+			for name in user_names
+		],
+		"projects": [
+			{"value": pid, "label": project_info.get(pid, pid)}
+			for pid in project_ids
+		],
 	}
