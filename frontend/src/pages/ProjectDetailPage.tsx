@@ -46,6 +46,14 @@ import { useDownload } from "@/hooks/useDownload"
 import { UserAvatar } from "@/components/UserAvatar"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { Files01Icon, FilmRoll01Icon, DeliveryBox01Icon, FolderOpenIcon } from "@hugeicons/core-free-icons"
 import type { VMSProject, VMSAsset, VMSFolder } from "@/types"
 
 export function ProjectDetailPage() {
@@ -460,9 +468,35 @@ export function ProjectDetailPage() {
             onDropToFolder={currentFolder ? undefined : handleDropToFolder}
             draggable={(folders ?? []).length > 0 || !!currentFolder}
             emptyMessage={
-              currentFolder
-                ? "This folder is empty. Upload files or move assets here."
-                : "No assets yet. Upload some files to get started."
+              currentFolder ? (
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <HugeiconsIcon icon={FolderOpenIcon} strokeWidth={1.5} />
+                    </EmptyMedia>
+                    <EmptyTitle>Folder is empty</EmptyTitle>
+                    <EmptyDescription>Upload files or move assets into this folder.</EmptyDescription>
+                  </EmptyHeader>
+                  <Button size="sm" onClick={() => setUploadOpen(true)}>
+                    <HugeiconsIcon icon={CloudUploadIcon} strokeWidth={1.5} data-icon="inline-start" />
+                    Upload
+                  </Button>
+                </Empty>
+              ) : (
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <HugeiconsIcon icon={Files01Icon} strokeWidth={1.5} />
+                    </EmptyMedia>
+                    <EmptyTitle>No assets yet</EmptyTitle>
+                    <EmptyDescription>Upload some files to get started.</EmptyDescription>
+                  </EmptyHeader>
+                  <Button size="sm" onClick={() => setUploadOpen(true)}>
+                    <HugeiconsIcon icon={CloudUploadIcon} strokeWidth={1.5} data-icon="inline-start" />
+                    Upload
+                  </Button>
+                </Empty>
+              )
             }
           />
         </TabsContent>
@@ -479,7 +513,17 @@ export function ProjectDetailPage() {
             onPlay={handleAssetClick}
             onTogglePublicReview={handleTogglePublicReview}
             onCategoryChanged={() => mutateAssets()}
-            emptyMessage="No assets marked for review yet."
+            emptyMessage={
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <HugeiconsIcon icon={FilmRoll01Icon} strokeWidth={1.5} />
+                  </EmptyMedia>
+                  <EmptyTitle>No assets for review</EmptyTitle>
+                  <EmptyDescription>Mark assets as "For Review" to see them here.</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            }
           />
         </TabsContent>
 
@@ -495,7 +539,17 @@ export function ProjectDetailPage() {
             onPlay={handleAssetClick}
             onTogglePublicReview={handleTogglePublicReview}
             onCategoryChanged={() => mutateAssets()}
-            emptyMessage="No deliverables yet."
+            emptyMessage={
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <HugeiconsIcon icon={DeliveryBox01Icon} strokeWidth={1.5} />
+                  </EmptyMedia>
+                  <EmptyTitle>No deliverables yet</EmptyTitle>
+                  <EmptyDescription>Mark assets as "Deliverable" to see them here.</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            }
           />
         </TabsContent>
       </Tabs>
@@ -808,7 +862,7 @@ function AssetList({
   onPlay: (assetName: string) => void
   onTogglePublicReview: (assetName: string, enable: boolean) => Promise<void>
   onCategoryChanged?: () => void
-  emptyMessage: string
+  emptyMessage: React.ReactNode
   folders?: VMSFolder[]
   onFolderClick?: (folderName: string) => void
   onDropToFolder?: (assetNames: string[], folderName: string) => void
@@ -853,13 +907,7 @@ function AssetList({
   const hasItems = items.length > 0
 
   if (!hasFolders && !hasItems) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <p className="text-muted-foreground">{emptyMessage}</p>
-        </CardContent>
-      </Card>
-    )
+    return <>{emptyMessage}</>
   }
 
   const allSelected = allItems.length > 0 && allItems.every((a) => selected.has(a.name))

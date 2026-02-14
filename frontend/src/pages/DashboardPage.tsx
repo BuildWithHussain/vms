@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router"
 import { useFrappeGetDocList, useFrappeGetDocCount, useFrappePostCall } from "frappe-react-sdk"
 import { useEffect, useState } from "react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Folder01Icon, CloudUploadIcon } from "@hugeicons/core-free-icons"
 import {
   Card,
   CardContent,
@@ -11,6 +13,13 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { formatBytes } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import type { VMSProject, VMSAsset } from "@/types"
 
 export function DashboardPage() {
@@ -147,9 +156,17 @@ export function DashboardPage() {
                 ))}
               </div>
             ) : projects.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No projects yet.
-              </p>
+              <Empty className="py-8 border-0">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <HugeiconsIcon icon={Folder01Icon} strokeWidth={1.5} />
+                  </EmptyMedia>
+                  <EmptyTitle className="text-base">No projects yet</EmptyTitle>
+                  <EmptyDescription>
+                    Create a project to start organizing your videos.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             ) : (
               <div className="space-y-3">
                 {projects.map((p) => (
@@ -192,9 +209,17 @@ export function DashboardPage() {
                 ))}
               </div>
             ) : recentAssets.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No uploads yet.
-              </p>
+              <Empty className="py-8 border-0">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <HugeiconsIcon icon={CloudUploadIcon} strokeWidth={1.5} />
+                  </EmptyMedia>
+                  <EmptyTitle className="text-base">No uploads yet</EmptyTitle>
+                  <EmptyDescription>
+                    Upload files to your inbox or a project to get started.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             ) : (
               <div className="space-y-3">
                 {recentAssets.map((a) => (

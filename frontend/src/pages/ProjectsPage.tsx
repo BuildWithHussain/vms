@@ -34,6 +34,14 @@ import {
 } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { Folder01Icon } from "@hugeicons/core-free-icons"
 import type { VMSProject } from "@/types"
 
 const statusVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
@@ -206,13 +214,21 @@ export function ProjectsPage() {
           ))}
         </div>
       ) : projects.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-muted-foreground">
-              No projects yet. Create your first project to get started.
-            </p>
-          </CardContent>
-        </Card>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <HugeiconsIcon icon={Folder01Icon} strokeWidth={1.5} />
+            </EmptyMedia>
+            <EmptyTitle>No projects yet</EmptyTitle>
+            <EmptyDescription>
+              Create your first project to get started organizing your video assets.
+            </EmptyDescription>
+          </EmptyHeader>
+          <Button onClick={() => setDialogOpen(true)}>
+            <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} data-icon="inline-start" />
+            New Project
+          </Button>
+        </Empty>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (

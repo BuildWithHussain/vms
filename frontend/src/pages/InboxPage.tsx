@@ -4,7 +4,7 @@ import { CategoryBadge } from "@/components/CategoryBadge"
 import { useNavigate } from "react-router"
 import { useFrappeGetDocList } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { CloudUploadIcon, Delete02Icon, Download04Icon, Film01Icon, GridViewIcon, ListViewIcon, Move01Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons"
+import { CloudUploadIcon, Delete02Icon, Download04Icon, Film01Icon, GridViewIcon, InboxIcon, ListViewIcon, Move01Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { formatBytes } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { Checkbox } from "@/components/ui/checkbox"
 import { UploadDialog } from "@/components/UploadDialog"
 import { MoveAssetDialog } from "@/components/MoveAssetDialog"
@@ -209,14 +216,21 @@ export function InboxPage() {
           ))}
         </div>
       ) : assets.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-muted-foreground">
-              Your inbox is empty. Upload files here to sort them into projects
-              later.
-            </p>
-          </CardContent>
-        </Card>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <HugeiconsIcon icon={InboxIcon} strokeWidth={1.5} />
+            </EmptyMedia>
+            <EmptyTitle>Inbox is empty</EmptyTitle>
+            <EmptyDescription>
+              Upload files here to sort them into projects later.
+            </EmptyDescription>
+          </EmptyHeader>
+          <Button size="sm" onClick={() => setUploadOpen(true)}>
+            <HugeiconsIcon icon={CloudUploadIcon} strokeWidth={1.5} data-icon="inline-start" />
+            Upload
+          </Button>
+        </Empty>
       ) : (
         <div className="space-y-2">
           <div className="flex items-center justify-between px-3 py-1">

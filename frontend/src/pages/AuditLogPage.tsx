@@ -1,7 +1,14 @@
 import { useState } from "react"
 import { useFrappeGetCall } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Search01Icon } from "@hugeicons/core-free-icons"
+import { Search01Icon, Audit01Icon } from "@hugeicons/core-free-icons"
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -141,8 +148,20 @@ export function AuditLogPage() {
               ))
             ) : logs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                  No audit logs found.
+                <TableCell colSpan={6} className="p-0">
+                  <Empty className="border-0">
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <HugeiconsIcon icon={Audit01Icon} strokeWidth={1.5} />
+                      </EmptyMedia>
+                      <EmptyTitle>No audit logs found</EmptyTitle>
+                      <EmptyDescription>
+                        {search || (action && action !== "all")
+                          ? "Try adjusting your filters."
+                          : "Activity will appear here as assets are downloaded, deleted, or renamed."}
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
                 </TableCell>
               </TableRow>
             ) : (
