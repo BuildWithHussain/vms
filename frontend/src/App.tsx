@@ -1,14 +1,36 @@
+import { lazy, Suspense } from "react"
 import { Routes, Route, Navigate } from "react-router"
 import { useFrappeAuth } from "frappe-react-sdk"
 import { Spinner } from "@/components/ui/spinner"
 import { UserProvider } from "@/context/UserContext"
 import { AppLayout } from "@/components/layout/AppLayout"
-import { DashboardPage } from "@/pages/DashboardPage"
-import { InboxPage } from "@/pages/InboxPage"
-import { ProjectsPage } from "@/pages/ProjectsPage"
-import { ProjectDetailPage } from "@/pages/ProjectDetailPage"
-import { ReviewPage } from "@/pages/ReviewPage"
-import { AuditLogPage } from "@/pages/AuditLogPage"
+
+const DashboardPage = lazy(() =>
+  import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })),
+)
+const InboxPage = lazy(() =>
+  import("@/pages/InboxPage").then((m) => ({ default: m.InboxPage })),
+)
+const ProjectsPage = lazy(() =>
+  import("@/pages/ProjectsPage").then((m) => ({ default: m.ProjectsPage })),
+)
+const ProjectDetailPage = lazy(() =>
+  import("@/pages/ProjectDetailPage").then((m) => ({ default: m.ProjectDetailPage })),
+)
+const ReviewPage = lazy(() =>
+  import("@/pages/ReviewPage").then((m) => ({ default: m.ReviewPage })),
+)
+const AuditLogPage = lazy(() =>
+  import("@/pages/AuditLogPage").then((m) => ({ default: m.AuditLogPage })),
+)
+
+function PageSpinner() {
+  return (
+    <div className="flex h-full items-center justify-center">
+      <Spinner className="size-6" />
+    </div>
+  )
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { currentUser, isLoading } = useFrappeAuth()
@@ -39,13 +61,13 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<DashboardPage />} />
-        <Route path="inbox" element={<InboxPage />} />
-        <Route path="projects" element={<ProjectsPage />} />
-        <Route path="projects/:projectId" element={<ProjectDetailPage />} />
-        <Route path="audit-logs" element={<AuditLogPage />} />
+        <Route index element={<Suspense fallback={<PageSpinner />}><DashboardPage /></Suspense>} />
+        <Route path="inbox" element={<Suspense fallback={<PageSpinner />}><InboxPage /></Suspense>} />
+        <Route path="projects" element={<Suspense fallback={<PageSpinner />}><ProjectsPage /></Suspense>} />
+        <Route path="projects/:projectId" element={<Suspense fallback={<PageSpinner />}><ProjectDetailPage /></Suspense>} />
+        <Route path="audit-logs" element={<Suspense fallback={<PageSpinner />}><AuditLogPage /></Suspense>} />
       </Route>
-      <Route path="review/:assetId" element={<ReviewPage />} />
+      <Route path="review/:assetId" element={<Suspense fallback={<PageSpinner />}><ReviewPage /></Suspense>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
