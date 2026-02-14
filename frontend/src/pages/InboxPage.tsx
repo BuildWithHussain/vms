@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react"
+import { useSelection } from "@/hooks/useSelection"
 import { DropZoneOverlay } from "@/components/DropZoneOverlay"
 import { CategoryBadge } from "@/components/CategoryBadge"
 import { useNavigate } from "react-router"
@@ -40,7 +41,7 @@ export function InboxPage() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
   const [previewAsset, setPreviewAsset] = useState<VMSAsset | null>(null)
-  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const { selected, toggleSelect, toggleSelectAll, clearSelection } = useSelection()
   const [droppedFiles, setDroppedFiles] = useState<File[]>([])
   const [view, setView] = useState<"list" | "grid">("grid")
   const { downloadOne, downloadMany, isDownloading } = useDownload()
@@ -65,34 +66,13 @@ export function InboxPage() {
     limit: 100,
   })
 
-  const toggleSelect = (name: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(name)) {
-        next.delete(name)
-      } else {
-        next.add(name)
-      }
-      return next
-    })
-  }
-
-  const toggleSelectAll = () => {
-    if (!assets) return
-    if (selected.size === assets.length) {
-      setSelected(new Set())
-    } else {
-      setSelected(new Set(assets.map((a) => a.name)))
-    }
-  }
-
   const handleMoveComplete = (targetProject: string) => {
-    setSelected(new Set())
+    clearSelection()
     navigate(`/projects/${targetProject}`)
   }
 
   const handleDeleteComplete = () => {
-    setSelected(new Set())
+    clearSelection()
     mutate()
   }
 
@@ -119,7 +99,7 @@ export function InboxPage() {
     setUploadOpen(true)
   }, [])
 
-  const allSelected = assets && assets.length > 0 && selected.size === assets.length
+  const allSelected = assets && assets.length > 0 && assets.every((a) => selected.has(a.name))
 
   return (
     <DropZoneOverlay onDrop={handlePageDrop}>
@@ -237,7 +217,7 @@ export function InboxPage() {
             <div className="flex items-center gap-3">
               <Checkbox
                 checked={allSelected ?? false}
-                onCheckedChange={toggleSelectAll}
+                onCheckedChange={() => toggleSelectAll(assets ?? [])}
               />
               <span className="text-sm text-muted-foreground">
                 {selected.size > 0

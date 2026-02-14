@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from "react"
+import { useSelection } from "@/hooks/useSelection"
 import { useParams, useNavigate } from "react-router"
 import { useFrappeGetDoc, useFrappeGetDocList, useFrappePostCall } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -68,7 +69,7 @@ export function ProjectDetailPage() {
   const [droppedFiles, setDroppedFiles] = useState<File[]>([])
   const [previewAsset, setPreviewAsset] = useState<VMSAsset | null>(null)
   const [view, setView] = useState<"list" | "grid">("grid")
-  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const { selected, toggleSelect, toggleSelectAll, clearSelection } = useSelection()
   const [currentFolder, setCurrentFolder] = useState<string | null>(null)
   const { downloadOne, downloadMany, isDownloading } = useDownload()
 
@@ -143,32 +144,6 @@ export function ProjectDetailPage() {
     [assets]
   )
 
-  const toggleSelect = (name: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(name)) {
-        next.delete(name)
-      } else {
-        next.add(name)
-      }
-      return next
-    })
-  }
-
-  const toggleSelectAll = (items: VMSAsset[]) => {
-    const allItemNames = items.map((a) => a.name)
-    const allSelected = allItemNames.every((n) => selected.has(n))
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (allSelected) {
-        allItemNames.forEach((n) => next.delete(n))
-      } else {
-        allItemNames.forEach((n) => next.add(n))
-      }
-      return next
-    })
-  }
-
   const handleBulkDownload = () => {
     if (!assets) return
     const toDownload = assets.filter((a) => selected.has(a.name))
@@ -189,18 +164,18 @@ export function ProjectDetailPage() {
   )
 
   const handleDeleteComplete = () => {
-    setSelected(new Set())
+    clearSelection()
     mutateAssets()
   }
 
   const handleFolderClick = (folderName: string) => {
     setCurrentFolder(folderName)
-    setSelected(new Set())
+    clearSelection()
   }
 
   const handleNavigateToRoot = () => {
     setCurrentFolder(null)
-    setSelected(new Set())
+    clearSelection()
   }
 
   const handleDeleteFolder = async () => {
@@ -218,7 +193,7 @@ export function ProjectDetailPage() {
   }
 
   const handleMoveToFolderComplete = () => {
-    setSelected(new Set())
+    clearSelection()
     mutateAssets()
   }
 
@@ -240,7 +215,7 @@ export function ProjectDetailPage() {
       try {
         await callMoveToFolder({ asset_names: JSON.stringify(assetNames), folder: folderName })
         toast.success(`Moved ${assetNames.length} ${assetNames.length === 1 ? "asset" : "assets"}`)
-        setSelected(new Set())
+        clearSelection()
         mutateAssets()
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : "Failed to move assets"
