@@ -4,6 +4,7 @@ import { AppSidebar } from "./Sidebar"
 import { Header } from "./Header"
 import { SettingsDialog } from "@/components/SettingsDialog"
 import { CommandPalette, useCommandPalette } from "@/components/CommandPalette"
+import { UploadDialog } from "@/components/UploadDialog"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 export function AppLayout() {
@@ -30,6 +31,7 @@ export function AppLayout() {
           <Outlet />
         </div>
       </SidebarInset>
+      <UploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />
       <SettingsDialog
         open={settingsOpen}
         onOpenChange={setSettingsOpen}

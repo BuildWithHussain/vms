@@ -1,4 +1,6 @@
+import React, { useState } from "react"
 import { NavLink, useLocation } from "react-router"
+import { useFrappeAuth } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   DashboardSquare02Icon,
@@ -6,18 +8,36 @@ import {
   FolderVideoIcon,
   Audit01Icon,
   Settings01Icon,
+  Notification01Icon,
+  LogoutIcon,
+  Sun02Icon,
+  Moon02Icon,
+  ArrowUp01Icon,
 } from "@hugeicons/core-free-icons"
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { NotificationSheet, useNotifications } from "@/components/NotificationSheet"
+import { useUser } from "@/context/UserContext"
+import { useTheme } from "@/components/theme-provider"
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: DashboardSquare02Icon },
@@ -28,7 +48,25 @@ const navItems = [
 
 export function AppSidebar({ onOpenSettings }: { onOpenSettings: () => void }) {
   const { setOpenMobile } = useSidebar()
+  const { logout } = useFrappeAuth()
+  const { user } = useUser()
+  const { setTheme, theme } = useTheme()
   const location = useLocation()
+  const { unreadCount } = useNotifications()
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+
+  const handleLogout = () => {
+    logout()
+    window.location.href = "/login"
+  }
+
+  const getInitials = (name: string) =>
+    name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2)
 
   return (
     <Sidebar>
@@ -39,33 +77,60 @@ export function AppSidebar({ onOpenSettings }: { onOpenSettings: () => void }) {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => {
+              {navItems.map((item, index) => {
                 const isActive =
                   item.to === "/"
                     ? location.pathname === "/"
                     : location.pathname.startsWith(item.to)
 
                 return (
-                  <SidebarMenuItem key={item.to}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      render={
-                        <NavLink
-                          to={item.to}
-                          end={item.to === "/"}
-                          onClick={() => setOpenMobile(false)}
+                  <React.Fragment key={item.to}>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        render={
+                          <NavLink
+                            to={item.to}
+                            end={item.to === "/"}
+                            onClick={() => setOpenMobile(false)}
+                          />
+                        }
+                        tooltip={item.label}
+                      >
+                        <HugeiconsIcon
+                          icon={item.icon}
+                          strokeWidth={2}
+                          className="size-5"
                         />
-                      }
-                      tooltip={item.label}
-                    >
-                      <HugeiconsIcon
-                        icon={item.icon}
-                        strokeWidth={2}
-                        className="size-5"
-                      />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    {index === 0 && (
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          onClick={() => {
+                            setNotificationsOpen(true)
+                            setOpenMobile(false)
+                          }}
+                          tooltip="Notifications"
+                        >
+                          <HugeiconsIcon
+                            icon={Notification01Icon}
+                            strokeWidth={2}
+                            className="size-5"
+                          />
+                          <span>Notifications</span>
+                        </SidebarMenuButton>
+                        {unreadCount > 0 && (
+                          <SidebarMenuBadge>
+                            <span className="flex size-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+                              {unreadCount > 9 ? "9+" : unreadCount}
+                            </span>
+                          </SidebarMenuBadge>
+                        )}
+                      </SidebarMenuItem>
+                    )}
+                  </React.Fragment>
                 )
               })}
               <SidebarMenuItem>
@@ -88,6 +153,47 @@ export function AppSidebar({ onOpenSettings }: { onOpenSettings: () => void }) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={<SidebarMenuButton size="lg" />}
+              >
+                <Avatar size="sm">
+                  {user?.user_image && <AvatarImage src={user.user_image} />}
+                  <AvatarFallback>
+                    {user?.full_name ? getInitials(user.full_name) : "?"}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="truncate text-sm">{user?.email}</span>
+                <HugeiconsIcon icon={ArrowUp01Icon} strokeWidth={2} className="ml-auto size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                side="top"
+                align="start"
+                className="w-[--anchor-width]"
+              >
+                <DropdownMenuItem
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                >
+                  <HugeiconsIcon
+                    icon={theme === "dark" ? Sun02Icon : Moon02Icon}
+                    strokeWidth={2}
+                  />
+                  {theme === "dark" ? "Light mode" : "Dark mode"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <HugeiconsIcon icon={LogoutIcon} strokeWidth={2} />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+      <NotificationSheet open={notificationsOpen} onOpenChange={setNotificationsOpen} />
     </Sidebar>
   )
 }
