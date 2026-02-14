@@ -6,3 +6,4 @@ vms.patches.migrate_asset_categories
 [post_model_sync]
 # Patches added in this section will be executed after doctypes are migrated
 vms.patches.generate_thumbnails_for_existing_assets
+vms.patches.migrate_thumbnails_to_webp
