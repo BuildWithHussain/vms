@@ -28,7 +28,7 @@ import {
 interface CommandPaletteProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onOpenSettings: () => void
+  onOpenSettings: (tab?: string) => void
   onOpenUpload: () => void
 }
 
@@ -222,7 +222,7 @@ export function CommandPalette({
               value="settings"
               keywords={["preferences", "config"]}
               onSelect={() =>
-                runCommand(() => onOpenSettings())
+                runCommand(() => onOpenSettings("general"))
               }
             >
               <HugeiconsIcon
@@ -236,10 +236,7 @@ export function CommandPalette({
               value="invite user"
               keywords={["add user", "team"]}
               onSelect={() =>
-                runCommand(() => {
-                  onOpenSettings()
-                  // Settings dialog opens on Profile tab by default — users tab has invite
-                })
+                runCommand(() => onOpenSettings("users"))
               }
             >
               <HugeiconsIcon
@@ -253,7 +250,7 @@ export function CommandPalette({
               value="profile"
               keywords={["account", "user", "me"]}
               onSelect={() =>
-                runCommand(() => onOpenSettings())
+                runCommand(() => onOpenSettings("profile"))
               }
             >
               <HugeiconsIcon
