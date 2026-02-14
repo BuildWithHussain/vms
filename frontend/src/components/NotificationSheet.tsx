@@ -1,4 +1,5 @@
-import { useFrappeGetCall, useFrappePostCall } from "frappe-react-sdk"
+import { useCallback } from "react"
+import { useFrappeGetCall, useFrappePostCall, useFrappeDocTypeEventListener } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Notification01Icon, CheckListIcon } from "@hugeicons/core-free-icons"
 import { formatDistanceToNow } from "date-fns"
@@ -53,6 +54,11 @@ export function useNotifications() {
       dedupingInterval: 30000,
     }
   )
+
+  // Real-time: revalidate when a new Notification Log is created
+  useFrappeDocTypeEventListener("Notification Log", useCallback(() => {
+    mutate()
+  }, [mutate]))
 
   const logs = data?.message?.notification_logs ?? []
   const userInfo = data?.message?.user_info ?? {}
