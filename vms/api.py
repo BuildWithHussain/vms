@@ -537,12 +537,13 @@ def get_audit_logs(
 @frappe.whitelist(methods=["GET"])
 def get_audit_log_filters():
 	"""Get distinct users and projects for audit log filter dropdowns."""
-	users = frappe.get_all(
+	user_names = frappe.get_all(
 		"VMS Audit Log",
-		fields=["distinct user as name"],
+		fields=["user"],
+		group_by="user",
 		order_by="user asc",
+		pluck="user",
 	)
-	user_names = [u.name for u in users]
 	user_info = {}
 	if user_names:
 		user_docs = frappe.get_all(
@@ -552,13 +553,14 @@ def get_audit_log_filters():
 		)
 		user_info = {u.name: u.full_name for u in user_docs}
 
-	projects = frappe.get_all(
+	project_ids = frappe.get_all(
 		"VMS Audit Log",
-		fields=["distinct project as name"],
+		fields=["project"],
 		filters={"project": ["is", "set"]},
+		group_by="project",
 		order_by="project asc",
+		pluck="project",
 	)
-	project_ids = [p.name for p in projects]
 	project_info = {}
 	if project_ids:
 		project_docs = frappe.get_all(
