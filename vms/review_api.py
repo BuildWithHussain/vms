@@ -284,6 +284,38 @@ def toggle_public_review(asset_name: str, enable: int):
 	}
 
 
+@frappe.whitelist(methods=["GET"])
+def get_mentionable_users():
+	"""Get list of users who can be @mentioned in comments.
+
+	Returns all users with Video Manager or System Manager role.
+	"""
+	users = frappe.get_all(
+		"User",
+		filters={
+			"enabled": 1,
+			"user_type": "System User",
+			"name": ["not in", ["Guest", "Administrator"]],
+		},
+		fields=["name", "full_name", "user_image"],
+	)
+
+	# Also include Administrator with proper name
+	admin = frappe.db.get_value(
+		"User", "Administrator", ["full_name", "user_image"], as_dict=True
+	)
+	if admin:
+		users.append(
+			{
+				"name": "Administrator",
+				"full_name": admin.full_name or "Administrator",
+				"user_image": admin.user_image,
+			}
+		)
+
+	return users
+
+
 @frappe.whitelist(allow_guest=True)
 def get_guest_download_url(asset_name: str, token: str):
 	"""Get a presigned download URL for guest users with a valid token."""

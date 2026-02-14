@@ -4,6 +4,7 @@ import { MailSend01Icon, Clock01Icon, Cancel01Icon, PenTool01Icon } from "@hugei
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { formatTimestamp } from "@/hooks/useVideoPlayer"
+import { CommentEditor, type CommentEditorHandle } from "./CommentEditor"
 
 interface CommentInputProps {
   currentTime: number
@@ -34,10 +35,9 @@ export function CommentInput({
   guestName = "",
   onSetGuestName,
 }: CommentInputProps) {
-  const [text, setText] = useState("")
   const [attachTimestamp, setAttachTimestamp] = useState(true)
   const [localGuestName, setLocalGuestName] = useState(guestName)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const editorRef = useRef<CommentEditorHandle>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   // Sync localGuestName when prop changes
@@ -45,10 +45,10 @@ export function CommentInput({
     setLocalGuestName(guestName)
   }, [guestName])
 
-  // Focus textarea when replying
+  // Focus editor when replying
   useEffect(() => {
     if (replyTo) {
-      textareaRef.current?.focus()
+      editorRef.current?.focus()
     }
   }, [replyTo])
 
@@ -60,8 +60,7 @@ export function CommentInput({
   }
 
   const handleSubmit = async () => {
-    const trimmed = text.trim()
-    if (!trimmed) return
+    if (!editorRef.current || editorRef.current.isEmpty()) return
 
     // For guests, require a name
     if (isGuest) {
@@ -76,21 +75,12 @@ export function CommentInput({
       }
     }
 
+    const html = editorRef.current.getHTML()
     const ts = attachTimestamp ? currentTime : null
     const parent = replyTo?.name ?? null
     const nameToSend = isGuest ? localGuestName.trim() : null
-    await onSubmit(trimmed, ts, parent, null, nameToSend)
-    setText("")
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault()
-      handleSubmit()
-    }
-    if (e.key === "Escape" && replyTo) {
-      onCancelReply?.()
-    }
+    await onSubmit(html, ts, parent, null, nameToSend)
+    editorRef.current.clearContent()
   }
 
   return (
@@ -115,7 +105,7 @@ export function CommentInput({
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault()
-                textareaRef.current?.focus()
+                editorRef.current?.focus()
               }
             }}
             placeholder="Your name"
@@ -148,21 +138,18 @@ export function CommentInput({
               {hasAnnotation ? "annotation attached" : attachTimestamp ? "timestamp attached" : "click to attach"}
             </span>
           </div>
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Add a comment..."
-            className="w-full resize-none rounded-md border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            rows={2}
+          <CommentEditor
+            ref={editorRef}
+            onSubmit={handleSubmit}
+            isGuest={isGuest}
+            placeholder={isGuest ? "Add a comment..." : "Add a comment... Type @ to mention"}
           />
         </div>
 
         <Button
           size="icon-sm"
           onClick={handleSubmit}
-          disabled={!text.trim() || isSubmitting}
+          disabled={isSubmitting}
           className="mt-6"
         >
           <HugeiconsIcon icon={MailSend01Icon} size={16} strokeWidth={2} />

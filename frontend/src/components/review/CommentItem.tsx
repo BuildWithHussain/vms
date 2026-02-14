@@ -106,9 +106,10 @@ export function CommentItem({
               )}
             </div>
 
-            <p className="mt-0.5 text-sm text-foreground whitespace-pre-wrap break-words">
-              {comment.comment_text}
-            </p>
+            <div
+              className="mt-0.5 text-sm text-foreground break-words [&_p]:mb-0 [&_.mention]:rounded [&_.mention]:bg-primary/10 [&_.mention]:px-1 [&_.mention]:py-0.5 [&_.mention]:font-medium [&_.mention]:text-primary"
+              dangerouslySetInnerHTML={{ __html: comment.comment_text }}
+            />
 
             <div className="mt-1 flex items-center gap-1">
               <span className="text-[10px] text-muted-foreground">
