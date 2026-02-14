@@ -1,3 +1,5 @@
+import json
+
 import frappe
 import requests
 from frappe import _
@@ -576,3 +578,55 @@ def get_audit_log_filters():
 			for pid in project_ids
 		],
 	}
+
+
+@frappe.whitelist(methods=["GET"])
+def search_assets(query: str, project: str | None = None, limit: int = 10):
+	"""Search VMS assets using SQLite FTS.
+
+	Falls back to SQL LIKE if the search index is not built yet.
+	"""
+	query = (query or "").strip()
+	if not query:
+		return {"results": []}
+
+	limit = min(50, max(1, int(limit)))
+
+	filters = {}
+	if project:
+		filters["project"] = project
+
+	try:
+		from vms.search import VMSSearch
+
+		search_engine = VMSSearch()
+		result = search_engine.search(query, filters=filters)
+
+		results = []
+		for item in result.get("results", [])[:limit]:
+			results.append(
+				{
+					"name": item.get("name"),
+					"file_name": item.get("title"),
+					"project": item.get("project"),
+					"category": item.get("category"),
+					"file_type": item.get("file_type"),
+				}
+			)
+
+		return {"results": results, "summary": result.get("summary")}
+	except Exception:
+		# Fallback to SQL LIKE search if index doesn't exist
+		like_filters = {"file_name": ["like", f"%{query}%"], "status": ["!=", "Uploading"]}
+		if project:
+			like_filters["project"] = project
+
+		assets = frappe.get_all(
+			"VMS Asset",
+			filters=like_filters,
+			fields=["name", "file_name", "project", "category", "file_type"],
+			order_by="modified desc",
+			page_length=limit,
+		)
+
+		return {"results": assets}

@@ -24,7 +24,9 @@
   "section_break_review",
   "is_public_review",
   "column_break_review",
-  "review_token"
+  "review_token",
+  "section_break_transcription",
+  "transcription"
  ],
  "fields": [
   {
@@ -145,10 +147,20 @@
    "read_only": 1,
    "hidden": 1,
    "unique": 1
+  },
+  {
+   "fieldname": "section_break_transcription",
+   "fieldtype": "Section Break",
+   "label": "Transcription"
+  },
+  {
+   "fieldname": "transcription",
+   "fieldtype": "Markdown Editor",
+   "label": "Transcription"
   }
  ],
  "links": [],
- "modified": "2026-02-11 19:05:00.000000",
+ "modified": "2026-02-14 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Video Management Solution",
  "name": "VMS Asset",

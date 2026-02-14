@@ -252,6 +252,8 @@ doc_events = {
 # ignore_translatable_strings_from = []
 
 
+sqlite_search = ["vms.search.VMSSearch"]
+
 website_route_rules = [
 	{"from_route": "/vms/<path:app_path>", "to_route": "vms"},
 ]
