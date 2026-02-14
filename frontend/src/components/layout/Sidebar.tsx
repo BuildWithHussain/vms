@@ -13,6 +13,7 @@ import {
   Sun02Icon,
   Moon02Icon,
   ArrowUp01Icon,
+  Bug01Icon,
 } from "@hugeicons/core-free-icons"
 import {
   Sidebar,
@@ -182,6 +183,17 @@ export function AppSidebar({ onOpenSettings }: { onOpenSettings: () => void }) {
                     strokeWidth={2}
                   />
                   {theme === "dark" ? "Light mode" : "Dark mode"}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    window.open(
+                      "https://github.com/BuildWithHussain/vms/issues/new",
+                      "_blank",
+                    )
+                  }
+                >
+                  <HugeiconsIcon icon={Bug01Icon} strokeWidth={2} />
+                  Raise an Issue
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
