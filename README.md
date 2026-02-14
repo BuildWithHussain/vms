@@ -37,6 +37,10 @@ A video management application built on [Frappe](https://frappeframework.com) wi
 
 ![Settings](docs/screenshots/settings-general.png)
 
+### Video Review
+
+![Review](docs/screenshots/review-page.png)
+
 ## Installation
 
 ```bash
