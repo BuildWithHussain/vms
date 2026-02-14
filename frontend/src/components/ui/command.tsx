@@ -60,6 +60,7 @@ function CommandDialog({
           className
         )}
         showCloseButton={showCloseButton}
+        finalFocus={false}
       >
         {children}
       </DialogContent>
