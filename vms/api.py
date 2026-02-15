@@ -7,6 +7,7 @@ from frappe import _
 from vms.r2 import (
 	abort_multipart_upload,
 	complete_multipart_upload,
+	configure_bucket_cors,
 	create_multipart_upload,
 	delete_r2_object,
 	generate_presigned_download_url,
@@ -19,13 +20,20 @@ from vms.r2 import (
 
 @frappe.whitelist()
 def test_r2_connection():
-	"""Test R2 credentials by calling head_bucket."""
+	"""Test R2 credentials by calling head_bucket, then configure CORS."""
 	settings = frappe.get_single("VMS Settings")
 	if not settings.r2_account_id or not settings.r2_access_key_id or not settings.r2_bucket_name:
 		frappe.throw(_("R2 credentials are incomplete. Please fill in all required fields."))
 
 	client = get_r2_client()
 	client.head_bucket(Bucket=settings.r2_bucket_name)
+
+	# Auto-configure CORS so browsers can read ETag headers (required for multipart uploads)
+	try:
+		configure_bucket_cors()
+	except Exception:
+		frappe.logger("vms").warning("Failed to configure CORS on R2 bucket — multipart uploads may not work")
+
 	return {"status": "ok"}
 
 
@@ -68,8 +76,8 @@ def fail_upload(asset_name: str):
 	return {"status": "ok"}
 
 
-# 100 MB threshold — files larger than this use multipart upload
-MULTIPART_THRESHOLD = 100 * 1024 * 1024
+# 2 GB threshold — files larger than this use multipart upload
+MULTIPART_THRESHOLD = 2 * 1024 * 1024 * 1024
 # 50 MB per part (R2/S3 minimum is 5 MB, max 5 GB per part)
 MULTIPART_PART_SIZE = 50 * 1024 * 1024
 
@@ -85,7 +93,7 @@ def get_upload_url(
 ):
 	"""Generate a presigned upload URL for direct upload to R2.
 
-	For files > 100 MB, initiates a multipart upload instead.
+	For files > 2 GB, initiates a multipart upload instead.
 	Returns dict with upload_url (or upload_id for multipart), r2_key, and asset_name.
 	If project is omitted, the asset goes to the Inbox.
 	"""

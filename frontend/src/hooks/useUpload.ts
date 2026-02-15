@@ -52,7 +52,11 @@ function uploadPart(
       if (xhr.status >= 200 && xhr.status < 300) {
         const rawEtag = xhr.getResponseHeader("ETag")
         if (!rawEtag) {
-          reject(new Error("Server did not return ETag for part"))
+          reject(
+            new Error(
+              "Missing ETag header — re-save R2 credentials in Settings to fix CORS",
+            ),
+          )
         } else {
           // S3/R2 returns ETags with surrounding quotes — strip them
           resolve(rawEtag.replace(/^"|"$/g, ""))

@@ -497,3 +497,76 @@ class TestUpload(IntegrationTestCase):
 		fail_result = fail_upload(asset_name=result["asset_name"])
 		self.assertEqual(fail_result["status"], "ok")
 		self.assertFalse(frappe.db.exists("VMS Asset", result["asset_name"]))
+
+	# ------------------------------------------------------------------
+	# CORS configuration
+	# ------------------------------------------------------------------
+
+	def test_configure_bucket_cors(self):
+		"""configure_bucket_cors should set CORS rules exposing ETag."""
+		from vms.r2 import configure_bucket_cors, get_r2_client
+
+		configure_bucket_cors()
+
+		# Verify CORS was applied
+		settings = frappe.get_single("VMS Settings")
+		client = get_r2_client()
+		cors = client.get_bucket_cors(Bucket=settings.r2_bucket_name)
+		rules = cors.get("CORSRules", [])
+
+		self.assertTrue(len(rules) > 0, "No CORS rules found on bucket")
+		rule = rules[0]
+		self.assertIn("ETag", rule.get("ExposeHeaders", []))
+
+	# ------------------------------------------------------------------
+	# Threshold
+	# ------------------------------------------------------------------
+
+	def test_threshold_is_2gb(self):
+		"""MULTIPART_THRESHOLD should be 2 GB."""
+		from vms.api import MULTIPART_THRESHOLD
+
+		self.assertEqual(MULTIPART_THRESHOLD, 2 * 1024 * 1024 * 1024)
+
+	def test_file_under_2gb_uses_single_put(self):
+		"""Files under 2 GB should use single PUT, not multipart."""
+		from vms.api import get_upload_url
+
+		# 1.5 GB — under threshold
+		result = get_upload_url(
+			file_name="medium_file.mp4",
+			content_type="video/mp4",
+			file_size=int(1.5 * 1024 * 1024 * 1024),
+			project=self.project,
+		)
+
+		self.assertFalse(result["multipart"])
+		self.assertIn("upload_url", result)
+
+		# Cleanup
+		frappe.delete_doc("VMS Asset", result["asset_name"], ignore_permissions=True)
+		frappe.db.commit()
+
+	def test_file_over_2gb_uses_multipart(self):
+		"""Files over 2 GB should trigger multipart upload."""
+		from vms.api import MULTIPART_THRESHOLD, get_upload_url
+
+		result = get_upload_url(
+			file_name="huge_file.mp4",
+			content_type="video/mp4",
+			file_size=MULTIPART_THRESHOLD + 1,
+			project=self.project,
+		)
+
+		self.assertTrue(result["multipart"])
+		self.assertIn("upload_id", result)
+
+		# Cleanup
+		from vms.r2 import abort_multipart_upload
+
+		try:
+			abort_multipart_upload(result["r2_key"], result["upload_id"])
+		except Exception:
+			pass
+		frappe.delete_doc("VMS Asset", result["asset_name"], ignore_permissions=True)
+		frappe.db.commit()

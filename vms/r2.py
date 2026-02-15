@@ -46,7 +46,7 @@ def generate_presigned_upload_url(file_name, content_type, project):
 
 
 # ---------------------------------------------------------------------------
-# Multipart upload helpers (for files > 100 MB)
+# Multipart upload helpers (for files > 2 GB)
 # ---------------------------------------------------------------------------
 
 
@@ -141,6 +141,28 @@ def generate_presigned_download_url(r2_key, file_name):
 	)
 
 	return url
+
+
+def configure_bucket_cors():
+	"""Configure CORS on the R2 bucket so browsers can read ETag headers
+	(required for multipart uploads) and perform PUT uploads."""
+	settings = frappe.get_single("VMS Settings")
+	client = get_r2_client()
+
+	client.put_bucket_cors(
+		Bucket=settings.r2_bucket_name,
+		CORSConfiguration={
+			"CORSRules": [
+				{
+					"AllowedOrigins": ["*"],
+					"AllowedMethods": ["GET", "PUT", "HEAD"],
+					"AllowedHeaders": ["*"],
+					"ExposeHeaders": ["ETag", "Content-Length", "Content-Type"],
+					"MaxAgeSeconds": 3600,
+				},
+			]
+		},
+	)
 
 
 def delete_r2_object(r2_key):
