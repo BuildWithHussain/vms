@@ -78,8 +78,8 @@ def fail_upload(asset_name: str):
 
 # 2 GB threshold — files larger than this use multipart upload
 MULTIPART_THRESHOLD = 2 * 1024 * 1024 * 1024
-# 50 MB per part (R2/S3 minimum is 5 MB, max 5 GB per part)
-MULTIPART_PART_SIZE = 50 * 1024 * 1024
+# 512 MB per part (R2/S3 minimum is 5 MB, max 5 GB per part)
+MULTIPART_PART_SIZE = 512 * 1024 * 1024
 
 
 @frappe.whitelist()

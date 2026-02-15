@@ -174,6 +174,7 @@ export function useUpload(options?: {
   const uploadMultipart = useCallback(
     async (
       item: FileUploadItem,
+      assetName: string,
       r2Key: string,
       uploadId: string,
       partSize: number,
@@ -247,7 +248,7 @@ export function useUpload(options?: {
 
         // Complete multipart upload
         await completeMultipart({
-          asset_name: item.assetName!,
+          asset_name: assetName,
           upload_id: uploadId,
           parts: JSON.stringify(parts),
         })
@@ -286,7 +287,7 @@ export function useUpload(options?: {
 
         // Step 2: Upload to R2
         if (data.multipart && data.upload_id && data.part_size) {
-          await uploadMultipart(item, data.r2_key, data.upload_id, data.part_size)
+          await uploadMultipart(item, data.asset_name, data.r2_key, data.upload_id, data.part_size)
         } else if (data.upload_url) {
           await uploadSinglePut(item, data.upload_url)
         } else {
