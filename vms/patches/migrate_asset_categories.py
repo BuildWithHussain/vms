@@ -5,10 +5,10 @@ def execute():
 	"""Migrate old VMS Asset category values to new ones.
 
 	Old: Source, Cut, Review, Final
-	New: Asset, For Review, Deliverable
+	New: Footage, For Review, Deliverable
 
 	Mapping:
-	  Source, Cut → Asset
+	  Source, Cut → Footage
 	  Review      → For Review
 	  Final       → Deliverable
 	"""
@@ -16,7 +16,7 @@ def execute():
 		"""
 		UPDATE `tabVMS Asset`
 		SET category = CASE
-			WHEN category IN ('Source', 'Cut') THEN 'Asset'
+			WHEN category IN ('Source', 'Cut') THEN 'Footage'
 			WHEN category = 'Review' THEN 'For Review'
 			WHEN category = 'Final' THEN 'Deliverable'
 			ELSE category

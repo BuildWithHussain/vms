@@ -12,11 +12,11 @@ import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { toast } from "sonner"
 
-const CATEGORIES = ["Asset", "For Review", "Deliverable"] as const
+const CATEGORIES = ["Footage", "For Review", "Deliverable"] as const
 type Category = (typeof CATEGORIES)[number]
 
 const categoryVariant: Record<string, "default" | "secondary" | "outline"> = {
-  Asset: "outline",
+  Footage: "outline",
   "For Review": "default",
   Deliverable: "secondary",
 }
