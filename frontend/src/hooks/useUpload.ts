@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { useFrappePostCall } from "frappe-react-sdk"
 
 export type FileUploadStatus = "pending" | "uploading" | "confirming" | "done" | "error" | "cancelled"
@@ -93,6 +93,8 @@ export function useUpload(options?: {
   const xhrMap = useRef<Map<string, { current: XMLHttpRequest | null }>>(new Map())
   // Signal map for cancelling multipart uploads between parts
   const cancelSignals = useRef<Map<string, { cancelled: boolean }>>(new Map())
+  // Ref to always access the latest uploadFile callback (avoids stale closures in processNext)
+  const uploadFileRef = useRef<(item: FileUploadItem) => Promise<void>>()
 
   const { call: getUploadUrl } = useFrappePostCall("vms.api.get_upload_url")
   const { call: confirmUpload } = useFrappePostCall("vms.api.confirm_upload")
@@ -120,7 +122,7 @@ export function useUpload(options?: {
       return
     }
     activeCount.current++
-    uploadFile(next)
+    uploadFileRef.current?.(next)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -323,6 +325,11 @@ export function useUpload(options?: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [options?.project, options?.category, options?.folder]
   )
+
+  // Keep ref in sync so processNext always uses the latest uploadFile
+  useEffect(() => {
+    uploadFileRef.current = uploadFile
+  }, [uploadFile])
 
   const retryFile = useCallback(
     (id: string) => {
