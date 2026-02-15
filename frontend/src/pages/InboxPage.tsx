@@ -405,7 +405,7 @@ export function InboxPage() {
           setUploadOpen(open)
           if (!open) setDroppedFiles([])
         }}
-        existingFileNames={(assets ?? []).map((a) => a.file_name)}
+        existingFileNames={(assets ?? []).filter((a) => a.status === "Ready").map((a) => a.file_name)}
         initialFiles={droppedFiles.length > 0 ? droppedFiles : undefined}
         onComplete={() => mutate()}
       />

@@ -537,7 +537,7 @@ export function ProjectDetailPage() {
         }}
         project={projectId}
         folder={currentFolder ?? undefined}
-        existingFileNames={folderAssets.map((a) => a.file_name)}
+        existingFileNames={folderAssets.filter((a) => a.status === "Ready").map((a) => a.file_name)}
         initialFiles={droppedFiles.length > 0 ? droppedFiles : undefined}
         onComplete={() => mutateAssets()}
       />
