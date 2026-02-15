@@ -5,6 +5,7 @@ import { FrappeProvider } from "frappe-react-sdk"
 import { Toaster } from "sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { ThemeProvider } from "@/components/theme-provider"
+import { ReloadPrompt } from "@/components/ReloadPrompt"
 import "./index.css"
 import App from "./App"
 
@@ -16,6 +17,7 @@ createRoot(document.getElementById("root")!).render(
           <BrowserRouter basename="/vms">
             <App />
             <Toaster position="top-right" />
+            <ReloadPrompt />
           </BrowserRouter>
         </TooltipProvider>
       </ThemeProvider>
