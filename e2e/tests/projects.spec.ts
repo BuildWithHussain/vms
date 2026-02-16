@@ -5,6 +5,7 @@ import {
 	cleanupTestProjects,
 	VMSProject,
 } from "../helpers/vms";
+import { docExists } from "../helpers/frappe";
 
 test.describe("Projects", () => {
 	let testProject: VMSProject;
@@ -90,9 +91,7 @@ test.describe("Projects", () => {
 		await deleteTestProject(request, tempProject.name);
 
 		// Verify it's gone
-		const response = await request.get(
-			`/api/resource/VMS Project/${encodeURIComponent(tempProject.name)}`,
-		);
-		expect(response.status()).toBe(404);
+		const exists = await docExists(request, "VMS Project", tempProject.name);
+		expect(exists).toBe(false);
 	});
 });

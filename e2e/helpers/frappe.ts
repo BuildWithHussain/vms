@@ -14,6 +14,10 @@ export interface FrappeResponse<T = unknown> {
 // Path to CSRF token file saved by auth.setup.ts
 const CSRF_FILE = "e2e/.auth/csrf.json";
 
+// Node.js can't resolve .localhost TLDs, so API calls go via 127.0.0.1 + Host header.
+const SITE_HOST = process.env.SITE_HOST || "vms.localhost:8000";
+export const API_BASE = process.env.API_BASE || "http://127.0.0.1:8000";
+
 // Cache for CSRF token (read from file once)
 let csrfTokenCache: string | null = null;
 
@@ -40,6 +44,18 @@ function getCsrfToken(): string {
 }
 
 /**
+ * Build common headers for API requests (CSRF + Host for .localhost resolution).
+ */
+function apiHeaders(extra: Record<string, string> = {}): Record<string, string> {
+	const csrfToken = getCsrfToken();
+	return {
+		Host: SITE_HOST,
+		...(csrfToken ? { "X-Frappe-CSRF-Token": csrfToken } : {}),
+		...extra,
+	};
+}
+
+/**
  * Create a new document via Frappe REST API.
  */
 export async function createDoc<T = Record<string, unknown>>(
@@ -47,14 +63,9 @@ export async function createDoc<T = Record<string, unknown>>(
 	doctype: string,
 	doc: Record<string, unknown>,
 ): Promise<T> {
-	const csrfToken = getCsrfToken();
-
-	const response = await request.post(`/api/resource/${doctype}`, {
+	const response = await request.post(`${API_BASE}/api/resource/${doctype}`, {
 		data: doc,
-		headers: {
-			"Content-Type": "application/json",
-			...(csrfToken ? { "X-Frappe-CSRF-Token": csrfToken } : {}),
-		},
+		headers: apiHeaders({ "Content-Type": "application/json" }),
 	});
 
 	if (!response.ok()) {
@@ -75,7 +86,8 @@ export async function getDoc<T = Record<string, unknown>>(
 	name: string,
 ): Promise<T> {
 	const response = await request.get(
-		`/api/resource/${doctype}/${encodeURIComponent(name)}`,
+		`${API_BASE}/api/resource/${doctype}/${encodeURIComponent(name)}`,
+		{ headers: apiHeaders() },
 	);
 
 	if (!response.ok()) {
@@ -96,16 +108,11 @@ export async function updateDoc<T = Record<string, unknown>>(
 	name: string,
 	updates: Record<string, unknown>,
 ): Promise<T> {
-	const csrfToken = getCsrfToken();
-
 	const response = await request.put(
-		`/api/resource/${doctype}/${encodeURIComponent(name)}`,
+		`${API_BASE}/api/resource/${doctype}/${encodeURIComponent(name)}`,
 		{
 			data: updates,
-			headers: {
-				"Content-Type": "application/json",
-				...(csrfToken ? { "X-Frappe-CSRF-Token": csrfToken } : {}),
-			},
+			headers: apiHeaders({ "Content-Type": "application/json" }),
 		},
 	);
 
@@ -126,15 +133,9 @@ export async function deleteDoc(
 	doctype: string,
 	name: string,
 ): Promise<void> {
-	const csrfToken = getCsrfToken();
-
 	const response = await request.delete(
-		`/api/resource/${doctype}/${encodeURIComponent(name)}`,
-		{
-			headers: {
-				...(csrfToken ? { "X-Frappe-CSRF-Token": csrfToken } : {}),
-			},
-		},
+		`${API_BASE}/api/resource/${doctype}/${encodeURIComponent(name)}`,
+		{ headers: apiHeaders() },
 	);
 
 	if (!response.ok()) {
@@ -151,14 +152,9 @@ export async function callMethod<T = unknown>(
 	method: string,
 	args: Record<string, unknown> = {},
 ): Promise<T> {
-	const csrfToken = getCsrfToken();
-
-	const response = await request.post(`/api/method/${method}`, {
+	const response = await request.post(`${API_BASE}/api/method/${method}`, {
 		data: args,
-		headers: {
-			"Content-Type": "application/json",
-			...(csrfToken ? { "X-Frappe-CSRF-Token": csrfToken } : {}),
-		},
+		headers: apiHeaders({ "Content-Type": "application/json" }),
 	});
 
 	if (!response.ok()) {
@@ -198,7 +194,10 @@ export async function getList<T = Record<string, unknown>>(
 		params.set("order_by", options.orderBy);
 	}
 
-	const response = await request.get(`/api/resource/${doctype}?${params.toString()}`);
+	const response = await request.get(
+		`${API_BASE}/api/resource/${doctype}?${params.toString()}`,
+		{ headers: apiHeaders() },
+	);
 
 	if (!response.ok()) {
 		const error = await response.text();
