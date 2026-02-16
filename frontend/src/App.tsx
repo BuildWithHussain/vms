@@ -53,9 +53,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function SetupGate({ children }: { children: React.ReactNode }) {
-  const { data, isLoading } = useFrappeGetCall<{ setup_complete: boolean }>(
-    "vms.api.get_setup_status"
-  )
+  const { data, isLoading } = useFrappeGetCall<{
+    setup_complete: boolean
+    is_system_manager: boolean
+  }>("vms.api.get_setup_status")
   const [wizardDone, setWizardDone] = useState(false)
 
   if (isLoading) {
@@ -67,8 +68,10 @@ function SetupGate({ children }: { children: React.ReactNode }) {
   }
 
   const setupComplete = data?.message?.setup_complete || wizardDone
+  const isSystemManager = data?.message?.is_system_manager ?? false
 
-  if (!setupComplete) {
+  // Only show wizard to System Managers; non-admins skip to app
+  if (!setupComplete && isSystemManager) {
     return <SetupWizard onComplete={() => setWizardDone(true)} />
   }
 

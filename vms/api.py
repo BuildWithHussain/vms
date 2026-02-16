@@ -758,12 +758,17 @@ def search_projects(query: str, limit: int = 5):
 def get_setup_status():
 	"""Check if VMS setup wizard has been completed."""
 	settings = frappe.get_single("VMS Settings")
-	return {"setup_complete": bool(settings.setup_complete)}
+	return {
+		"setup_complete": bool(settings.setup_complete),
+		"is_system_manager": "System Manager" in frappe.get_roles(),
+	}
 
 
 @frappe.whitelist()
 def complete_setup():
-	"""Mark VMS setup as complete."""
+	"""Mark VMS setup as complete. Only System Managers can do this."""
+	if "System Manager" not in frappe.get_roles():
+		frappe.throw("Only System Managers can complete setup", frappe.PermissionError)
 	settings = frappe.get_single("VMS Settings")
 	settings.setup_complete = 1
 	settings.save(ignore_permissions=True)
