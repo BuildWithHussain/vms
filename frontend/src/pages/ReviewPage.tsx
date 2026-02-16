@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useParams, useSearchParams } from "react-router"
 import { useFrappeGetCall, useFrappePostCall, useFrappeAuth } from "frappe-react-sdk"
 import { Spinner } from "@/components/ui/spinner"
@@ -102,27 +102,39 @@ function ReviewPageInner({
 }) {
   const { replayAnnotation, annotationMode, dismissReplay, cancelAnnotation, isGuest } = useReviewContext()
   const [transcriptionOpen, setTranscriptionOpen] = useState(false)
+  const [isPolling, setIsPolling] = useState(asset.transcription_status === "Processing")
 
   const { call: callTogglePublicReview } = useFrappePostCall("vms.review_api.toggle_public_review")
   const { call: callStartTranscription, loading: startingTranscription } = useFrappePostCall(
     "vms.transcription.start_transcription",
   )
 
-  // Fetch transcription content when sheet is opened or status is complete
+  // Fetch transcription content — auto-poll every 5s while Processing
   const { data: transcriptionData, mutate: mutateTranscription } = useFrappeGetCall<{
     message: { transcription_status: string; transcription: string }
   }>(
     "vms.transcription.get_transcription",
     { asset_name: asset.name },
     `transcription-${asset.name}`,
-    { revalidateOnFocus: false },
+    {
+      revalidateOnFocus: false,
+      refreshInterval: isPolling ? 5000 : 0,
+    },
   )
 
   const transcriptionStatus = transcriptionData?.message?.transcription_status || asset.transcription_status || ""
   const transcriptionText = transcriptionData?.message?.transcription || ""
 
+  // Stop polling when transcription completes or errors
+  useEffect(() => {
+    if (transcriptionStatus === "Complete" || transcriptionStatus === "Error") {
+      setIsPolling(false)
+    }
+  }, [transcriptionStatus])
+
   const handleStartTranscription = useCallback(async () => {
     await callStartTranscription({ asset_name: asset.name })
+    setIsPolling(true)
     mutateReviewData()
     mutateTranscription()
   }, [asset.name, callStartTranscription, mutateReviewData, mutateTranscription])

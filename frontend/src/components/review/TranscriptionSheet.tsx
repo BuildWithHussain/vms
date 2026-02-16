@@ -65,9 +65,9 @@ export function TranscriptionSheet({
               <p className="text-sm text-muted-foreground">
                 Transcription in progress. This may take a few minutes depending on the video length.
               </p>
-              <Button variant="outline" size="sm" onClick={onRefresh}>
-                Check status
-              </Button>
+              <p className="text-xs text-muted-foreground/60">
+                Auto-checking every few seconds...
+              </p>
             </div>
           ) : transcriptionStatus === "Error" ? (
             <div className="flex flex-col items-center gap-3 py-12">
