@@ -36,15 +36,17 @@ export function GeneralSection() {
   const { call: resetSetup, loading: resetting } = useFrappePostCall("vms.api.reset_setup")
 
   const GB_TO_BYTES = 1024 * 1024 * 1024
+  const MB_TO_BYTES = 1024 * 1024
 
   const [form, setForm] = useState<Partial<VMSSettings>>({})
   const initialForm = useRef<Partial<VMSSettings>>({})
 
-  // Separate state for slider (GB) and tag input
-  const [maxFileSizeGB, setMaxFileSizeGB] = useState(5)
+  // File size stored in MB for precision; slider works in GB (2-40, step 2)
+  const [maxFileSizeMB, setMaxFileSizeMB] = useState(5 * 1024) // 5 GB default in MB
+  const [customMBInput, setCustomMBInput] = useState("")
   const [extensionTags, setExtensionTags] = useState<Tag[]>([])
   const [activeTagIndex, setActiveTagIndex] = useState<number | null>(null)
-  const initialMaxFileSizeGB = useRef(5)
+  const initialMaxFileSizeMB = useRef(5 * 1024)
   const initialExtensionTags = useRef<Tag[]>([])
 
   useEffect(() => {
@@ -63,10 +65,11 @@ export function GeneralSection() {
       setForm(values)
       initialForm.current = values
 
-      // File size: bytes → GB, snap to nearest 0.5
-      const sizeGB = Math.round(((data.max_file_size || 5 * GB_TO_BYTES) / GB_TO_BYTES) * 2) / 2
-      setMaxFileSizeGB(sizeGB)
-      initialMaxFileSizeGB.current = sizeGB
+      // File size: bytes → MB
+      const sizeMB = Math.round((data.max_file_size || 5 * GB_TO_BYTES) / MB_TO_BYTES)
+      setMaxFileSizeMB(sizeMB)
+      setCustomMBInput(String(sizeMB))
+      initialMaxFileSizeMB.current = sizeMB
 
       // Extensions: comma string → tags
       const exts = (data.allowed_extensions || "mp4,mov,avi,mkv,webm,m4v")
@@ -81,7 +84,7 @@ export function GeneralSection() {
 
   const isDirty =
     JSON.stringify(form) !== JSON.stringify(initialForm.current) ||
-    maxFileSizeGB !== initialMaxFileSizeGB.current ||
+    maxFileSizeMB !== initialMaxFileSizeMB.current ||
     JSON.stringify(extensionTags.map((t) => t.text)) !==
       JSON.stringify(initialExtensionTags.current.map((t) => t.text))
 
@@ -103,7 +106,7 @@ export function GeneralSection() {
     try {
       await updateDoc("VMS Settings", "VMS Settings", {
         ...form,
-        max_file_size: maxFileSizeGB * GB_TO_BYTES,
+        max_file_size: maxFileSizeMB * MB_TO_BYTES,
         allowed_extensions: extensionTags.map((t) => t.text).join(","),
       })
       await mutate()
@@ -263,19 +266,58 @@ export function GeneralSection() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label className="text-xs">Max File Size</Label>
-                  <span className="text-sm font-medium">{maxFileSizeGB} GB</span>
+                  <span className="text-sm font-medium">
+                    {maxFileSizeMB >= 1024
+                      ? `${(maxFileSizeMB / 1024).toFixed(maxFileSizeMB % 1024 === 0 ? 0 : 1)} GB`
+                      : `${maxFileSizeMB} MB`}
+                  </span>
                 </div>
                 <Slider
-                  value={[maxFileSizeGB]}
-                  onValueChange={(values: number[]) => setMaxFileSizeGB(values[0])}
-                  min={0.5}
-                  max={10}
-                  step={0.5}
+                  value={[Math.max(2, Math.min(Math.round(maxFileSizeMB / 1024 / 2) * 2, 40))]}
+                  onValueChange={(values: number[]) => {
+                    const mb = values[0] * 1024
+                    setMaxFileSizeMB(mb)
+                    setCustomMBInput(String(mb))
+                  }}
+                  min={2}
+                  max={40}
+                  step={2}
                 />
                 <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>0.5 GB</span>
-                  <span>5 GB</span>
-                  <span>10 GB</span>
+                  <span>2 GB</span>
+                  <span>20 GB</span>
+                  <span>40 GB</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="custom_mb" className="text-xs text-muted-foreground whitespace-nowrap">
+                    Custom (MB)
+                  </Label>
+                  <Input
+                    id="custom_mb"
+                    type="number"
+                    min={1}
+                    className="w-28 h-8 text-xs"
+                    value={customMBInput}
+                    onChange={(e) => setCustomMBInput(e.target.value)}
+                    onBlur={() => {
+                      const val = parseInt(customMBInput)
+                      if (val && val > 0) {
+                        setMaxFileSizeMB(val)
+                      } else {
+                        setCustomMBInput(String(maxFileSizeMB))
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        const val = parseInt(customMBInput)
+                        if (val && val > 0) {
+                          setMaxFileSizeMB(val)
+                        } else {
+                          setCustomMBInput(String(maxFileSizeMB))
+                        }
+                      }
+                    }}
+                  />
                 </div>
               </div>
               <div className="space-y-1.5">

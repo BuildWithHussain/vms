@@ -39,9 +39,9 @@ const STEPS = [
   { id: "formats", label: "Formats" },
 ] as const
 
-// File size slider: 0.5 GB steps, from 0.5 to 10 GB (displayed in GB, stored in bytes)
-const SIZE_STEPS_GB = [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10]
+// File size slider: 2 GB steps, from 2 to 40 GB (displayed in GB, stored in bytes)
 const GB_TO_BYTES = 1024 * 1024 * 1024
+const MB_TO_BYTES = 1024 * 1024
 
 const DEFAULT_EXTENSIONS = ["mp4", "mov", "avi", "mkv", "webm", "m4v"]
 
@@ -58,8 +58,9 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
     cloudflare_api_token: "",
   })
 
-  // Upload settings
-  const [maxFileSizeGB, setMaxFileSizeGB] = useState(5) // 5 GB default
+  // Upload settings (stored in MB for precision)
+  const [maxFileSizeMB, setMaxFileSizeMB] = useState(5 * 1024) // 5 GB default in MB
+  const [customMBInput, setCustomMBInput] = useState(String(5 * 1024))
 
   // File formats (emblor tags)
   const [extensionTags, setExtensionTags] = useState<Tag[]>(
@@ -106,9 +107,9 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
         r2_public_url: settings.r2_public_url || "",
         cloudflare_api_token: settings.cloudflare_api_token || "",
       })
-      const sizeGB = (settings.max_file_size || 5 * GB_TO_BYTES) / GB_TO_BYTES
-      // Snap to nearest 0.5
-      setMaxFileSizeGB(Math.round(sizeGB * 2) / 2)
+      const sizeMB = Math.round((settings.max_file_size || 5 * GB_TO_BYTES) / MB_TO_BYTES)
+      setMaxFileSizeMB(sizeMB)
+      setCustomMBInput(String(sizeMB))
       const exts = (settings.allowed_extensions || "mp4,mov,avi,mkv,webm,m4v")
         .split(",")
         .map((e) => e.trim())
@@ -171,7 +172,7 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
       } else if (step === 2) {
         // Save upload settings
         await updateDoc("VMS Settings", "VMS Settings", {
-          max_file_size: maxFileSizeGB * GB_TO_BYTES,
+          max_file_size: maxFileSizeMB * MB_TO_BYTES,
         })
       } else if (step === 3) {
         // Save file formats
@@ -381,19 +382,58 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs">Max File Size</Label>
-                    <span className="text-sm font-medium">{maxFileSizeGB} GB</span>
+                    <span className="text-sm font-medium">
+                      {maxFileSizeMB >= 1024
+                        ? `${(maxFileSizeMB / 1024).toFixed(maxFileSizeMB % 1024 === 0 ? 0 : 1)} GB`
+                        : `${maxFileSizeMB} MB`}
+                    </span>
                   </div>
                   <Slider
-                    value={[maxFileSizeGB]}
-                    onValueChange={(values: number[]) => setMaxFileSizeGB(values[0])}
-                    min={0.5}
-                    max={10}
-                    step={0.5}
+                    value={[Math.max(2, Math.min(Math.round(maxFileSizeMB / 1024 / 2) * 2, 40))]}
+                    onValueChange={(values: number[]) => {
+                      const mb = values[0] * 1024
+                      setMaxFileSizeMB(mb)
+                      setCustomMBInput(String(mb))
+                    }}
+                    min={2}
+                    max={40}
+                    step={2}
                   />
                   <div className="flex justify-between text-[10px] text-muted-foreground">
-                    <span>0.5 GB</span>
-                    <span>5 GB</span>
-                    <span>10 GB</span>
+                    <span>2 GB</span>
+                    <span>20 GB</span>
+                    <span>40 GB</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="wizard_custom_mb" className="text-xs text-muted-foreground whitespace-nowrap">
+                      Custom (MB)
+                    </Label>
+                    <Input
+                      id="wizard_custom_mb"
+                      type="number"
+                      min={1}
+                      className="w-28 h-8 text-xs"
+                      value={customMBInput}
+                      onChange={(e) => setCustomMBInput(e.target.value)}
+                      onBlur={() => {
+                        const val = parseInt(customMBInput)
+                        if (val && val > 0) {
+                          setMaxFileSizeMB(val)
+                        } else {
+                          setCustomMBInput(String(maxFileSizeMB))
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const val = parseInt(customMBInput)
+                          if (val && val > 0) {
+                            setMaxFileSizeMB(val)
+                          } else {
+                            setCustomMBInput(String(maxFileSizeMB))
+                          }
+                        }
+                      }}
+                    />
                   </div>
                 </div>
               </div>

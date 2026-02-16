@@ -103,8 +103,14 @@ def get_upload_url(
 	# Validate file size against settings
 	max_size = int(settings.max_file_size or 0)
 	if max_size and file_size and file_size > max_size:
-		max_gb = round(max_size / (1024**3), 1)
-		frappe.throw(_("File size exceeds the maximum allowed size of {0} GB").format(max_gb))
+		max_mb = max_size / (1024**2)
+		if max_mb >= 1024 and max_mb % 1024 == 0:
+			size_label = f"{int(max_mb / 1024)} GB"
+		elif max_mb >= 1024:
+			size_label = f"{round(max_mb / 1024, 1)} GB"
+		else:
+			size_label = f"{int(max_mb)} MB"
+		frappe.throw(_("File size exceeds the maximum allowed size of {0}").format(size_label))
 
 	# Validate file extension
 	ext = file_name.rsplit(".", 1)[-1].lower() if "." in file_name else ""
