@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
 interface VMSSettings {
@@ -19,6 +20,8 @@ interface VMSSettings {
   max_file_size: number
   presigned_url_expiry: number
   allowed_extensions: string
+  transcription_provider: string
+  whisper_model: string
 }
 
 
@@ -45,6 +48,8 @@ export function GeneralSection() {
         max_file_size: Math.round((data.max_file_size || 5368709120) / (1024 * 1024)),
         presigned_url_expiry: data.presigned_url_expiry || 3600,
         allowed_extensions: data.allowed_extensions || "mp4,mov,avi,mkv,webm,m4v",
+        transcription_provider: data.transcription_provider || "whisper.cpp",
+        whisper_model: data.whisper_model || "ggml-small.en",
       }
       setForm(values)
       initialForm.current = values
@@ -264,6 +269,60 @@ export function GeneralSection() {
                   Comma-separated list of allowed file extensions (e.g.
                   mp4,mov,avi,mkv,webm)
                 </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Transcription */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold">Transcription</h3>
+              <p className="text-xs text-muted-foreground">
+                Configure AI transcription for video assets.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="transcription_provider" className="text-xs">Provider</Label>
+                  <Select
+                    value={form.transcription_provider ?? "whisper.cpp"}
+                    onValueChange={(value) =>
+                      handleChange("transcription_provider", value)
+                    }
+                  >
+                    <SelectTrigger id="transcription_provider">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="whisper.cpp">whisper.cpp (local)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.transcription_provider === "whisper.cpp" && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="whisper_model" className="text-xs">Whisper Model</Label>
+                    <Select
+                      value={form.whisper_model ?? "ggml-small.en"}
+                      onValueChange={(value) =>
+                        handleChange("whisper_model", value)
+                      }
+                    >
+                      <SelectTrigger id="whisper_model">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ggml-small.en">small.en (recommended)</SelectItem>
+                        <SelectItem value="ggml-base.en">base.en (faster, less accurate)</SelectItem>
+                        <SelectItem value="ggml-medium.en">medium.en (slower, more accurate)</SelectItem>
+                        <SelectItem value="ggml-large">large (slowest, most accurate)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Larger models are more accurate but slower.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
