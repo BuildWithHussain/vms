@@ -2,11 +2,12 @@ import { useFrappeGetDoc, useFrappeUpdateDoc, useFrappePostCall } from "frappe-r
 import { useState, useEffect, useRef } from "react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Slider } from "@/components/ui/slider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tag, TagInput } from "emblor"
 import { cn } from "@/lib/utils"
 
 interface VMSSettings {
@@ -33,8 +34,17 @@ export function GeneralSection() {
   const { updateDoc, loading: saving } = useFrappeUpdateDoc<VMSSettings>()
   const { call: testConnection, loading: testing } = useFrappePostCall("vms.api.test_r2_connection")
 
+  const GB_TO_BYTES = 1024 * 1024 * 1024
+
   const [form, setForm] = useState<Partial<VMSSettings>>({})
   const initialForm = useRef<Partial<VMSSettings>>({})
+
+  // Separate state for slider (GB) and tag input
+  const [maxFileSizeGB, setMaxFileSizeGB] = useState(5)
+  const [extensionTags, setExtensionTags] = useState<Tag[]>([])
+  const [activeTagIndex, setActiveTagIndex] = useState<number | null>(null)
+  const initialMaxFileSizeGB = useRef(5)
+  const initialExtensionTags = useRef<Tag[]>([])
 
   useEffect(() => {
     if (data) {
@@ -45,18 +55,34 @@ export function GeneralSection() {
         r2_bucket_name: data.r2_bucket_name || "",
         r2_public_url: data.r2_public_url || "",
         cloudflare_api_token: data.cloudflare_api_token || "",
-        max_file_size: Math.round((data.max_file_size || 5368709120) / (1024 * 1024)),
         presigned_url_expiry: data.presigned_url_expiry || 3600,
-        allowed_extensions: data.allowed_extensions || "mp4,mov,avi,mkv,webm,m4v",
         transcription_provider: data.transcription_provider || "whisper.cpp",
         whisper_model: data.whisper_model || "ggml-small.en",
       }
       setForm(values)
       initialForm.current = values
+
+      // File size: bytes → GB, snap to nearest 0.5
+      const sizeGB = Math.round(((data.max_file_size || 5 * GB_TO_BYTES) / GB_TO_BYTES) * 2) / 2
+      setMaxFileSizeGB(sizeGB)
+      initialMaxFileSizeGB.current = sizeGB
+
+      // Extensions: comma string → tags
+      const exts = (data.allowed_extensions || "mp4,mov,avi,mkv,webm,m4v")
+        .split(",")
+        .map((e) => e.trim())
+        .filter(Boolean)
+      const tags = exts.map((ext, i) => ({ id: String(i), text: ext }))
+      setExtensionTags(tags)
+      initialExtensionTags.current = tags
     }
   }, [data])
 
-  const isDirty = JSON.stringify(form) !== JSON.stringify(initialForm.current)
+  const isDirty =
+    JSON.stringify(form) !== JSON.stringify(initialForm.current) ||
+    maxFileSizeGB !== initialMaxFileSizeGB.current ||
+    JSON.stringify(extensionTags.map((t) => t.text)) !==
+      JSON.stringify(initialExtensionTags.current.map((t) => t.text))
 
   const handleTestConnection = async () => {
     try {
@@ -76,7 +102,8 @@ export function GeneralSection() {
     try {
       await updateDoc("VMS Settings", "VMS Settings", {
         ...form,
-        max_file_size: (form.max_file_size || 0) * 1024 * 1024,
+        max_file_size: maxFileSizeGB * GB_TO_BYTES,
+        allowed_extensions: extensionTags.map((t) => t.text).join(","),
       })
       await mutate()
       toast.success("Settings saved")
@@ -221,53 +248,68 @@ export function GeneralSection() {
               </p>
             </div>
             <div className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="max_file_size" className="text-xs">Max File Size (MB)</Label>
-                  <Input
-                    id="max_file_size"
-                    type="number"
-                    value={form.max_file_size ?? ""}
-                    onChange={(e) =>
-                      handleChange("max_file_size", parseInt(e.target.value) || 0)
-                    }
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Default: 5120 MB (5 GB)
-                  </p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Max File Size</Label>
+                  <span className="text-sm font-medium">{maxFileSizeGB} GB</span>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="presigned_url_expiry" className="text-xs">
-                    Presigned URL Expiry (seconds)
-                  </Label>
-                  <Input
-                    id="presigned_url_expiry"
-                    type="number"
-                    value={form.presigned_url_expiry ?? ""}
-                    onChange={(e) =>
-                      handleChange(
-                        "presigned_url_expiry",
-                        parseInt(e.target.value) || 0
-                      )
-                    }
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Default: 1 hour (3600 seconds)
-                  </p>
+                <Slider
+                  value={[maxFileSizeGB]}
+                  onValueChange={(values: number[]) => setMaxFileSizeGB(values[0])}
+                  min={0.5}
+                  max={10}
+                  step={0.5}
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>0.5 GB</span>
+                  <span>5 GB</span>
+                  <span>10 GB</span>
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="allowed_extensions" className="text-xs">Allowed Extensions</Label>
-                <Textarea
-                  id="allowed_extensions"
-                  value={form.allowed_extensions ?? ""}
+                <Label htmlFor="presigned_url_expiry" className="text-xs">
+                  Presigned URL Expiry (seconds)
+                </Label>
+                <Input
+                  id="presigned_url_expiry"
+                  type="number"
+                  value={form.presigned_url_expiry ?? ""}
                   onChange={(e) =>
-                    handleChange("allowed_extensions", e.target.value)
+                    handleChange(
+                      "presigned_url_expiry",
+                      parseInt(e.target.value) || 0
+                    )
                   }
                 />
                 <p className="text-xs text-muted-foreground">
-                  Comma-separated list of allowed file extensions (e.g.
-                  mp4,mov,avi,mkv,webm)
+                  Default: 1 hour (3600 seconds)
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Allowed Extensions</Label>
+                <TagInput
+                  tags={extensionTags}
+                  setTags={(newTags) => {
+                    if (typeof newTags === "function") {
+                      setExtensionTags(newTags)
+                    } else {
+                      setExtensionTags(newTags)
+                    }
+                  }}
+                  placeholder="Add format (e.g. mp4)"
+                  activeTagIndex={activeTagIndex}
+                  setActiveTagIndex={setActiveTagIndex}
+                  styleClasses={{
+                    inlineTagsContainer: "border-input bg-background rounded-md p-1 gap-1",
+                    input: "text-sm placeholder:text-muted-foreground",
+                    tag: {
+                      body: "bg-secondary text-secondary-foreground rounded-md pl-2 text-xs",
+                      closeButton: "text-muted-foreground hover:text-foreground",
+                    },
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Type an extension and press Enter to add.
                 </p>
               </div>
             </div>
