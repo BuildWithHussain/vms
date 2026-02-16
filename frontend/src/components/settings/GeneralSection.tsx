@@ -33,6 +33,7 @@ export function GeneralSection() {
   )
   const { updateDoc, loading: saving } = useFrappeUpdateDoc<VMSSettings>()
   const { call: testConnection, loading: testing } = useFrappePostCall("vms.api.test_r2_connection")
+  const { call: resetSetup, loading: resetting } = useFrappePostCall("vms.api.reset_setup")
 
   const GB_TO_BYTES = 1024 * 1024 * 1024
 
@@ -109,6 +110,17 @@ export function GeneralSection() {
       toast.success("Settings saved")
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Failed to save settings"
+      toast.error(message)
+    }
+  }
+
+  const handleResetSetup = async () => {
+    try {
+      await resetSetup({})
+      toast.success("Setup reset. Reloading...")
+      setTimeout(() => window.location.reload(), 500)
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Failed to reset setup"
       toast.error(message)
     }
   }
@@ -367,6 +379,24 @@ export function GeneralSection() {
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Re-run Setup */}
+          <div className="flex items-center justify-between rounded-lg border border-dashed border-border p-4">
+            <div>
+              <p className="text-xs font-medium">Setup Wizard</p>
+              <p className="text-xs text-muted-foreground">
+                Re-run the initial setup wizard to reconfigure your workspace.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResetSetup}
+              disabled={resetting}
+            >
+              {resetting ? "Resetting..." : "Re-run Setup"}
+            </Button>
           </div>
         </div>
       </div>

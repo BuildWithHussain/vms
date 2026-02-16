@@ -774,3 +774,15 @@ def complete_setup():
 	settings.save(ignore_permissions=True)
 	frappe.db.commit()
 	return {"status": "ok"}
+
+
+@frappe.whitelist()
+def reset_setup():
+	"""Reset VMS setup so the wizard runs again. Only System Managers can do this."""
+	if "System Manager" not in frappe.get_roles():
+		frappe.throw("Only System Managers can reset setup", frappe.PermissionError)
+	settings = frappe.get_single("VMS Settings")
+	settings.setup_complete = 0
+	settings.save(ignore_permissions=True)
+	frappe.db.commit()
+	return {"status": "ok"}
