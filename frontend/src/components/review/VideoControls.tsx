@@ -10,12 +10,13 @@ import {
   FullScreenIcon,
   MinimizeScreenIcon,
 } from "@hugeicons/core-free-icons"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
 import { formatTimecode } from "@/hooks/useVideoPlayer"
 
 const SPEED_OPTIONS = [0.5, 1, 1.5, 2]
@@ -89,10 +90,13 @@ export function VideoControls({
 
       <div className="ml-auto flex items-center gap-1">
         <Popover>
-          <PopoverTrigger>
-            <Button variant="ghost" size="sm" className="hidden font-mono text-xs md:inline-flex" asChild>
-              <span>{playbackRate}x</span>
-            </Button>
+          <PopoverTrigger
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "sm" }),
+              "hidden font-mono text-xs md:inline-flex cursor-pointer"
+            )}
+          >
+            {playbackRate}x
           </PopoverTrigger>
           <PopoverContent className="w-auto min-w-0 p-1" align="end">
             <div className="flex flex-col">
