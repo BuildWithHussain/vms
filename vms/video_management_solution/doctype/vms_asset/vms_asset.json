@@ -26,6 +26,7 @@
   "column_break_review",
   "review_token",
   "section_break_transcription",
+  "transcription_status",
   "transcription"
  ],
  "fields": [
@@ -152,6 +153,13 @@
    "fieldname": "section_break_transcription",
    "fieldtype": "Section Break",
    "label": "Transcription"
+  },
+  {
+   "fieldname": "transcription_status",
+   "fieldtype": "Select",
+   "label": "Transcription Status",
+   "options": "\nPending\nProcessing\nComplete\nError",
+   "read_only": 1
   },
   {
    "fieldname": "transcription",

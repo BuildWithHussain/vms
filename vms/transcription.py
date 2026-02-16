@@ -1,0 +1,279 @@
+import json
+import os
+import shutil
+import subprocess
+import tempfile
+from pathlib import Path
+from urllib.request import urlretrieve
+
+import frappe
+from frappe import _
+
+from vms.r2 import generate_presigned_download_url
+
+WHISPER_BINARY = "whisper-cli"
+MODEL_CACHE_DIR = Path(frappe.get_site_path()) / ".cache" / "whispercpp"
+HUGGINGFACE_BASE = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main"
+
+
+def ensure_whisper_installed():
+	"""Check if whisper-cli is available on the system PATH."""
+	return shutil.which(WHISPER_BINARY) is not None
+
+
+def get_model_path(model_name: str = "ggml-small.en") -> Path:
+	"""Get the path where a whisper model should be stored."""
+	filename = f"{model_name}.bin"
+	return MODEL_CACHE_DIR / filename
+
+
+def ensure_model_downloaded(model_name: str = "ggml-small.en") -> Path:
+	"""Download the whisper model if it doesn't exist locally."""
+	model_path = get_model_path(model_name)
+
+	if model_path.exists():
+		return model_path
+
+	MODEL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+	filename = f"{model_name}.bin"
+	url = f"{HUGGINGFACE_BASE}/{filename}"
+
+	frappe.logger().info(f"Downloading whisper model from {url} to {model_path}")
+	urlretrieve(url, str(model_path))
+	frappe.logger().info(f"Model downloaded: {model_path}")
+
+	return model_path
+
+
+def extract_audio(video_path: str, output_path: str) -> None:
+	"""Extract audio from video as 16kHz mono WAV (required by whisper.cpp)."""
+	cmd = [
+		"ffmpeg",
+		"-hide_banner",
+		"-y",
+		"-i",
+		video_path,
+		"-vn",
+		"-sn",
+		"-dn",
+		"-ac",
+		"1",
+		"-ar",
+		"16000",
+		"-c:a",
+		"pcm_s16le",
+		output_path,
+	]
+	result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+	if result.returncode != 0:
+		raise RuntimeError(f"ffmpeg failed: {result.stderr}")
+
+
+def run_whisper(audio_path: str, model_path: str, output_base: str) -> dict:
+	"""Run whisper-cli and return parsed JSON output."""
+	cmd = [
+		WHISPER_BINARY,
+		"-m",
+		model_path,
+		"-f",
+		audio_path,
+		"-l",
+		"en",
+		"-ojf",
+		"-of",
+		output_base,
+	]
+
+	result = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+	if result.returncode != 0:
+		raise RuntimeError(f"whisper-cli failed: {result.stderr}")
+
+	json_path = f"{output_base}.json"
+	if os.path.exists(json_path):
+		with open(json_path) as f:
+			return json.load(f)
+
+	return {}
+
+
+def format_timestamp(seconds: float) -> str:
+	"""Format seconds as MM:SS."""
+	minutes = int(seconds // 60)
+	secs = int(seconds % 60)
+	return f"{minutes:02d}:{secs:02d}"
+
+
+def parse_segments(whisper_output: dict) -> list[dict]:
+	"""Parse whisper JSON output into segments with timestamps."""
+	segments = []
+
+	# Try transcription[].tokens first (most granular)
+	transcription = whisper_output.get("transcription", [])
+	if transcription:
+		for item in transcription:
+			offsets = item.get("offsets", {})
+			start_ms = offsets.get("from", 0)
+			end_ms = offsets.get("to", 0)
+			text = item.get("text", "").strip()
+			if text and not text.startswith("[_"):
+				segments.append(
+					{
+						"start": start_ms / 1000,
+						"end": end_ms / 1000,
+						"text": text,
+					}
+				)
+		if segments:
+			return segments
+
+	# Fallback to segments[]
+	raw_segments = whisper_output.get("segments", [])
+	for seg in raw_segments:
+		text = seg.get("text", seg.get("transcript", "")).strip()
+		start = seg.get("start", seg.get("t0", 0))
+		end = seg.get("end", seg.get("t1", 0))
+		if text:
+			segments.append({"start": float(start), "end": float(end), "text": text})
+
+	return segments
+
+
+def segments_to_markdown(segments: list[dict]) -> str:
+	"""Convert segments to readable markdown with timestamps."""
+	if not segments:
+		return ""
+
+	lines = []
+	for seg in segments:
+		ts = format_timestamp(seg["start"])
+		lines.append(f"**[{ts}]** {seg['text']}")
+
+	return "\n\n".join(lines)
+
+
+@frappe.whitelist()
+def start_transcription(asset_name: str):
+	"""Enqueue a transcription job for the given asset."""
+	if not frappe.db.exists("VMS Asset", asset_name):
+		frappe.throw(_("Asset {0} does not exist").format(asset_name))
+
+	asset = frappe.get_doc("VMS Asset", asset_name)
+
+	if not asset.r2_key:
+		frappe.throw(_("Asset has no uploaded file"))
+
+	if asset.transcription_status == "Processing":
+		frappe.throw(_("Transcription is already in progress"))
+
+	if not ensure_whisper_installed():
+		frappe.throw(
+			_(
+				"whisper-cli is not installed. Install it with: brew install whisper-cpp"
+			)
+		)
+
+	# Mark as processing
+	asset.transcription_status = "Processing"
+	asset.save(ignore_permissions=True)
+	frappe.db.commit()
+
+	frappe.enqueue(
+		"vms.transcription.process_transcription",
+		asset_name=asset_name,
+		queue="long",
+		enqueue_after_commit=True,
+		timeout=3600,
+	)
+
+	return {"status": "ok", "transcription_status": "Processing"}
+
+
+@frappe.whitelist(methods=["GET"])
+def get_transcription(asset_name: str):
+	"""Get the transcription status and content for an asset."""
+	if not frappe.db.exists("VMS Asset", asset_name):
+		frappe.throw(_("Asset {0} does not exist").format(asset_name))
+
+	data = frappe.db.get_value(
+		"VMS Asset",
+		asset_name,
+		["transcription_status", "transcription"],
+		as_dict=True,
+	)
+
+	return {
+		"transcription_status": data.transcription_status or "",
+		"transcription": data.transcription or "",
+	}
+
+
+def process_transcription(asset_name: str):
+	"""Background job: download video, extract audio, run whisper, save transcript."""
+	asset = frappe.get_doc("VMS Asset", asset_name)
+
+	try:
+		settings = frappe.get_single("VMS Settings")
+		model_name = settings.whisper_model or "ggml-small.en"
+
+		# Ensure model is downloaded
+		model_path = ensure_model_downloaded(model_name)
+
+		# Create temp directory for work
+		with tempfile.TemporaryDirectory() as tmpdir:
+			# Download video from R2
+			video_path = os.path.join(tmpdir, "video" + _get_extension(asset.file_name))
+			download_url = generate_presigned_download_url(
+				asset.r2_key, asset.file_name
+			)
+			frappe.logger().info(
+				f"Downloading video for transcription: {asset_name}"
+			)
+			urlretrieve(download_url, video_path)
+
+			# Extract audio
+			audio_path = os.path.join(tmpdir, "audio.wav")
+			frappe.logger().info(f"Extracting audio: {asset_name}")
+			extract_audio(video_path, audio_path)
+
+			# Run whisper
+			output_base = os.path.join(tmpdir, "transcript")
+			frappe.logger().info(f"Running whisper-cli: {asset_name}")
+			whisper_output = run_whisper(
+				audio_path, str(model_path), output_base
+			)
+
+			# Parse and format
+			segments = parse_segments(whisper_output)
+			markdown = segments_to_markdown(segments)
+
+			if not markdown:
+				# Fallback: try to read the .txt output
+				txt_path = f"{output_base}.txt"
+				if os.path.exists(txt_path):
+					with open(txt_path) as f:
+						markdown = f.read().strip()
+
+		# Save to asset
+		asset.reload()
+		asset.transcription = markdown
+		asset.transcription_status = "Complete"
+		asset.save(ignore_permissions=True)
+		frappe.db.commit()
+
+		frappe.logger().info(f"Transcription complete: {asset_name}")
+
+	except Exception as e:
+		frappe.logger().error(f"Transcription failed for {asset_name}: {e}")
+		asset.reload()
+		asset.transcription_status = "Error"
+		asset.transcription = f"Transcription failed: {e}"
+		asset.save(ignore_permissions=True)
+		frappe.db.commit()
+
+
+def _get_extension(filename: str) -> str:
+	"""Get file extension from filename."""
+	if "." in filename:
+		return "." + filename.rsplit(".", 1)[1].lower()
+	return ".mp4"

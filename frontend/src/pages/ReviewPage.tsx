@@ -1,4 +1,4 @@
-import { useCallback } from "react"
+import { useCallback, useState } from "react"
 import { useParams, useSearchParams } from "react-router"
 import { useFrappeGetCall, useFrappePostCall, useFrappeAuth } from "frappe-react-sdk"
 import { Spinner } from "@/components/ui/spinner"
@@ -7,6 +7,7 @@ import { useReviewContext } from "@/hooks/useReviewContext"
 import { ReviewHeader } from "@/components/review/ReviewHeader"
 import { VideoPlayer } from "@/components/review/VideoPlayer"
 import { CommentPanel } from "@/components/review/CommentPanel"
+import { TranscriptionSheet } from "@/components/review/TranscriptionSheet"
 
 interface ReviewData {
   name: string
@@ -21,6 +22,7 @@ interface ReviewData {
   project?: { name: string; project_name: string } | null
   is_public_review?: 0 | 1
   review_token?: string | null
+  transcription_status?: string
 }
 
 export function ReviewPage() {
@@ -98,9 +100,32 @@ function ReviewPageInner({
   asset: ReviewData
   mutateReviewData: () => void
 }) {
-  const { replayAnnotation, annotationMode, dismissReplay, cancelAnnotation } = useReviewContext()
+  const { replayAnnotation, annotationMode, dismissReplay, cancelAnnotation, isGuest } = useReviewContext()
+  const [transcriptionOpen, setTranscriptionOpen] = useState(false)
 
   const { call: callTogglePublicReview } = useFrappePostCall("vms.review_api.toggle_public_review")
+  const { call: callStartTranscription, loading: startingTranscription } = useFrappePostCall(
+    "vms.transcription.start_transcription",
+  )
+
+  // Fetch transcription content when sheet is opened or status is complete
+  const { data: transcriptionData, mutate: mutateTranscription } = useFrappeGetCall<{
+    message: { transcription_status: string; transcription: string }
+  }>(
+    "vms.transcription.get_transcription",
+    { asset_name: asset.name },
+    `transcription-${asset.name}`,
+    { revalidateOnFocus: false },
+  )
+
+  const transcriptionStatus = transcriptionData?.message?.transcription_status || asset.transcription_status || ""
+  const transcriptionText = transcriptionData?.message?.transcription || ""
+
+  const handleStartTranscription = useCallback(async () => {
+    await callStartTranscription({ asset_name: asset.name })
+    mutateReviewData()
+    mutateTranscription()
+  }, [asset.name, callStartTranscription, mutateReviewData, mutateTranscription])
 
   const handleTogglePublicReview = useCallback(
     async (enable: boolean) => {
@@ -133,6 +158,10 @@ function ReviewPageInner({
         isPublicReview={asset.is_public_review === 1}
         reviewToken={asset.review_token}
         onTogglePublicReview={handleTogglePublicReview}
+        transcriptionStatus={transcriptionStatus}
+        onTranscribe={handleStartTranscription}
+        isTranscribing={startingTranscription}
+        onOpenTranscription={() => setTranscriptionOpen(true)}
       />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
@@ -146,6 +175,18 @@ function ReviewPageInner({
           <CommentPanel />
         </div>
       </div>
+
+      {!isGuest && (
+        <TranscriptionSheet
+          open={transcriptionOpen}
+          onOpenChange={setTranscriptionOpen}
+          transcriptionStatus={transcriptionStatus}
+          transcriptionText={transcriptionText}
+          onTranscribe={handleStartTranscription}
+          isTranscribing={startingTranscription}
+          onRefresh={() => mutateTranscription()}
+        />
+      )}
     </div>
   )
 }

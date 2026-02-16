@@ -87,6 +87,7 @@ app_license = "agpl-3.0"
 
 # before_install = "vms.install.before_install"
 after_install = "vms.install.after_install"
+after_migrate = ["vms.install.after_migrate"]
 
 # Uninstallation
 # ------------

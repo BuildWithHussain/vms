@@ -47,6 +47,7 @@ def get_review_data(asset_name: str, token: str | None = None):
 		"uploaded_by": asset.uploaded_by,
 		"uploaded_at": asset.uploaded_at,
 		"is_public_review": asset.is_public_review,
+		"transcription_status": asset.transcription_status or "",
 	}
 
 	# Only expose review_token to authenticated users

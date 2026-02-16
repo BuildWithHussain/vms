@@ -16,7 +16,10 @@
   "max_file_size",
   "presigned_url_expiry",
   "column_break_mlev",
-  "allowed_extensions"
+  "allowed_extensions",
+  "transcription_section",
+  "transcription_provider",
+  "whisper_model"
  ],
  "fields": [
   {
@@ -97,6 +100,28 @@
   {
    "fieldname": "column_break_mlev",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "transcription_section",
+   "fieldtype": "Section Break",
+   "label": "Transcription"
+  },
+  {
+   "fieldname": "transcription_provider",
+   "fieldtype": "Select",
+   "label": "Provider",
+   "options": "whisper.cpp",
+   "default": "whisper.cpp",
+   "description": "Transcription engine to use for video transcription"
+  },
+  {
+   "fieldname": "whisper_model",
+   "fieldtype": "Select",
+   "label": "Whisper Model",
+   "options": "ggml-small.en\nggml-base.en\nggml-medium.en\nggml-large",
+   "default": "ggml-small.en",
+   "description": "Whisper.cpp model to use. Larger models are more accurate but slower.",
+   "depends_on": "eval:doc.transcription_provider=='whisper.cpp'"
   }
  ],
  "issingle": 1,

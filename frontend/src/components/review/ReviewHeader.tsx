@@ -1,13 +1,14 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowLeft01Icon, Download04Icon, Link01Icon, Copy01Icon } from "@hugeicons/core-free-icons"
+import { ArrowLeft01Icon, Download04Icon, Link01Icon, Copy01Icon, SubtitleIcon } from "@hugeicons/core-free-icons"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Spinner } from "@/components/ui/spinner"
 import { useDownload } from "@/hooks/useDownload"
 import { useReviewContext } from "@/hooks/useReviewContext"
 import { toast } from "sonner"
@@ -20,6 +21,10 @@ interface ReviewHeaderProps {
   isPublicReview?: boolean
   reviewToken?: string | null
   onTogglePublicReview?: (enable: boolean) => Promise<void>
+  transcriptionStatus?: string
+  onTranscribe?: () => Promise<void>
+  isTranscribing?: boolean
+  onOpenTranscription?: () => void
 }
 
 export function ReviewHeader({
@@ -30,6 +35,10 @@ export function ReviewHeader({
   isPublicReview = false,
   reviewToken,
   onTogglePublicReview,
+  transcriptionStatus,
+  onTranscribe,
+  isTranscribing,
+  onOpenTranscription,
 }: ReviewHeaderProps) {
   const navigate = useNavigate()
   const { isGuest, token } = useReviewContext()
@@ -135,6 +144,39 @@ export function ReviewHeader({
             </div>
           </PopoverContent>
         </Popover>
+      )}
+
+      {/* Transcribe button — auth users only */}
+      {!isGuest && (
+        <>
+          {transcriptionStatus === "Processing" ? (
+            <Button variant="outline" size="sm" onClick={onOpenTranscription}>
+              <Spinner className="size-3.5" />
+              <span className="hidden md:inline ml-1">Transcribing...</span>
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                className="md:hidden"
+                onClick={onOpenTranscription}
+                title={transcriptionStatus === "Complete" ? "View transcription" : "Transcribe video"}
+              >
+                <HugeiconsIcon icon={SubtitleIcon} strokeWidth={2} size={16} />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="hidden md:inline-flex"
+                onClick={onOpenTranscription}
+              >
+                <HugeiconsIcon icon={SubtitleIcon} strokeWidth={2} data-icon="inline-start" size={16} />
+                {transcriptionStatus === "Complete" ? "Transcript" : "Transcribe"}
+              </Button>
+            </>
+          )}
+        </>
       )}
 
       <Button
