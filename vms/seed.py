@@ -12,4 +12,5 @@ def seed_test_settings():
 	settings.r2_access_key_id = "minioadmin"
 	settings.r2_bucket_name = "vms-media"
 	settings.r2_secret_access_key = "minioadmin"
+	settings.setup_complete = 1
 	settings.save(ignore_permissions=True)

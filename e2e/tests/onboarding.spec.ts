@@ -19,8 +19,9 @@ async function browserCallMethod(page: Page, method: string, args: Record<string
 				headers: {
 					"Content-Type": "application/json",
 					"X-Frappe-CSRF-Token":
-						(window as unknown as { frappe?: { csrf_token?: string } }).frappe
-							?.csrf_token || "",
+						(window as unknown as { csrf_token?: string }).csrf_token ||
+							(window as unknown as { frappe?: { csrf_token?: string } }).frappe
+								?.csrf_token || "",
 				},
 				body: JSON.stringify(args),
 			});
