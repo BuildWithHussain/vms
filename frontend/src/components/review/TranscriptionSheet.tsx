@@ -109,9 +109,9 @@ export function TranscriptionSheet({
 }
 
 function formatTranscription(markdown: string): string {
-  // Simple markdown-to-HTML for timestamps: **[MM:SS]** text
+  // Simple markdown-to-HTML for timestamps: **[MM:SS]** or **[HH:MM:SS]** text
   return markdown
-    .replace(/\*\*\[(\d{2}:\d{2})\]\*\*/g, '<span class="font-mono text-xs text-primary font-medium">[$1]</span>')
+    .replace(/\*\*\[(\d{2}:\d{2}(?::\d{2})?)\]\*\*/g, '<span class="font-mono text-xs text-primary font-medium">[$1]</span>')
     .replace(/\n\n/g, "<br/><br/>")
     .replace(/\n/g, "<br/>")
 }

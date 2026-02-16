@@ -98,9 +98,12 @@ def run_whisper(audio_path: str, model_path: str, output_base: str) -> dict:
 
 
 def format_timestamp(seconds: float) -> str:
-	"""Format seconds as MM:SS."""
-	minutes = int(seconds // 60)
+	"""Format seconds as MM:SS or HH:MM:SS for videos >= 1 hour."""
+	hours = int(seconds // 3600)
+	minutes = int((seconds % 3600) // 60)
 	secs = int(seconds % 60)
+	if hours > 0:
+		return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 	return f"{minutes:02d}:{secs:02d}"
 
 
