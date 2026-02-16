@@ -4,6 +4,7 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "setup_complete",
   "r2_section",
   "r2_account_id",
   "r2_access_key_id",
@@ -22,6 +23,13 @@
   "whisper_model"
  ],
  "fields": [
+  {
+   "default": "0",
+   "fieldname": "setup_complete",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Setup Complete"
+  },
   {
    "fieldname": "r2_section",
    "fieldtype": "Section Break",

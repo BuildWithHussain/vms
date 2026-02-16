@@ -12,10 +12,12 @@ WHISPER_CPP_REPO = "https://github.com/ggerganov/whisper.cpp.git"
 
 def after_install():
 	create_roles()
+	assign_video_manager_to_system_managers()
 	ensure_transcription_dependencies()
 
 
 def after_migrate():
+	assign_video_manager_to_system_managers()
 	ensure_transcription_dependencies()
 
 
@@ -29,6 +31,26 @@ def create_roles():
 					"desk_access": 0,
 				}
 			).insert(ignore_permissions=True)
+
+	frappe.db.commit()
+
+
+def assign_video_manager_to_system_managers():
+	"""Ensure all System Managers also have the Video Manager role."""
+	system_managers = frappe.get_all(
+		"Has Role",
+		filters={"role": "System Manager", "parenttype": "User"},
+		fields=["parent"],
+		pluck="parent",
+	)
+
+	for user_email in system_managers:
+		if user_email == "Administrator":
+			continue
+		if not frappe.db.exists("Has Role", {"parent": user_email, "role": "Video Manager"}):
+			user = frappe.get_doc("User", user_email)
+			user.append("roles", {"role": "Video Manager"})
+			user.save(ignore_permissions=True)
 
 	frappe.db.commit()
 

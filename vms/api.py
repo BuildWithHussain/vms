@@ -752,3 +752,20 @@ def search_projects(query: str, limit: int = 5):
 	)
 
 	return {"results": results}
+
+
+@frappe.whitelist(methods=["GET"])
+def get_setup_status():
+	"""Check if VMS setup wizard has been completed."""
+	settings = frappe.get_single("VMS Settings")
+	return {"setup_complete": bool(settings.setup_complete)}
+
+
+@frappe.whitelist()
+def complete_setup():
+	"""Mark VMS setup as complete."""
+	settings = frappe.get_single("VMS Settings")
+	settings.setup_complete = 1
+	settings.save(ignore_permissions=True)
+	frappe.db.commit()
+	return {"status": "ok"}

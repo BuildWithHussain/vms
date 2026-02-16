@@ -1,9 +1,10 @@
-import { lazy, Suspense } from "react"
+import { lazy, Suspense, useState } from "react"
 import { Routes, Route, Navigate } from "react-router"
-import { useFrappeAuth } from "frappe-react-sdk"
+import { useFrappeAuth, useFrappeGetCall } from "frappe-react-sdk"
 import { Spinner } from "@/components/ui/spinner"
 import { UserProvider } from "@/context/UserContext"
 import { AppLayout } from "@/components/layout/AppLayout"
+import { SetupWizard } from "@/pages/SetupWizard"
 
 const DashboardPage = lazy(() =>
   import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })),
@@ -51,13 +52,38 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <UserProvider>{children}</UserProvider>
 }
 
+function SetupGate({ children }: { children: React.ReactNode }) {
+  const { data, isLoading } = useFrappeGetCall<{ setup_complete: boolean }>(
+    "vms.api.get_setup_status"
+  )
+  const [wizardDone, setWizardDone] = useState(false)
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <Spinner className="size-6" />
+      </div>
+    )
+  }
+
+  const setupComplete = data?.message?.setup_complete || wizardDone
+
+  if (!setupComplete) {
+    return <SetupWizard onComplete={() => setWizardDone(true)} />
+  }
+
+  return <>{children}</>
+}
+
 export default function App() {
   return (
     <Routes>
       <Route
         element={
           <ProtectedRoute>
-            <AppLayout />
+            <SetupGate>
+              <AppLayout />
+            </SetupGate>
           </ProtectedRoute>
         }
       >
