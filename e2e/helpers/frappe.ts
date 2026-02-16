@@ -13,6 +13,8 @@ export interface FrappeResponse<T = unknown> {
 
 // Path to CSRF token file saved by auth.setup.ts
 const CSRF_FILE = "e2e/.auth/csrf.json";
+// Path to auth storage state file saved by auth.setup.ts
+const AUTH_FILE = "e2e/.auth/user.json";
 
 // Node.js can't resolve .localhost TLDs, so API calls go via 127.0.0.1 + Host header.
 const SITE_HOST = process.env.SITE_HOST || "vms.localhost:8000";
@@ -20,6 +22,8 @@ export const API_BASE = process.env.API_BASE || "http://127.0.0.1:8000";
 
 // Cache for CSRF token (read from file once)
 let csrfTokenCache: string | null = null;
+// Cache for auth cookies (read from file once)
+let cookieCache: string | null = null;
 
 /**
  * Get CSRF token from the file saved during auth setup.
@@ -44,13 +48,42 @@ function getCsrfToken(): string {
 }
 
 /**
- * Build common headers for API requests (CSRF + Host for .localhost resolution).
+ * Get auth cookies from the storage state file saved during auth setup.
+ * Needed because the request fixture sends to 127.0.0.1 but cookies are
+ * scoped to the site domain (e.g. vms.test), so they won't be sent automatically.
+ */
+function getAuthCookies(): string {
+	if (cookieCache !== null) {
+		return cookieCache;
+	}
+
+	try {
+		if (fs.existsSync(AUTH_FILE)) {
+			const data = JSON.parse(fs.readFileSync(AUTH_FILE, "utf-8"));
+			const cookies = data.cookies as Array<{ name: string; value: string }>;
+			if (cookies?.length) {
+				cookieCache = cookies.map((c) => `${c.name}=${c.value}`).join("; ");
+				return cookieCache;
+			}
+		}
+	} catch (error) {
+		console.warn("Failed to read auth cookies file:", error);
+	}
+
+	cookieCache = "";
+	return "";
+}
+
+/**
+ * Build common headers for API requests (CSRF + Host + auth cookies).
  */
 function apiHeaders(extra: Record<string, string> = {}): Record<string, string> {
 	const csrfToken = getCsrfToken();
+	const cookies = getAuthCookies();
 	return {
 		Host: SITE_HOST,
 		...(csrfToken ? { "X-Frappe-CSRF-Token": csrfToken } : {}),
+		...(cookies ? { Cookie: cookies } : {}),
 		...extra,
 	};
 }
