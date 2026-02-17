@@ -225,7 +225,12 @@ export function DashboardPage() {
                 {recentAssets.map((a) => (
                   <div
                     key={a.name}
-                    className="flex items-center justify-between rounded-lg border p-3"
+                    className="flex items-center justify-between rounded-lg border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => {
+                      if (a.status === "Ready") {
+                        navigate(`/review/${a.name}`)
+                      }
+                    }}
                   >
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium">
