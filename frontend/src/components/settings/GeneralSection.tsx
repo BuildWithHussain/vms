@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Slider } from "@/components/ui/slider"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tag, TagInput } from "emblor"
 import { cn } from "@/lib/utils"
 
@@ -21,9 +20,6 @@ interface VMSSettings {
   max_file_size: number
   presigned_url_expiry: number
   allowed_extensions: string
-  transcription_provider: string
-  whisper_model: string
-  openai_api_key: string
 }
 
 
@@ -60,9 +56,6 @@ export function GeneralSection() {
         r2_public_url: data.r2_public_url || "",
         cloudflare_api_token: data.cloudflare_api_token || "",
         presigned_url_expiry: data.presigned_url_expiry || 3600,
-        transcription_provider: data.transcription_provider || "OpenAI Whisper",
-        whisper_model: data.whisper_model || "ggml-small.en",
-        openai_api_key: data.openai_api_key || "",
       }
       setForm(values)
       initialForm.current = values
@@ -367,79 +360,6 @@ export function GeneralSection() {
                 <p className="text-xs text-muted-foreground">
                   Type an extension and press Enter to add.
                 </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Transcription */}
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold">Transcription</h3>
-              <p className="text-xs text-muted-foreground">
-                Configure AI transcription for video assets.
-              </p>
-            </div>
-            <div className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="transcription_provider" className="text-xs">Provider</Label>
-                  <Select
-                    value={form.transcription_provider ?? "OpenAI Whisper"}
-                    onValueChange={(value) =>
-                      handleChange("transcription_provider", value)
-                    }
-                  >
-                    <SelectTrigger id="transcription_provider">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="OpenAI Whisper">OpenAI Whisper (recommended)</SelectItem>
-                      <SelectItem value="whisper.cpp">whisper.cpp (local)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {form.transcription_provider === "OpenAI Whisper" && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="openai_api_key" className="text-xs">OpenAI API Key</Label>
-                    <Input
-                      id="openai_api_key"
-                      type="password"
-                      placeholder="sk-..."
-                      value={form.openai_api_key ?? ""}
-                      onChange={(e) => handleChange("openai_api_key", e.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Get an API key at{" "}
-                      <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="underline">
-                        platform.openai.com
-                      </a>
-                    </p>
-                  </div>
-                )}
-                {form.transcription_provider === "whisper.cpp" && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="whisper_model" className="text-xs">Whisper Model</Label>
-                    <Select
-                      value={form.whisper_model ?? "ggml-small.en"}
-                      onValueChange={(value) =>
-                        handleChange("whisper_model", value)
-                      }
-                    >
-                      <SelectTrigger id="whisper_model">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ggml-small.en">small.en (recommended)</SelectItem>
-                        <SelectItem value="ggml-base.en">base.en (faster, less accurate)</SelectItem>
-                        <SelectItem value="ggml-medium.en">medium.en (slower, more accurate)</SelectItem>
-                        <SelectItem value="ggml-large">large (slowest, most accurate)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Larger models are more accurate but slower.
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
           </div>

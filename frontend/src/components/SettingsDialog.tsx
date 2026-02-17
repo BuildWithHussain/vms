@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Settings01Icon, UserGroupIcon, UserCircleIcon } from "@hugeicons/core-free-icons"
+import { Settings01Icon, UserGroupIcon, UserCircleIcon, SubtitleIcon } from "@hugeicons/core-free-icons"
 import {
   Dialog,
   DialogContent,
@@ -12,10 +12,12 @@ import { useIsMobile } from "@/hooks/use-mobile"
 import { ProfileSection } from "@/components/settings/ProfileSection"
 import { GeneralSection } from "@/components/settings/GeneralSection"
 import { UsersSection } from "@/components/settings/UsersSection"
+import { TranscriptionSection } from "@/components/settings/TranscriptionSection"
 
 const sections = [
   { id: "profile", label: "Profile", icon: UserCircleIcon },
   { id: "general", label: "General", icon: Settings01Icon },
+  { id: "transcription", label: "Transcription", icon: SubtitleIcon },
   { id: "users", label: "Users", icon: UserGroupIcon },
 ] as const
 
@@ -67,6 +69,9 @@ export function SettingsDialog({
             </TabsContent>
             <TabsContent value="general" className="flex flex-1 flex-col overflow-hidden m-0">
               <GeneralSection />
+            </TabsContent>
+            <TabsContent value="transcription" className="flex flex-1 flex-col overflow-hidden m-0">
+              <TranscriptionSection />
             </TabsContent>
             <TabsContent value="users" className="flex flex-1 flex-col overflow-hidden m-0">
               <UsersSection />
