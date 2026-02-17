@@ -131,7 +131,7 @@ function ReviewPageInner({
 
   // Poll for split status while Processing
   const { data: splitStatusData } = useFrappeGetCall<{
-    message: { status: string }
+    message: { status: string; progress?: { stage: string; current: number; total: number } | null }
   }>(
     "vms.video_split.get_split_status",
     isSplitPolling ? { asset_name: asset.name } : undefined,
@@ -143,6 +143,7 @@ function ReviewPageInner({
   )
 
   const currentAssetStatus = splitStatusData?.message?.status || asset.status
+  const splitProgress = splitStatusData?.message?.progress || null
 
   // Stop split polling when status changes from Processing
   useEffect(() => {
@@ -205,6 +206,7 @@ function ReviewPageInner({
         isTranscribing={startingTranscription}
         onOpenTranscription={() => setTranscriptionOpen(true)}
         assetStatus={currentAssetStatus}
+        splitProgress={splitProgress}
         onOpenSplit={() => setSplitDialogOpen(true)}
       />
 

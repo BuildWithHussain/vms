@@ -116,12 +116,24 @@ def start_video_split(asset_name: str, num_slices: int = 2):
 
 @frappe.whitelist(methods=["GET"])
 def get_split_status(asset_name: str):
-	"""Check if an asset is currently being split."""
+	"""Check if an asset is currently being split, with progress info."""
 	if not frappe.db.exists("VMS Asset", asset_name):
 		frappe.throw(_("Asset {0} does not exist").format(asset_name))
 
 	status = frappe.db.get_value("VMS Asset", asset_name, "status")
-	return {"status": status}
+	progress = None
+	if status == "Processing":
+		progress = frappe.cache.get_value(f"vms_split_progress:{asset_name}")
+	return {"status": status, "progress": progress}
+
+
+def _set_split_progress(asset_name: str, stage: str, current: int = 0, total: int = 0):
+	"""Update split progress in cache for polling."""
+	frappe.cache.set_value(
+		f"vms_split_progress:{asset_name}",
+		{"stage": stage, "current": current, "total": total},
+		expires_in_sec=14400,  # match job timeout
+	)
 
 
 def process_video_split(asset_name: str, num_slices: int, requested_by: str):
@@ -132,6 +144,7 @@ def process_video_split(asset_name: str, num_slices: int, requested_by: str):
 	try:
 		with tempfile.TemporaryDirectory() as tmpdir:
 			# 1. Download from R2
+			_set_split_progress(asset_name, "downloading")
 			ext = _get_extension(asset.file_name)
 			video_path = os.path.join(tmpdir, f"source{ext}")
 			download_url = generate_presigned_download_url(asset.r2_key, asset.file_name)
@@ -139,6 +152,7 @@ def process_video_split(asset_name: str, num_slices: int, requested_by: str):
 			urlretrieve(download_url, video_path)
 
 			# 2. Split using ffmpeg (no re-encode)
+			_set_split_progress(asset_name, "splitting", 0, num_slices)
 			base_name = asset.file_name.rsplit(".", 1)[0] if "." in asset.file_name else asset.file_name
 			frappe.logger().info(f"Splitting video into {num_slices} parts: {asset_name}")
 			output_paths = _split_video(video_path, tmpdir, num_slices, base_name, ext)
@@ -146,6 +160,7 @@ def process_video_split(asset_name: str, num_slices: int, requested_by: str):
 			# 3. Upload each slice and create asset records
 			for i, slice_path in enumerate(output_paths):
 				part_num = i + 1
+				_set_split_progress(asset_name, "uploading", part_num, num_slices)
 				slice_file_name = f"{base_name}-part{part_num}{ext}"
 				r2_key = _make_r2_key(slice_file_name, asset.project)
 				file_size = os.path.getsize(slice_path)
@@ -190,6 +205,7 @@ def process_video_split(asset_name: str, num_slices: int, requested_by: str):
 		frappe.db.commit()
 
 		frappe.logger().info(f"Video split complete: {asset_name} → {len(created_assets)} parts")
+		frappe.cache.delete_value(f"vms_split_progress:{asset_name}")
 
 		# 5. Send email notification
 		_send_split_complete_email(asset, created_assets, requested_by)
@@ -202,6 +218,7 @@ def process_video_split(asset_name: str, num_slices: int, requested_by: str):
 		asset.status = "Ready"
 		asset.save(ignore_permissions=True)
 		frappe.db.commit()
+		frappe.cache.delete_value(f"vms_split_progress:{asset_name}")
 
 		# Send error email
 		_send_split_error_email(asset, requested_by, str(e))

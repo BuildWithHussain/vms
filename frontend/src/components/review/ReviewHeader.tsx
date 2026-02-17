@@ -26,6 +26,7 @@ interface ReviewHeaderProps {
   isTranscribing?: boolean
   onOpenTranscription?: () => void
   assetStatus?: string
+  splitProgress?: { stage: string; current: number; total: number } | null
   onOpenSplit?: () => void
 }
 
@@ -42,6 +43,7 @@ export function ReviewHeader({
   isTranscribing,
   onOpenTranscription,
   assetStatus,
+  splitProgress,
   onOpenSplit,
 }: ReviewHeaderProps) {
   const navigate = useNavigate()
@@ -176,7 +178,15 @@ export function ReviewHeader({
       {!isGuest && assetStatus === "Processing" && (
         <Button variant="outline" size="sm" disabled>
           <Spinner className="size-3.5" />
-          <span className="hidden md:inline ml-1">Splitting...</span>
+          <span className="hidden md:inline ml-1">
+            {splitProgress?.stage === "downloading"
+              ? "Downloading..."
+              : splitProgress?.stage === "splitting"
+                ? `Splitting...`
+                : splitProgress?.stage === "uploading"
+                  ? `Uploading ${splitProgress.current}/${splitProgress.total}...`
+                  : "Splitting..."}
+          </span>
         </Button>
       )}
 
