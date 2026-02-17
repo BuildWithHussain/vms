@@ -79,14 +79,36 @@ export function VideoPlayer({ assetName }: VideoPlayerProps) {
     return () => document.removeEventListener("fullscreenchange", onChange)
   }, [])
 
-  // Spacebar play/pause
+  const SKIP_SECONDS = 10
+
+  const skipForward = useCallback(() => {
+    player.seek(player.currentTime + SKIP_SECONDS)
+  }, [player])
+
+  const skipBackward = useCallback(() => {
+    player.seek(player.currentTime - SKIP_SECONDS)
+  }, [player])
+
+  // Keyboard shortcuts: Space (play/pause), ArrowLeft/Right (skip ±10s)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.code !== "Space") return
       const tag = (e.target as HTMLElement)?.tagName
       if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return
-      e.preventDefault()
-      player.togglePlay()
+
+      switch (e.code) {
+        case "Space":
+          e.preventDefault()
+          player.togglePlay()
+          break
+        case "ArrowLeft":
+          e.preventDefault()
+          player.seek(player.currentTime - SKIP_SECONDS)
+          break
+        case "ArrowRight":
+          e.preventDefault()
+          player.seek(player.currentTime + SKIP_SECONDS)
+          break
+      }
     }
     document.addEventListener("keydown", onKeyDown)
     return () => document.removeEventListener("keydown", onKeyDown)
@@ -140,6 +162,8 @@ export function VideoPlayer({ assetName }: VideoPlayerProps) {
           onToggleLoop={player.toggleLoop}
           isFullscreen={isFullscreen}
           onToggleFullscreen={toggleFullscreen}
+          onSkipBackward={skipBackward}
+          onSkipForward={skipForward}
         />
       </div>
     </div>

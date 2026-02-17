@@ -9,6 +9,8 @@ import {
   RepeatOffIcon,
   FullScreenIcon,
   MinimizeScreenIcon,
+  GoBackward10SecIcon,
+  GoForward10SecIcon,
 } from "@hugeicons/core-free-icons"
 import { Button, buttonVariants } from "@/components/ui/button"
 import {
@@ -36,6 +38,8 @@ interface VideoControlsProps {
   onToggleLoop: () => void
   isFullscreen: boolean
   onToggleFullscreen: () => void
+  onSkipBackward: () => void
+  onSkipForward: () => void
 }
 
 export function VideoControls({
@@ -53,6 +57,8 @@ export function VideoControls({
   onToggleLoop,
   isFullscreen,
   onToggleFullscreen,
+  onSkipBackward,
+  onSkipForward,
 }: VideoControlsProps) {
   const VolumeIcon = isMuted || volume === 0
     ? VolumeMute01Icon
@@ -62,12 +68,18 @@ export function VideoControls({
 
   return (
     <div className="flex items-center gap-1 px-2 py-1.5">
+      <Button variant="ghost" size="icon-sm" onClick={onSkipBackward} title="Skip back 10s (←)">
+        <HugeiconsIcon icon={GoBackward10SecIcon} strokeWidth={2} size={18} />
+      </Button>
       <Button variant="ghost" size="icon-sm" onClick={onTogglePlay}>
         <HugeiconsIcon
           icon={isPlaying ? PauseIcon : PlayIcon}
           strokeWidth={2}
           size={18}
         />
+      </Button>
+      <Button variant="ghost" size="icon-sm" onClick={onSkipForward} title="Skip forward 10s (→)">
+        <HugeiconsIcon icon={GoForward10SecIcon} strokeWidth={2} size={18} />
       </Button>
 
       <div className="hidden items-center gap-1 md:flex">
