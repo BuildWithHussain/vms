@@ -1,5 +1,11 @@
 import { APIRequestContext } from "@playwright/test";
-import { callMethod, createDoc, deleteDoc, getDoc, getList } from "./frappe";
+import {
+	callMethod,
+	createDoc,
+	deleteDoc,
+	getDoc,
+	getList,
+} from "./frappe";
 
 /**
  * VMS Project document interface.
@@ -133,6 +139,7 @@ export async function deleteTestAsset(
 
 /**
  * Cleanup test projects matching a name pattern.
+ * Deletes linked assets first to avoid LinkExistsError.
  */
 export async function cleanupTestProjects(
 	request: APIRequestContext,
@@ -145,6 +152,19 @@ export async function cleanupTestProjects(
 
 	for (const project of projects) {
 		try {
+			// Delete linked assets first to avoid LinkExistsError
+			const assets = await getList<VMSAsset>(request, "VMS Asset", {
+				fields: ["name"],
+				filters: { project: project.name },
+				limit: 500,
+			});
+			for (const asset of assets) {
+				try {
+					await deleteDoc(request, "VMS Asset", asset.name);
+				} catch (assetError) {
+					console.warn(`Failed to delete asset ${asset.name}:`, assetError);
+				}
+			}
 			await deleteTestProject(request, project.name);
 		} catch (error) {
 			console.warn(`Failed to delete ${project.name}:`, error);

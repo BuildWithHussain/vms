@@ -43,7 +43,7 @@ test.describe("Command Palette (Cmd+K)", () => {
 			page.locator("[cmdk-item]:has-text('Go to Dashboard')"),
 		).toBeVisible();
 		await expect(
-			page.locator("[cmdk-item]:has-text('Go to Inbox')"),
+			page.locator("[cmdk-item]:has-text('Go to Uncategorised')"),
 		).toBeVisible();
 		await expect(
 			page.locator("[cmdk-item]:has-text('Go to Projects')"),
@@ -126,12 +126,12 @@ test.describe("Command Palette (Cmd+K)", () => {
 		await expect(page).toHaveURL(/\/vms\/projects/, { timeout: 10000 });
 	});
 
-	test("should navigate to Inbox page via command", async ({ page }) => {
+	test("should navigate to Uncategorised page via command", async ({ page }) => {
 		await openCommandPalette(page);
 
-		await page.locator("[cmdk-item]:has-text('Go to Inbox')").click();
+		await page.locator("[cmdk-item]:has-text('Go to Uncategorised')").click();
 
-		await expect(page).toHaveURL(/\/vms\/inbox/, { timeout: 10000 });
+		await expect(page).toHaveURL(/\/vms\/uncategorised/, { timeout: 10000 });
 	});
 
 	test("should navigate to Audit Logs page via command", async ({
