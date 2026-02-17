@@ -23,6 +23,7 @@ interface VMSSettings {
   allowed_extensions: string
   transcription_provider: string
   whisper_model: string
+  openai_api_key: string
 }
 
 
@@ -59,8 +60,9 @@ export function GeneralSection() {
         r2_public_url: data.r2_public_url || "",
         cloudflare_api_token: data.cloudflare_api_token || "",
         presigned_url_expiry: data.presigned_url_expiry || 3600,
-        transcription_provider: data.transcription_provider || "whisper.cpp",
+        transcription_provider: data.transcription_provider || "OpenAI Whisper",
         whisper_model: data.whisper_model || "ggml-small.en",
+        openai_api_key: data.openai_api_key || "",
       }
       setForm(values)
       initialForm.current = values
@@ -382,7 +384,7 @@ export function GeneralSection() {
                 <div className="space-y-1.5">
                   <Label htmlFor="transcription_provider" className="text-xs">Provider</Label>
                   <Select
-                    value={form.transcription_provider ?? "whisper.cpp"}
+                    value={form.transcription_provider ?? "OpenAI Whisper"}
                     onValueChange={(value) =>
                       handleChange("transcription_provider", value)
                     }
@@ -391,10 +393,29 @@ export function GeneralSection() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="OpenAI Whisper">OpenAI Whisper (recommended)</SelectItem>
                       <SelectItem value="whisper.cpp">whisper.cpp (local)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                {form.transcription_provider === "OpenAI Whisper" && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="openai_api_key" className="text-xs">OpenAI API Key</Label>
+                    <Input
+                      id="openai_api_key"
+                      type="password"
+                      placeholder="sk-..."
+                      value={form.openai_api_key ?? ""}
+                      onChange={(e) => handleChange("openai_api_key", e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Get an API key at{" "}
+                      <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="underline">
+                        platform.openai.com
+                      </a>
+                    </p>
+                  </div>
+                )}
                 {form.transcription_provider === "whisper.cpp" && (
                   <div className="space-y-1.5">
                     <Label htmlFor="whisper_model" className="text-xs">Whisper Model</Label>

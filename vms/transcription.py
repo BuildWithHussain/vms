@@ -7,6 +7,7 @@ from pathlib import Path
 from urllib.request import urlretrieve
 
 import frappe
+import requests
 from frappe import _
 
 from vms.r2 import generate_presigned_download_url
@@ -97,6 +98,27 @@ def run_whisper(audio_path: str, model_path: str, output_base: str) -> dict:
 	return {}
 
 
+def run_openai_whisper(audio_path: str, api_key: str) -> dict:
+	"""Call OpenAI Whisper API and return verbose JSON response with segments."""
+	with open(audio_path, "rb") as audio_file:
+		response = requests.post(
+			"https://api.openai.com/v1/audio/transcriptions",
+			headers={"Authorization": f"Bearer {api_key}"},
+			files={"file": (os.path.basename(audio_path), audio_file, "audio/wav")},
+			data={
+				"model": "whisper-1",
+				"response_format": "verbose_json",
+				"timestamp_granularities[]": "segment",
+			},
+			timeout=1800,
+		)
+
+	if response.status_code != 200:
+		raise RuntimeError(f"OpenAI Whisper API failed ({response.status_code}): {response.text}")
+
+	return response.json()
+
+
 def format_timestamp(seconds: float) -> str:
 	"""Format seconds as MM:SS or HH:MM:SS for videos >= 1 hour."""
 	hours = int(seconds // 3600)
@@ -169,12 +191,17 @@ def start_transcription(asset_name: str):
 	if asset.transcription_status == "Processing":
 		frappe.throw(_("Transcription is already in progress"))
 
-	if not ensure_whisper_installed():
-		frappe.throw(
-			_(
-				"whisper-cli is not installed. Install it with: brew install whisper-cpp"
+	settings = frappe.get_single("VMS Settings")
+	provider = settings.transcription_provider or "OpenAI Whisper"
+
+	if provider == "OpenAI Whisper":
+		if not settings.openai_api_key:
+			frappe.throw(_("OpenAI API key is not configured. Go to Settings > Transcription to add it."))
+	elif provider == "whisper.cpp":
+		if not ensure_whisper_installed():
+			frappe.throw(
+				_("whisper-cli is not installed. Install it with: brew install whisper-cpp")
 			)
-		)
 
 	# Mark as processing
 	asset.transcription_status = "Processing"
@@ -217,10 +244,7 @@ def process_transcription(asset_name: str):
 
 	try:
 		settings = frappe.get_single("VMS Settings")
-		model_name = settings.whisper_model or "ggml-small.en"
-
-		# Ensure model is downloaded
-		model_path = ensure_model_downloaded(model_name)
+		provider = settings.transcription_provider or "OpenAI Whisper"
 
 		# Create temp directory for work
 		with tempfile.TemporaryDirectory() as tmpdir:
@@ -239,18 +263,28 @@ def process_transcription(asset_name: str):
 			frappe.logger().info(f"Extracting audio: {asset_name}")
 			extract_audio(video_path, audio_path)
 
-			# Run whisper
-			output_base = os.path.join(tmpdir, "transcript")
-			frappe.logger().info(f"Running whisper-cli: {asset_name}")
-			whisper_output = run_whisper(
-				audio_path, str(model_path), output_base
-			)
+			if provider == "OpenAI Whisper":
+				api_key = settings.get_password("openai_api_key")
+				# Compress to mp3 for OpenAI (25MB file limit)
+				mp3_path = os.path.join(tmpdir, "audio.mp3")
+				frappe.logger().info(f"Compressing audio to mp3: {asset_name}")
+				_compress_audio_to_mp3(audio_path, mp3_path)
+				frappe.logger().info(f"Running OpenAI Whisper API: {asset_name}")
+				whisper_output = run_openai_whisper(mp3_path, api_key)
+			else:
+				model_name = settings.whisper_model or "ggml-small.en"
+				model_path = ensure_model_downloaded(model_name)
+				output_base = os.path.join(tmpdir, "transcript")
+				frappe.logger().info(f"Running whisper-cli: {asset_name}")
+				whisper_output = run_whisper(
+					audio_path, str(model_path), output_base
+				)
 
 			# Parse and format
 			segments = parse_segments(whisper_output)
 			markdown = segments_to_markdown(segments)
 
-			if not markdown:
+			if not markdown and provider == "whisper.cpp":
 				# Fallback: try to read the .txt output
 				txt_path = f"{output_base}.txt"
 				if os.path.exists(txt_path):
@@ -273,6 +307,27 @@ def process_transcription(asset_name: str):
 		asset.transcription = f"Transcription failed: {e}"
 		asset.save(ignore_permissions=True)
 		frappe.db.commit()
+
+
+def _compress_audio_to_mp3(wav_path: str, mp3_path: str) -> None:
+	"""Compress WAV to mp3 to stay within OpenAI's 25MB limit."""
+	cmd = [
+		"ffmpeg",
+		"-hide_banner",
+		"-y",
+		"-i",
+		wav_path,
+		"-ac",
+		"1",
+		"-ar",
+		"16000",
+		"-b:a",
+		"64k",
+		mp3_path,
+	]
+	result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+	if result.returncode != 0:
+		raise RuntimeError(f"ffmpeg mp3 compression failed: {result.stderr}")
 
 
 def _get_extension(filename: str) -> str:

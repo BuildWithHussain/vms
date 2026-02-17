@@ -20,7 +20,8 @@
   "allowed_extensions",
   "transcription_section",
   "transcription_provider",
-  "whisper_model"
+  "whisper_model",
+  "openai_api_key"
  ],
  "fields": [
   {
@@ -118,8 +119,8 @@
    "fieldname": "transcription_provider",
    "fieldtype": "Select",
    "label": "Provider",
-   "options": "whisper.cpp",
-   "default": "whisper.cpp",
+   "options": "OpenAI Whisper\nwhisper.cpp",
+   "default": "OpenAI Whisper",
    "description": "Transcription engine to use for video transcription"
   },
   {
@@ -130,6 +131,13 @@
    "default": "ggml-small.en",
    "description": "Whisper.cpp model to use. Larger models are more accurate but slower.",
    "depends_on": "eval:doc.transcription_provider=='whisper.cpp'"
+  },
+  {
+   "fieldname": "openai_api_key",
+   "fieldtype": "Password",
+   "label": "OpenAI API Key",
+   "description": "API key for OpenAI Whisper transcription. Get one at platform.openai.com",
+   "depends_on": "eval:doc.transcription_provider=='OpenAI Whisper'"
   }
  ],
  "issingle": 1,
