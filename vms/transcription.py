@@ -98,13 +98,17 @@ def run_whisper(audio_path: str, model_path: str, output_base: str) -> dict:
 	return {}
 
 
+OPENAI_MAX_FILE_SIZE = 24 * 1024 * 1024  # 24MB (leave margin below 25MB limit)
+CHUNK_DURATION_SECS = 1200  # 20 minutes per chunk
+
+
 def run_openai_whisper(audio_path: str, api_key: str) -> dict:
 	"""Call OpenAI Whisper API and return verbose JSON response with segments."""
 	with open(audio_path, "rb") as audio_file:
 		response = requests.post(
 			"https://api.openai.com/v1/audio/transcriptions",
 			headers={"Authorization": f"Bearer {api_key}"},
-			files={"file": (os.path.basename(audio_path), audio_file, "audio/wav")},
+			files={"file": (os.path.basename(audio_path), audio_file, "audio/mpeg")},
 			data={
 				"model": "whisper-1",
 				"response_format": "verbose_json",
@@ -117,6 +121,74 @@ def run_openai_whisper(audio_path: str, api_key: str) -> dict:
 		raise RuntimeError(f"OpenAI Whisper API failed ({response.status_code}): {response.text}")
 
 	return response.json()
+
+
+def _get_audio_duration(audio_path: str) -> float:
+	"""Get audio duration in seconds using ffprobe."""
+	cmd = [
+		"ffprobe", "-v", "error", "-show_entries", "format=duration",
+		"-of", "default=noprint_wrappers=1:nokey=1", audio_path,
+	]
+	result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+	if result.returncode != 0:
+		raise RuntimeError(f"ffprobe failed: {result.stderr}")
+	return float(result.stdout.strip())
+
+
+def _split_audio_into_chunks(mp3_path: str, tmpdir: str, chunk_duration: int = CHUNK_DURATION_SECS) -> list[tuple[str, int]]:
+	"""Split an mp3 file into chunks of chunk_duration seconds each."""
+	total_duration = _get_audio_duration(mp3_path)
+	chunks = []
+	start = 0
+	idx = 0
+
+	while start < total_duration:
+		chunk_path = os.path.join(tmpdir, f"chunk_{idx:03d}.mp3")
+		cmd = [
+			"ffmpeg", "-hide_banner", "-y",
+			"-i", mp3_path,
+			"-ss", str(start),
+			"-t", str(chunk_duration),
+			"-c", "copy",
+			chunk_path,
+		]
+		result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+		if result.returncode != 0:
+			raise RuntimeError(f"ffmpeg chunk split failed: {result.stderr}")
+		chunks.append((chunk_path, start))
+		start += chunk_duration
+		idx += 1
+
+	return chunks
+
+
+def _transcribe_with_openai(mp3_path: str, api_key: str, tmpdir: str) -> list[dict]:
+	"""Transcribe mp3 via OpenAI, chunking if file exceeds size limit. Returns segments."""
+	file_size = os.path.getsize(mp3_path)
+
+	if file_size <= OPENAI_MAX_FILE_SIZE:
+		whisper_output = run_openai_whisper(mp3_path, api_key)
+		return parse_segments(whisper_output)
+
+	# File too large — split into chunks and transcribe each
+	frappe.logger().info(
+		f"Audio file {file_size / 1024 / 1024:.1f}MB exceeds limit, splitting into chunks"
+	)
+	chunks = _split_audio_into_chunks(mp3_path, tmpdir)
+	all_segments = []
+
+	for chunk_path, offset_secs in chunks:
+		frappe.logger().info(f"Transcribing chunk at offset {offset_secs}s: {chunk_path}")
+		whisper_output = run_openai_whisper(chunk_path, api_key)
+		chunk_segments = parse_segments(whisper_output)
+
+		# Offset timestamps by the chunk's start time
+		for seg in chunk_segments:
+			seg["start"] += offset_secs
+			seg["end"] += offset_secs
+		all_segments.extend(chunk_segments)
+
+	return all_segments
 
 
 def format_timestamp(seconds: float) -> str:
@@ -270,7 +342,7 @@ def process_transcription(asset_name: str):
 				frappe.logger().info(f"Compressing audio to mp3: {asset_name}")
 				_compress_audio_to_mp3(audio_path, mp3_path)
 				frappe.logger().info(f"Running OpenAI Whisper API: {asset_name}")
-				whisper_output = run_openai_whisper(mp3_path, api_key)
+				segments = _transcribe_with_openai(mp3_path, api_key, tmpdir)
 			else:
 				model_name = settings.whisper_model or "ggml-small.en"
 				model_path = ensure_model_downloaded(model_name)
@@ -279,9 +351,9 @@ def process_transcription(asset_name: str):
 				whisper_output = run_whisper(
 					audio_path, str(model_path), output_base
 				)
+				segments = parse_segments(whisper_output)
 
-			# Parse and format
-			segments = parse_segments(whisper_output)
+			# Format
 			markdown = segments_to_markdown(segments)
 
 			if not markdown and provider == "whisper.cpp":
