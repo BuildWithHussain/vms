@@ -75,7 +75,7 @@ export function SplitVideoDialog({
             </div>
             <Slider
               value={[numSlices]}
-              onValueChange={(val: number[]) => setNumSlices(val[0])}
+              onValueChange={(val) => setNumSlices(Array.isArray(val) ? val[0] : val)}
               min={2}
               max={10}
               step={1}

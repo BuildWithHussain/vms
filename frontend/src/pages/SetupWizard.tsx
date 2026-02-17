@@ -390,8 +390,8 @@ export function SetupWizard({ onComplete }: { onComplete: () => void }) {
                   </div>
                   <Slider
                     value={[Math.max(2, Math.min(Math.round(maxFileSizeMB / 1024 / 2) * 2, 40))]}
-                    onValueChange={(values: number[]) => {
-                      const mb = values[0] * 1024
+                    onValueChange={(values) => {
+                      const mb = (Array.isArray(values) ? values[0] : values) * 1024
                       setMaxFileSizeMB(mb)
                       setCustomMBInput(String(mb))
                     }}
