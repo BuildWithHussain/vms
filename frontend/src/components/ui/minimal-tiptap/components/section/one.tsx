@@ -4,7 +4,8 @@ import type { FormatAction } from "../../types"
 import type { VariantProps } from "class-variance-authority"
 import type { toggleVariants } from "@/components/ui/toggle"
 import { cn } from "@/lib/utils"
-import { CaretDownIcon, LetterCaseCapitalizeIcon } from "@radix-ui/react-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowDown01Icon, TextFontIcon } from "@hugeicons/core-free-icons"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -127,7 +128,7 @@ export const SectionOne: React.FC<SectionOneProps> = ({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<ToolbarButton isActive={editor.isActive("heading")} tooltip="Text styles" aria-label="Text styles" pressed={editor.isActive("heading")} disabled={editor.isActive("codeBlock")} size={size} variant={variant} className="gap-0" />}><LetterCaseCapitalizeIcon className="size-5" /><CaretDownIcon className="size-5" /></DropdownMenuTrigger>
+      <DropdownMenuTrigger render={<ToolbarButton isActive={editor.isActive("heading")} tooltip="Text styles" aria-label="Text styles" pressed={editor.isActive("heading")} disabled={editor.isActive("codeBlock")} size={size} variant={variant} className="gap-0" />}><HugeiconsIcon icon={TextFontIcon} className="size-5" /><HugeiconsIcon icon={ArrowDown01Icon} className="size-5" /></DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-full">
         {filteredActions.map(renderMenuItem)}
       </DropdownMenuContent>

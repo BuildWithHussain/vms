@@ -7,7 +7,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { Link2Icon } from "@radix-ui/react-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Link01Icon } from "@hugeicons/core-free-icons"
 import { ToolbarButton } from "../toolbar-button"
 import { LinkEditBlock } from "./link-edit-block"
 
@@ -50,7 +51,7 @@ const LinkEditPopover = ({ editor, size, variant }: LinkEditPopoverProps) => {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger render={<ToolbarButton isActive={editor.isActive("link")} tooltip="Link" aria-label="Insert link" disabled={editor.isActive("codeBlock")} size={size} variant={variant} />}><Link2Icon className="size-5" /></PopoverTrigger>
+      <PopoverTrigger render={<ToolbarButton isActive={editor.isActive("link")} tooltip="Link" aria-label="Insert link" disabled={editor.isActive("codeBlock")} size={size} variant={variant} />}><HugeiconsIcon icon={Link01Icon} className="size-5" /></PopoverTrigger>
       <PopoverContent align="end" side="bottom">
         <LinkEditBlock onSave={onSetLink} defaultText={text} />
       </PopoverContent>

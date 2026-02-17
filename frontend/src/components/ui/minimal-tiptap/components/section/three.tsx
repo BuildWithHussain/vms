@@ -2,7 +2,8 @@ import * as React from "react"
 import type { Editor } from "@tiptap/react"
 import type { toggleVariants } from "@/components/ui/toggle"
 import type { VariantProps } from "class-variance-authority"
-import { CaretDownIcon, CheckIcon } from "@radix-ui/react-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowDown01Icon, Tick01Icon } from "@hugeicons/core-free-icons"
 import { ToolbarButton } from "../toolbar-button"
 import {
   Popover,
@@ -86,7 +87,8 @@ const MemoizedColorButton = React.memo<{
                       e.preventDefault()
                       onClick(color.cssVar)
                     }} />}>{isSelected && (
-                      <CheckIcon
+                      <HugeiconsIcon
+                        icon={Tick01Icon}
                         className="absolute inset-0 m-auto size-6"
                         style={{ color: inverse }}
                       />
@@ -182,7 +184,7 @@ export const SectionThree: React.FC<SectionThreeProps> = ({
                       <path d="M4 20h16" />
                       <path d="m6 16 6-12 6 12" />
                       <path d="M8 12h8" />
-                    </svg><CaretDownIcon className="size-5" /></PopoverTrigger>
+                    </svg><HugeiconsIcon icon={ArrowDown01Icon} className="size-5" /></PopoverTrigger>
       <PopoverContent align="start" className="w-full">
         <div className="space-y-1.5">
           {COLORS.map((palette, index) => (

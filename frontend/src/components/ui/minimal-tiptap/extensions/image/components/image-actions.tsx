@@ -12,13 +12,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { HugeiconsIcon } from "@hugeicons/react"
 import {
-  ClipboardCopyIcon,
-  DotsHorizontalIcon,
-  DownloadIcon,
-  Link2Icon,
-  SizeIcon,
-} from "@radix-ui/react-icons"
+  ClipboardIcon,
+  MoreHorizontalIcon,
+  Download01Icon,
+  Link01Icon,
+  Maximize01Icon,
+} from "@hugeicons/core-free-icons"
 
 interface ImageActionsProps {
   shouldMerge?: boolean
@@ -81,22 +82,22 @@ const ActionItems: Array<{
 }> = [
   {
     key: "onView",
-    icon: <SizeIcon />,
+    icon: <HugeiconsIcon icon={Maximize01Icon} />,
     tooltip: "View image",
   },
   {
     key: "onDownload",
-    icon: <DownloadIcon />,
+    icon: <HugeiconsIcon icon={Download01Icon} />,
     tooltip: "Download image",
   },
   {
     key: "onCopy",
-    icon: <ClipboardCopyIcon />,
+    icon: <HugeiconsIcon icon={ClipboardIcon} />,
     tooltip: "Copy image to clipboard",
   },
   {
     key: "onCopyLink",
-    icon: <Link2Icon />,
+    icon: <HugeiconsIcon icon={Link01Icon} />,
     tooltip: "Copy image link",
     isLink: true,
   },
@@ -127,7 +128,7 @@ export const ImageActions: React.FC<ImageActionsProps> = ({
     <ActionWrapper className={cn({ "opacity-100": isOpen })}>
       {shouldMerge ? (
         <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-          <DropdownMenuTrigger render={<ActionButton icon={<DotsHorizontalIcon />} tooltip="Open menu" onClick={(e) => e.preventDefault()} />}></DropdownMenuTrigger>
+          <DropdownMenuTrigger render={<ActionButton icon={<HugeiconsIcon icon={MoreHorizontalIcon} />} tooltip="Open menu" onClick={(e) => e.preventDefault()} />}></DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="end">
             {filteredActions.map(({ key, icon, tooltip }) => (
               <DropdownMenuItem

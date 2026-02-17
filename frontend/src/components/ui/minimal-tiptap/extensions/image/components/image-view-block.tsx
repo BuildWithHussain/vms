@@ -8,7 +8,8 @@ import { Controlled as ControlledZoom } from "react-medium-image-zoom"
 import { ActionButton, ActionWrapper, ImageActions } from "./image-actions"
 import { useImageActions } from "../hooks/use-image-actions"
 import { blobUrlToBase64, randomId } from "../../../utils"
-import { InfoCircledIcon, TrashIcon } from "@radix-ui/react-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { InformationCircleIcon, Delete01Icon } from "@hugeicons/core-free-icons"
 import { ImageOverlay } from "./image-overlay"
 import { Spinner } from "../../../components/spinner"
 import type { UploadReturnType } from "../image"
@@ -247,7 +248,7 @@ export const ImageViewBlock: React.FC<NodeViewProps> = ({
 
               {imageState.error && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <InfoCircledIcon className="text-destructive size-8" />
+                  <HugeiconsIcon icon={InformationCircleIcon} className="text-destructive size-8" />
                   <p className="text-muted-foreground mt-2 text-sm">
                     Failed to load image
                   </p>
@@ -312,7 +313,7 @@ export const ImageViewBlock: React.FC<NodeViewProps> = ({
           {imageState.error && (
             <ActionWrapper>
               <ActionButton
-                icon={<TrashIcon />}
+                icon={<HugeiconsIcon icon={Delete01Icon} />}
                 tooltip="Remove image"
                 onClick={onRemoveImg}
               />

@@ -1,11 +1,12 @@
 import * as React from "react"
 import { Separator } from "@/components/ui/separator"
 import { ToolbarButton } from "../toolbar-button"
+import { HugeiconsIcon } from "@hugeicons/react"
 import {
-  CopyIcon,
-  ExternalLinkIcon,
-  LinkBreak2Icon,
-} from "@radix-ui/react-icons"
+  Copy01Icon,
+  LinkSquare01Icon,
+  Unlink01Icon,
+} from "@hugeicons/core-free-icons"
 
 interface LinkPopoverBlockProps {
   url: string
@@ -49,23 +50,18 @@ export const LinkPopoverBlock: React.FC<LinkPopoverBlockProps> = ({
           tooltip="Open link in a new tab"
           onClick={handleOpenLink}
         >
-          <ExternalLinkIcon />
+          <HugeiconsIcon icon={LinkSquare01Icon} />
         </ToolbarButton>
         <Separator orientation="vertical" />
         <ToolbarButton tooltip="Clear link" onClick={onClear}>
-          <LinkBreak2Icon />
+          <HugeiconsIcon icon={Unlink01Icon} />
         </ToolbarButton>
         <Separator orientation="vertical" />
         <ToolbarButton
           tooltip={copyTitle}
           onClick={handleCopy}
-          tooltipOptions={{
-            onPointerDownOutside: (e) => {
-              if (e.target === e.currentTarget) e.preventDefault()
-            },
-          }}
         >
-          <CopyIcon />
+          <HugeiconsIcon icon={Copy01Icon} />
         </ToolbarButton>
       </div>
     </div>
