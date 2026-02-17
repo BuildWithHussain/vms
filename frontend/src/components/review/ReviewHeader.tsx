@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowLeft01Icon, Download04Icon, Link01Icon, Copy01Icon, SubtitleIcon } from "@hugeicons/core-free-icons"
+import { ArrowLeft01Icon, Download04Icon, Link01Icon, Copy01Icon, SubtitleIcon, Scissor01Icon } from "@hugeicons/core-free-icons"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
@@ -25,6 +25,8 @@ interface ReviewHeaderProps {
   onTranscribe?: () => Promise<void>
   isTranscribing?: boolean
   onOpenTranscription?: () => void
+  assetStatus?: string
+  onOpenSplit?: () => void
 }
 
 export function ReviewHeader({
@@ -39,6 +41,8 @@ export function ReviewHeader({
   onTranscribe,
   isTranscribing,
   onOpenTranscription,
+  assetStatus,
+  onOpenSplit,
 }: ReviewHeaderProps) {
   const navigate = useNavigate()
   const { isGuest, token } = useReviewContext()
@@ -49,7 +53,7 @@ export function ReviewHeader({
     if (project) {
       navigate(`/projects/${project.name}`)
     } else {
-      navigate("/inbox")
+      navigate("/media-pool")
     }
   }
 
@@ -144,6 +148,36 @@ export function ReviewHeader({
             </div>
           </PopoverContent>
         </Popover>
+      )}
+
+      {/* Split button — auth users only, hidden while Processing */}
+      {!isGuest && assetStatus !== "Processing" && (
+        <>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            className="md:hidden"
+            onClick={onOpenSplit}
+            title="Split video"
+          >
+            <HugeiconsIcon icon={Scissor01Icon} strokeWidth={2} size={16} />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="hidden md:inline-flex"
+            onClick={onOpenSplit}
+          >
+            <HugeiconsIcon icon={Scissor01Icon} strokeWidth={2} data-icon="inline-start" size={16} />
+            Split
+          </Button>
+        </>
+      )}
+      {!isGuest && assetStatus === "Processing" && (
+        <Button variant="outline" size="sm" disabled>
+          <Spinner className="size-3.5" />
+          <span className="hidden md:inline ml-1">Splitting...</span>
+        </Button>
       )}
 
       {/* Transcribe button — auth users only */}

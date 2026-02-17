@@ -165,6 +165,29 @@ def configure_bucket_cors():
 	)
 
 
+def upload_r2_object(r2_key, file_path, content_type="application/octet-stream"):
+	"""Upload a local file directly to R2 from the server (for background jobs)."""
+	settings = frappe.get_single("VMS Settings")
+	client = get_r2_client()
+
+	with open(file_path, "rb") as f:
+		client.upload_fileobj(
+			f,
+			settings.r2_bucket_name,
+			r2_key,
+			ExtraArgs={"ContentType": content_type},
+		)
+
+
+def get_r2_object_size(r2_key):
+	"""Get the size of an R2 object in bytes."""
+	settings = frappe.get_single("VMS Settings")
+	client = get_r2_client()
+
+	resp = client.head_object(Bucket=settings.r2_bucket_name, Key=r2_key)
+	return resp["ContentLength"]
+
+
 def delete_r2_object(r2_key):
 	settings = frappe.get_single("VMS Settings")
 	client = get_r2_client()

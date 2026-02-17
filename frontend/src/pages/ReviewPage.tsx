@@ -8,6 +8,8 @@ import { ReviewHeader } from "@/components/review/ReviewHeader"
 import { VideoPlayer } from "@/components/review/VideoPlayer"
 import { CommentPanel } from "@/components/review/CommentPanel"
 import { TranscriptionSheet } from "@/components/review/TranscriptionSheet"
+import { SplitVideoDialog } from "@/components/review/SplitVideoDialog"
+import { toast } from "sonner"
 
 interface ReviewData {
   name: string
@@ -102,7 +104,9 @@ function ReviewPageInner({
 }) {
   const { replayAnnotation, annotationMode, dismissReplay, cancelAnnotation, isGuest } = useReviewContext()
   const [transcriptionOpen, setTranscriptionOpen] = useState(false)
+  const [splitDialogOpen, setSplitDialogOpen] = useState(false)
   const [isPolling, setIsPolling] = useState(asset.transcription_status === "Processing")
+  const [isSplitPolling, setIsSplitPolling] = useState(asset.status === "Processing")
 
   const { call: callTogglePublicReview } = useFrappePostCall("vms.review_api.toggle_public_review")
   const { call: callStartTranscription, loading: startingTranscription } = useFrappePostCall(
@@ -124,6 +128,32 @@ function ReviewPageInner({
 
   const transcriptionStatus = transcriptionData?.message?.transcription_status || asset.transcription_status || ""
   const transcriptionText = transcriptionData?.message?.transcription || ""
+
+  // Poll for split status while Processing
+  const { data: splitStatusData } = useFrappeGetCall<{
+    message: { status: string }
+  }>(
+    "vms.video_split.get_split_status",
+    isSplitPolling ? { asset_name: asset.name } : undefined,
+    isSplitPolling ? `split-status-${asset.name}` : undefined,
+    {
+      revalidateOnFocus: false,
+      refreshInterval: isSplitPolling ? 5000 : 0,
+    },
+  )
+
+  const currentAssetStatus = splitStatusData?.message?.status || asset.status
+
+  // Stop split polling when status changes from Processing
+  useEffect(() => {
+    if (splitStatusData?.message?.status && splitStatusData.message.status !== "Processing") {
+      setIsSplitPolling(false)
+      mutateReviewData()
+      if (splitStatusData.message.status === "Ready") {
+        toast.success("Video split complete! New parts have been created.")
+      }
+    }
+  }, [splitStatusData?.message?.status, mutateReviewData])
 
   // Stop polling when transcription completes or errors
   useEffect(() => {
@@ -174,6 +204,8 @@ function ReviewPageInner({
         onTranscribe={handleStartTranscription}
         isTranscribing={startingTranscription}
         onOpenTranscription={() => setTranscriptionOpen(true)}
+        assetStatus={currentAssetStatus}
+        onOpenSplit={() => setSplitDialogOpen(true)}
       />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
@@ -197,6 +229,20 @@ function ReviewPageInner({
           onTranscribe={handleStartTranscription}
           isTranscribing={startingTranscription}
           onRefresh={() => mutateTranscription()}
+        />
+      )}
+
+      {!isGuest && (
+        <SplitVideoDialog
+          open={splitDialogOpen}
+          onOpenChange={setSplitDialogOpen}
+          assetName={asset.name}
+          fileName={asset.file_name}
+          fileSize={asset.file_size}
+          onSplitStarted={() => {
+            setIsSplitPolling(true)
+            mutateReviewData()
+          }}
         />
       )}
     </div>
