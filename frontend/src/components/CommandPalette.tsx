@@ -4,7 +4,7 @@ import { useFrappeGetCall } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   DashboardSquare02Icon,
-  InboxIcon,
+  Album01Icon,
   FolderVideoIcon,
   Audit01Icon,
   Settings01Icon,
@@ -221,16 +221,16 @@ export function CommandPalette({
               <span>Go to Dashboard</span>
             </CommandItem>
             <CommandItem
-              value="inbox"
-              keywords={["messages", "notifications"]}
-              onSelect={() => runCommand(() => navigate("/inbox"))}
+              value="media pool"
+              keywords={["uploads", "unassigned", "media"]}
+              onSelect={() => runCommand(() => navigate("/media-pool"))}
             >
               <HugeiconsIcon
-                icon={InboxIcon}
+                icon={Album01Icon}
                 strokeWidth={2}
                 className="size-4"
               />
-              <span>Go to Inbox</span>
+              <span>Go to Media Pool</span>
             </CommandItem>
             <CommandItem
               value="projects"

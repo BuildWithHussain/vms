@@ -9,8 +9,8 @@ import { SetupWizard } from "@/pages/SetupWizard"
 const DashboardPage = lazy(() =>
   import("@/pages/DashboardPage").then((m) => ({ default: m.DashboardPage })),
 )
-const InboxPage = lazy(() =>
-  import("@/pages/InboxPage").then((m) => ({ default: m.InboxPage })),
+const MediaPoolPage = lazy(() =>
+  import("@/pages/InboxPage").then((m) => ({ default: m.MediaPoolPage })),
 )
 const ProjectsPage = lazy(() =>
   import("@/pages/ProjectsPage").then((m) => ({ default: m.ProjectsPage })),
@@ -91,7 +91,7 @@ export default function App() {
         }
       >
         <Route index element={<Suspense fallback={<PageSpinner />}><DashboardPage /></Suspense>} />
-        <Route path="inbox" element={<Suspense fallback={<PageSpinner />}><InboxPage /></Suspense>} />
+        <Route path="media-pool" element={<Suspense fallback={<PageSpinner />}><MediaPoolPage /></Suspense>} />
         <Route path="projects" element={<Suspense fallback={<PageSpinner />}><ProjectsPage /></Suspense>} />
         <Route path="projects/:projectId" element={<Suspense fallback={<PageSpinner />}><ProjectDetailPage /></Suspense>} />
         <Route path="audit-logs" element={<Suspense fallback={<PageSpinner />}><AuditLogPage /></Suspense>} />

@@ -4,7 +4,7 @@ import { useFrappeAuth } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   DashboardSquare02Icon,
-  InboxIcon,
+  Album01Icon,
   FolderVideoIcon,
   Audit01Icon,
   Settings01Icon,
@@ -42,7 +42,7 @@ import { useTheme } from "@/components/theme-provider"
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: DashboardSquare02Icon },
-  { to: "/inbox", label: "Inbox", icon: InboxIcon },
+  { to: "/media-pool", label: "Media Pool", icon: Album01Icon },
   { to: "/projects", label: "Projects", icon: FolderVideoIcon },
   { to: "/audit-logs", label: "Audit Logs", icon: Audit01Icon },
 ]

@@ -207,7 +207,7 @@ export function UploadDialog({
           <DialogDescription>
             {project
               ? "Upload files to this project."
-              : "Upload files to your Inbox."}
+              : "Upload files to your Media Pool."}
           </DialogDescription>
         </DialogHeader>
 

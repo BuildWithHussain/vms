@@ -5,7 +5,7 @@ import { CategoryBadge } from "@/components/CategoryBadge"
 import { useNavigate } from "react-router"
 import { useFrappeGetDocList } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { CloudUploadIcon, Delete02Icon, Download04Icon, Film01Icon, GridViewIcon, InboxIcon, ListViewIcon, Move01Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons"
+import { CloudUploadIcon, Delete02Icon, Download04Icon, Film01Icon, GridViewIcon, Album01Icon, ListViewIcon, Move01Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { formatBytes } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -34,7 +34,7 @@ import { UserAvatar } from "@/components/UserAvatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { VMSAsset } from "@/types"
 
-export function InboxPage() {
+export function MediaPoolPage() {
   const navigate = useNavigate()
   const [uploadOpen, setUploadOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
@@ -106,7 +106,7 @@ export function InboxPage() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold md:text-2xl">Inbox</h1>
+          <h1 className="text-xl font-bold md:text-2xl">Media Pool</h1>
           <p className="mt-1 text-sm text-muted-foreground md:text-base">
             Assets uploaded without a project. Move them into a project when
             ready.
@@ -199,9 +199,9 @@ export function InboxPage() {
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
-              <HugeiconsIcon icon={InboxIcon} strokeWidth={1.5} />
+              <HugeiconsIcon icon={Album01Icon} strokeWidth={1.5} />
             </EmptyMedia>
-            <EmptyTitle>Inbox is empty</EmptyTitle>
+            <EmptyTitle>Media Pool is empty</EmptyTitle>
             <EmptyDescription>
               Upload files here to sort them into projects later.
             </EmptyDescription>
