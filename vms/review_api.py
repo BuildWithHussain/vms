@@ -54,6 +54,24 @@ def get_review_data(asset_name: str, token: str | None = None):
 	if not is_guest:
 		data["review_token"] = asset.review_token
 
+	# Split history
+	if asset.split_from and frappe.db.exists("VMS Asset", asset.split_from):
+		data["split_from"] = {
+			"name": asset.split_from,
+			"file_name": frappe.db.get_value("VMS Asset", asset.split_from, "file_name"),
+		}
+	else:
+		data["split_from"] = None
+
+	# Check if this asset has been split into parts
+	split_parts = frappe.get_all(
+		"VMS Asset",
+		filters={"split_from": asset.name},
+		fields=["name", "file_name"],
+		order_by="creation asc",
+	)
+	data["split_parts"] = split_parts if split_parts else None
+
 	if asset.project:
 		project = frappe.get_doc("VMS Project", asset.project)
 		data["project"] = {

@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowLeft01Icon, Download04Icon, Link01Icon, Copy01Icon, SubtitleIcon, Scissor01Icon } from "@hugeicons/core-free-icons"
+import { ArrowLeft01Icon, Download04Icon, Link01Icon, Copy01Icon, SubtitleIcon, Scissor01Icon, GitForkIcon } from "@hugeicons/core-free-icons"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
@@ -28,6 +28,8 @@ interface ReviewHeaderProps {
   assetStatus?: string
   splitProgress?: { stage: string; current: number; total: number } | null
   onOpenSplit?: () => void
+  splitFrom?: { name: string; file_name: string } | null
+  splitParts?: { name: string; file_name: string }[] | null
 }
 
 export function ReviewHeader({
@@ -45,6 +47,8 @@ export function ReviewHeader({
   assetStatus,
   splitProgress,
   onOpenSplit,
+  splitFrom,
+  splitParts,
 }: ReviewHeaderProps) {
   const navigate = useNavigate()
   const { isGuest, token } = useReviewContext()
@@ -105,6 +109,40 @@ export function ReviewHeader({
           )}
           <span className="text-xs font-medium truncate md:text-sm">{fileName}</span>
           {category && <Badge variant="outline" className="hidden shrink-0 text-[10px] md:inline-flex">{category}</Badge>}
+          {splitFrom && (
+            <Badge
+              variant="secondary"
+              className="hidden shrink-0 cursor-pointer text-[10px] gap-1 md:inline-flex"
+              onClick={() => navigate(`/review/${splitFrom.name}`)}
+            >
+              <HugeiconsIcon icon={GitForkIcon} size={10} />
+              Split from {splitFrom.file_name}
+            </Badge>
+          )}
+          {splitParts && splitParts.length > 0 && (
+            <Popover>
+              <PopoverTrigger>
+                <Badge variant="secondary" className="hidden shrink-0 cursor-pointer text-[10px] gap-1 md:inline-flex">
+                  <HugeiconsIcon icon={GitForkIcon} size={10} />
+                  {splitParts.length} {splitParts.length === 1 ? "part" : "parts"}
+                </Badge>
+              </PopoverTrigger>
+              <PopoverContent className="w-64" align="start">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground mb-2">Split parts</p>
+                  {splitParts.map((part) => (
+                    <div
+                      key={part.name}
+                      className="flex items-center gap-2 rounded px-2 py-1.5 text-xs cursor-pointer hover:bg-muted"
+                      onClick={() => navigate(`/review/${part.name}`)}
+                    >
+                      <span className="truncate">{part.file_name}</span>
+                    </div>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
           {isGuest && (
             <Badge variant="secondary" className="text-[10px] shrink-0">Guest</Badge>
           )}

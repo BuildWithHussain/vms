@@ -115,6 +115,21 @@ def start_video_split(asset_name: str, num_slices: int = 2):
 
 
 @frappe.whitelist(methods=["GET"])
+def get_split_parts(asset_name: str):
+	"""Get all parts that were split from a given asset."""
+	if not frappe.db.exists("VMS Asset", asset_name):
+		frappe.throw(_("Asset {0} does not exist").format(asset_name))
+
+	parts = frappe.get_all(
+		"VMS Asset",
+		filters={"split_from": asset_name},
+		fields=["name", "file_name", "file_size", "status"],
+		order_by="creation asc",
+	)
+	return parts
+
+
+@frappe.whitelist(methods=["GET"])
 def get_split_status(asset_name: str):
 	"""Check if an asset is currently being split, with progress info."""
 	if not frappe.db.exists("VMS Asset", asset_name):
@@ -180,6 +195,7 @@ def process_video_split(asset_name: str, num_slices: int, requested_by: str):
 						"uploaded_by": requested_by,
 						"uploaded_at": frappe.utils.now_datetime(),
 						"file_size": file_size,
+						"split_from": asset.name,
 					}
 				)
 				if asset.project:

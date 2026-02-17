@@ -25,6 +25,8 @@ interface ReviewData {
   is_public_review?: 0 | 1
   review_token?: string | null
   transcription_status?: string
+  split_from?: { name: string; file_name: string } | null
+  split_parts?: { name: string; file_name: string }[] | null
 }
 
 export function ReviewPage() {
@@ -208,6 +210,8 @@ function ReviewPageInner({
         assetStatus={currentAssetStatus}
         splitProgress={splitProgress}
         onOpenSplit={() => setSplitDialogOpen(true)}
+        splitFrom={asset.split_from}
+        splitParts={asset.split_parts}
       />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">

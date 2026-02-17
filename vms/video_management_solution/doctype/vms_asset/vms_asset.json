@@ -27,7 +27,9 @@
   "review_token",
   "section_break_transcription",
   "transcription_status",
-  "transcription"
+  "transcription",
+  "section_break_split",
+  "split_from"
  ],
  "fields": [
   {
@@ -165,6 +167,18 @@
    "fieldname": "transcription",
    "fieldtype": "Markdown Editor",
    "label": "Transcription"
+  },
+  {
+   "fieldname": "section_break_split",
+   "fieldtype": "Section Break",
+   "label": "Split History"
+  },
+  {
+   "fieldname": "split_from",
+   "fieldtype": "Link",
+   "label": "Split From",
+   "options": "VMS Asset",
+   "read_only": 1
   }
  ],
  "links": [],
