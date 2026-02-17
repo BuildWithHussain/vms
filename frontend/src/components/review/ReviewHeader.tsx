@@ -59,7 +59,7 @@ export function ReviewHeader({
     if (project) {
       navigate(`/projects/${project.name}`)
     } else {
-      navigate("/media-pool")
+      navigate("/uncategorised")
     }
   }
 

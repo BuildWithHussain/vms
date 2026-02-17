@@ -34,7 +34,7 @@ import { UserAvatar } from "@/components/UserAvatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { VMSAsset } from "@/types"
 
-export function MediaPoolPage() {
+export function UncategorisedPage() {
   const navigate = useNavigate()
   const [uploadOpen, setUploadOpen] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
@@ -106,7 +106,7 @@ export function MediaPoolPage() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold md:text-2xl">Media Pool</h1>
+          <h1 className="text-xl font-bold md:text-2xl">Uncategorised</h1>
           <p className="mt-1 text-sm text-muted-foreground md:text-base">
             Assets uploaded without a project. Move them into a project when
             ready.
@@ -201,7 +201,7 @@ export function MediaPoolPage() {
             <EmptyMedia variant="icon">
               <HugeiconsIcon icon={Album01Icon} strokeWidth={1.5} />
             </EmptyMedia>
-            <EmptyTitle>Media Pool is empty</EmptyTitle>
+            <EmptyTitle>No uncategorised assets</EmptyTitle>
             <EmptyDescription>
               Upload files here to sort them into projects later.
             </EmptyDescription>

@@ -76,10 +76,10 @@ export function DashboardPage() {
         <Card
           size="sm"
           className="cursor-pointer"
-          onClick={() => navigate("/media-pool")}
+          onClick={() => navigate("/uncategorised")}
         >
           <CardHeader>
-            <CardDescription>Media Pool</CardDescription>
+            <CardDescription>Uncategorised</CardDescription>
             <CardTitle className="text-2xl">
               {inboxCount === undefined ? (
                 <Skeleton className="h-7 w-8" />
@@ -216,7 +216,7 @@ export function DashboardPage() {
                   </EmptyMedia>
                   <EmptyTitle className="text-base">No uploads yet</EmptyTitle>
                   <EmptyDescription>
-                    Upload files to your media pool or a project to get started.
+                    Upload files to get started. Move them into a project when ready.
                   </EmptyDescription>
                 </EmptyHeader>
               </Empty>
@@ -232,7 +232,7 @@ export function DashboardPage() {
                         {a.file_name}
                       </div>
                       <div className="truncate text-xs text-muted-foreground">
-                        {a.project || "Media Pool"} &middot;{" "}
+                        {a.project || "Uncategorised"} &middot;{" "}
                         {new Date(a.creation).toLocaleDateString()}
                       </div>
                     </div>

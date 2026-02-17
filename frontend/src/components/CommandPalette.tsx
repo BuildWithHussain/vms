@@ -221,16 +221,16 @@ export function CommandPalette({
               <span>Go to Dashboard</span>
             </CommandItem>
             <CommandItem
-              value="media pool"
-              keywords={["uploads", "unassigned", "media"]}
-              onSelect={() => runCommand(() => navigate("/media-pool"))}
+              value="uncategorised"
+              keywords={["uploads", "unassigned", "media", "inbox"]}
+              onSelect={() => runCommand(() => navigate("/uncategorised"))}
             >
               <HugeiconsIcon
                 icon={Album01Icon}
                 strokeWidth={2}
                 className="size-4"
               />
-              <span>Go to Media Pool</span>
+              <span>Go to Uncategorised</span>
             </CommandItem>
             <CommandItem
               value="projects"

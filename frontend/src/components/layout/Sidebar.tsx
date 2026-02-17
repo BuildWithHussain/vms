@@ -42,7 +42,7 @@ import { useTheme } from "@/components/theme-provider"
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: DashboardSquare02Icon },
-  { to: "/media-pool", label: "Media Pool", icon: Album01Icon },
+  { to: "/uncategorised", label: "Uncategorised", icon: Album01Icon },
   { to: "/projects", label: "Projects", icon: FolderVideoIcon },
   { to: "/audit-logs", label: "Audit Logs", icon: Audit01Icon },
 ]
