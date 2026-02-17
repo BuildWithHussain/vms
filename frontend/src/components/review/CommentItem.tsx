@@ -9,6 +9,16 @@ import {
 } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   Avatar,
   AvatarFallback,
   AvatarImage,
@@ -41,6 +51,7 @@ export function CommentItem({
   isGuest = false,
 }: CommentItemProps) {
   const [showReplies, setShowReplies] = useState(true)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const hasTimestamp = comment.video_timestamp != null
   const isGuestComment = !!comment.guest_name && !comment.commented_by
 
@@ -150,7 +161,7 @@ export function CommentItem({
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      onClick={() => onDelete(comment.name)}
+                      onClick={() => setShowDeleteConfirm(true)}
                       title="Delete"
                     >
                       <HugeiconsIcon icon={Delete02Icon} size={14} strokeWidth={2} />
@@ -191,6 +202,26 @@ export function CommentItem({
             ))}
         </div>
       )}
+
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete comment</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this comment? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => onDelete(comment.name)}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
