@@ -38,6 +38,10 @@ export function useReviewComments(
     "vms.review_api.resolve_comment",
   )
 
+  const { call: callUpdateComment } = useFrappePostCall(
+    "vms.review_api.update_comment",
+  )
+
   const comments = data?.message ?? []
 
   const addComment = useCallback(
@@ -82,6 +86,17 @@ export function useReviewComments(
     [callResolveComment, mutate],
   )
 
+  const updateComment = useCallback(
+    async (commentName: string, commentText: string) => {
+      await callUpdateComment({
+        comment_name: commentName,
+        comment_text: commentText,
+      })
+      mutate()
+    },
+    [callUpdateComment, mutate],
+  )
+
   return {
     comments,
     isLoading,
@@ -89,6 +104,7 @@ export function useReviewComments(
     addComment,
     deleteComment,
     resolveComment,
+    updateComment,
     mutate,
   }
 }

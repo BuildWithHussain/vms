@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   CheckmarkCircle02Icon,
@@ -6,6 +6,7 @@ import {
   MailReply01Icon,
   Clock01Icon,
   PenTool01Icon,
+  PencilEdit01Icon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import {
@@ -26,6 +27,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { formatTimestamp } from "@/hooks/useVideoPlayer"
 import type { VMSReviewComment } from "@/types"
+import { CommentEditor, type CommentEditorHandle } from "./CommentEditor"
 
 interface CommentItemProps {
   comment: VMSReviewComment
@@ -34,6 +36,7 @@ interface CommentItemProps {
   onReply: (parentName: string, timestamp?: number | null) => void
   onResolve: (name: string, resolved: boolean) => void
   onDelete: (name: string) => void
+  onUpdate: (name: string, text: string) => void
   onViewAnnotation?: (commentName: string, timestamp?: number | null) => void
   isNested?: boolean
   isGuest?: boolean
@@ -46,14 +49,36 @@ export function CommentItem({
   onReply,
   onResolve,
   onDelete,
+  onUpdate,
   onViewAnnotation,
   isNested = false,
   isGuest = false,
 }: CommentItemProps) {
   const [showReplies, setShowReplies] = useState(true)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const editorRef = useRef<CommentEditorHandle>(null)
   const hasTimestamp = comment.video_timestamp != null
   const isGuestComment = !!comment.guest_name && !comment.commented_by
+
+  const handleSaveEdit = () => {
+    const html = editorRef.current?.getHTML()
+    if (html && !editorRef.current?.isEmpty()) {
+      onUpdate(comment.name, html)
+      setIsEditing(false)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditing(false)
+  }
+
+  useEffect(() => {
+    if (isEditing && editorRef.current) {
+      editorRef.current.setContent(comment.comment_text)
+      editorRef.current.focus()
+    }
+  }, [isEditing, comment.comment_text])
 
   return (
     <div className={isNested ? "ml-8 border-l pl-3" : ""}>
@@ -117,10 +142,36 @@ export function CommentItem({
               )}
             </div>
 
-            <div
-              className="mt-0.5 text-sm text-foreground break-words [&_p]:mb-0 [&_.mention]:rounded [&_.mention]:bg-primary/10 [&_.mention]:px-1 [&_.mention]:py-0.5 [&_.mention]:font-medium [&_.mention]:text-primary"
-              dangerouslySetInnerHTML={{ __html: comment.comment_text }}
-            />
+            {isEditing ? (
+              <div className="mt-1">
+                <CommentEditor
+                  ref={editorRef}
+                  placeholder="Edit your comment..."
+                  isGuest={isGuest}
+                  className="mb-2"
+                />
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    onClick={handleSaveEdit}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleCancelEdit}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="mt-0.5 text-sm text-foreground break-words [&_p]:mb-0 [&_.mention]:rounded [&_.mention]:bg-primary/10 [&_.mention]:px-1 [&_.mention]:py-0.5 [&_.mention]:font-medium [&_.mention]:text-primary"
+                dangerouslySetInnerHTML={{ __html: comment.comment_text }}
+              />
+            )}
 
             <div className="mt-1 flex items-center gap-1">
               <span className="text-[10px] text-muted-foreground">
@@ -145,6 +196,14 @@ export function CommentItem({
                 )}
                 {!isGuest && (
                   <>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setIsEditing(true)}
+                      title="Edit"
+                    >
+                      <HugeiconsIcon icon={PencilEdit01Icon} size={14} strokeWidth={2} />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon-sm"
@@ -195,6 +254,7 @@ export function CommentItem({
                 onReply={onReply}
                 onResolve={onResolve}
                 onDelete={onDelete}
+                onUpdate={onUpdate}
                 onViewAnnotation={onViewAnnotation}
                 isNested
                 isGuest={isGuest}

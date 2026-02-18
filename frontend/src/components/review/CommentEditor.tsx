@@ -19,6 +19,7 @@ export interface CommentEditorHandle {
   clearContent: () => void
   focus: () => void
   isEmpty: () => boolean
+  setContent: (html: string) => void
 }
 
 interface CommentEditorProps {
@@ -26,6 +27,7 @@ interface CommentEditorProps {
   onSubmit?: () => void
   isGuest?: boolean
   className?: string
+  initialContent?: string
 }
 
 // --- Mention suggestion list component ---
@@ -107,7 +109,7 @@ MentionList.displayName = "MentionList"
 
 // --- Main CommentEditor ---
 export const CommentEditor = forwardRef<CommentEditorHandle, CommentEditorProps>(
-  ({ placeholder = "Add a comment...", onSubmit, isGuest = false, className }, ref) => {
+  ({ placeholder = "Add a comment...", onSubmit, isGuest = false, className, initialContent }, ref) => {
     // Fetch mentionable users (only for authenticated users)
     const { data: usersData } = useFrappeGetCall<{ message: MentionUser[] }>(
       "vms.review_api.get_mentionable_users",
@@ -124,6 +126,7 @@ export const CommentEditor = forwardRef<CommentEditorHandle, CommentEditorProps>
 
     const editor = useEditor({
       immediatelyRender: false,
+      content: initialContent || "",
       extensions: [
         StarterKit.configure({
           heading: false,
@@ -228,6 +231,7 @@ export const CommentEditor = forwardRef<CommentEditorHandle, CommentEditorProps>
       clearContent: () => editor?.commands.clearContent(),
       focus: () => editor?.commands.focus(),
       isEmpty: () => editor?.isEmpty ?? true,
+      setContent: (html: string) => editor?.commands.setContent(html),
     }))
 
     if (!editor) return null

@@ -38,6 +38,7 @@ export function CommentPanel() {
     addComment,
     deleteComment,
     resolveComment,
+    updateComment,
   } = useReviewComments(assetId, sortBy, token)
 
   // Build thread tree: top-level comments + their replies
@@ -138,6 +139,7 @@ export function CommentPanel() {
                 onReply={handleReply}
                 onResolve={resolveComment}
                 onDelete={deleteComment}
+                onUpdate={updateComment}
                 onViewAnnotation={viewAnnotation}
                 isGuest={isGuest}
               />

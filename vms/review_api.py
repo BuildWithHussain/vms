@@ -288,6 +288,19 @@ def resolve_comment(comment_name: str, is_resolved: int):
 
 
 @frappe.whitelist()
+def update_comment(comment_name: str, comment_text: str):
+	"""Update the text of an existing comment."""
+	if not frappe.db.exists("VMS Review Comment", comment_name):
+		frappe.throw(_("Comment {0} does not exist").format(comment_name))
+
+	doc = frappe.get_doc("VMS Review Comment", comment_name)
+	doc.comment_text = comment_text
+	doc.save(ignore_permissions=True)
+
+	return {"status": "ok", "comment_text": doc.comment_text, "modified": str(doc.modified)}
+
+
+@frappe.whitelist()
 def toggle_public_review(asset_name: str, enable: int):
 	"""Toggle public review on/off for an asset."""
 	if not frappe.db.exists("VMS Asset", asset_name):
