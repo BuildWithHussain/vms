@@ -544,3 +544,64 @@ export async function searchProjects(
 		params,
 	);
 }
+
+// ---------------------------------------------------------------------------
+// Transcription helpers
+// ---------------------------------------------------------------------------
+
+export interface TranscriptionResponse {
+	transcription_status: string;
+	transcription: string;
+	speaker_names: Record<string, string>;
+}
+
+export interface StartTranscriptionResponse {
+	status: string;
+	transcription_status: string;
+}
+
+/**
+ * Start a transcription job for an asset (POST endpoint).
+ */
+export async function startTranscription(
+	request: APIRequestContext,
+	assetName: string,
+): Promise<StartTranscriptionResponse> {
+	return callMethod<StartTranscriptionResponse>(
+		request,
+		"vms.transcription.start_transcription",
+		{ asset_name: assetName },
+	);
+}
+
+/**
+ * Get transcription status and content for an asset (GET endpoint).
+ */
+export async function getTranscription(
+	request: APIRequestContext,
+	assetName: string,
+): Promise<TranscriptionResponse> {
+	return callGetMethod<TranscriptionResponse>(
+		request,
+		"vms.transcription.get_transcription",
+		{ asset_name: assetName },
+	);
+}
+
+/**
+ * Save custom speaker name mappings for an asset (POST endpoint).
+ */
+export async function saveSpeakerNames(
+	request: APIRequestContext,
+	assetName: string,
+	speakerNames: Record<string, string>,
+): Promise<{ status: string }> {
+	return callMethod<{ status: string }>(
+		request,
+		"vms.transcription.save_speaker_names",
+		{
+			asset_name: assetName,
+			speaker_names: JSON.stringify(speakerNames),
+		},
+	);
+}
