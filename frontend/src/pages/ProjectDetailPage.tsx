@@ -196,10 +196,12 @@ export function ProjectDetailPage() {
 
   const handleFolderCreated = () => {
     mutateFolders()
+    mutateAssets()
   }
 
   const handleFolderRenamed = () => {
     mutateFolders()
+    mutateAssets()
   }
 
   const handleDropToFolder = useCallback(
