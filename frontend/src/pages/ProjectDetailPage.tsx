@@ -57,6 +57,16 @@ import {
 import { Files01Icon, FilmRoll01Icon, DeliveryBox01Icon, FolderOpenIcon } from "@hugeicons/core-free-icons"
 import type { VMSProject, VMSAsset, VMSFolder } from "@/types"
 
+const PAGE_SIZE = 20
+
+interface PaginatedAssets {
+  assets: VMSAsset[]
+  total: number
+  page: number
+  page_size: number
+  total_pages: number
+}
+
 export function ProjectDetailPage() {
   const { projectId } = useParams()
   const navigate = useNavigate()
@@ -71,6 +81,8 @@ export function ProjectDetailPage() {
   const [view, setView] = useState<"list" | "grid">("grid")
   const { selected, toggleSelect, toggleSelectAll, clearSelection } = useSelection()
   const [currentFolder, setCurrentFolder] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState("all")
+  const [page, setPage] = useState(1)
   const { downloadOne, downloadMany, isDownloading } = useDownload()
 
   const { call: callTogglePublicReview } = useFrappePostCall("vms.review_api.toggle_public_review")
@@ -82,27 +94,33 @@ export function ProjectDetailPage() {
     projectId!
   )
 
-  const { data: folderAssetsData, mutate: mutateFolderAssets } = useFrappeGetCall<{ message: VMSAsset[] }>(
+  const { data: folderAssetsData, mutate: mutateFolderAssets } = useFrappeGetCall<{ message: PaginatedAssets }>(
     "vms.api.get_project_assets",
-    { project: projectId!, folder: currentFolder ?? undefined },
-    `project-assets-folder-${projectId}-${currentFolder ?? "root"}`,
+    { project: projectId!, folder: currentFolder ?? undefined, page: activeTab === "all" ? page : 1, page_size: PAGE_SIZE },
+    `project-assets-folder-${projectId}-${currentFolder ?? "root"}-p${activeTab === "all" ? page : 1}`,
   )
 
-  const { data: forReviewData, mutate: mutateForReview } = useFrappeGetCall<{ message: VMSAsset[] }>(
+  const { data: forReviewData, mutate: mutateForReview } = useFrappeGetCall<{ message: PaginatedAssets }>(
     "vms.api.get_project_assets",
-    { project: projectId!, category: "For Review" },
-    `project-assets-review-${projectId}`,
+    { project: projectId!, category: "For Review", page: activeTab === "for-review" ? page : 1, page_size: PAGE_SIZE },
+    `project-assets-review-${projectId}-p${activeTab === "for-review" ? page : 1}`,
   )
 
-  const { data: deliverablesData, mutate: mutateDeliverables } = useFrappeGetCall<{ message: VMSAsset[] }>(
+  const { data: deliverablesData, mutate: mutateDeliverables } = useFrappeGetCall<{ message: PaginatedAssets }>(
     "vms.api.get_project_assets",
-    { project: projectId!, category: "Deliverable" },
-    `project-assets-deliverables-${projectId}`,
+    { project: projectId!, category: "Deliverable", page: activeTab === "deliverables" ? page : 1, page_size: PAGE_SIZE },
+    `project-assets-deliverables-${projectId}-p${activeTab === "deliverables" ? page : 1}`,
   )
 
-  const folderAssets = folderAssetsData?.message ?? []
-  const forReviewItems = forReviewData?.message ?? []
-  const deliverableItems = deliverablesData?.message ?? []
+  const folderAssets = folderAssetsData?.message?.assets ?? []
+  const folderTotal = folderAssetsData?.message?.total ?? 0
+  const folderTotalPages = folderAssetsData?.message?.total_pages ?? 1
+  const forReviewItems = forReviewData?.message?.assets ?? []
+  const forReviewTotal = forReviewData?.message?.total ?? 0
+  const forReviewTotalPages = forReviewData?.message?.total_pages ?? 1
+  const deliverableItems = deliverablesData?.message?.assets ?? []
+  const deliverableTotal = deliverablesData?.message?.total ?? 0
+  const deliverableTotalPages = deliverablesData?.message?.total_pages ?? 1
 
   const mutateAssets = useCallback(() => {
     mutateFolderAssets()
@@ -162,11 +180,13 @@ export function ProjectDetailPage() {
 
   const handleFolderClick = (folderName: string) => {
     setCurrentFolder(folderName)
+    setPage(1)
     clearSelection()
   }
 
   const handleNavigateToRoot = () => {
     setCurrentFolder(null)
+    setPage(1)
     clearSelection()
   }
 
@@ -302,17 +322,17 @@ export function ProjectDetailPage() {
         />
       )}
 
-      <Tabs defaultValue="all">
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setPage(1); clearSelection() }}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <TabsList>
             <TabsTrigger value="all">
-              All{folderAssets.length > 0 ? ` (${folderAssets.length})` : ""}
+              All{folderTotal > 0 ? ` (${folderTotal})` : ""}
             </TabsTrigger>
             <TabsTrigger value="for-review">
-              For Review{forReviewItems.length > 0 ? ` (${forReviewItems.length})` : ""}
+              For Review{forReviewTotal > 0 ? ` (${forReviewTotal})` : ""}
             </TabsTrigger>
             <TabsTrigger value="deliverables">
-              Deliverables{deliverableItems.length > 0 ? ` (${deliverableItems.length})` : ""}
+              Deliverables{deliverableTotal > 0 ? ` (${deliverableTotal})` : ""}
             </TabsTrigger>
           </TabsList>
           <div className="flex flex-wrap items-center gap-2">
@@ -468,6 +488,7 @@ export function ProjectDetailPage() {
               )
             }
           />
+          <PaginationControls page={page} totalPages={folderTotalPages} onPageChange={setPage} />
         </TabsContent>
 
         <TabsContent value="for-review">
@@ -494,6 +515,7 @@ export function ProjectDetailPage() {
               </Empty>
             }
           />
+          <PaginationControls page={page} totalPages={forReviewTotalPages} onPageChange={setPage} />
         </TabsContent>
 
         <TabsContent value="deliverables">
@@ -520,6 +542,7 @@ export function ProjectDetailPage() {
               </Empty>
             }
           />
+          <PaginationControls page={page} totalPages={deliverableTotalPages} onPageChange={setPage} />
         </TabsContent>
       </Tabs>
 
@@ -800,6 +823,42 @@ function BreadcrumbNav({
       </button>
       <span className="text-muted-foreground">/</span>
       <span className="font-medium">{folderName}</span>
+    </div>
+  )
+}
+
+function PaginationControls({
+  page,
+  totalPages,
+  onPageChange,
+}: {
+  page: number
+  totalPages: number
+  onPageChange: (page: number) => void
+}) {
+  if (totalPages <= 1) return null
+
+  return (
+    <div className="flex items-center justify-end gap-2 pt-4">
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={page <= 1}
+        onClick={() => onPageChange(page - 1)}
+      >
+        Previous
+      </Button>
+      <span className="text-sm text-muted-foreground">
+        Page {page} of {totalPages}
+      </span>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={page >= totalPages}
+        onClick={() => onPageChange(page + 1)}
+      >
+        Next
+      </Button>
     </div>
   )
 }

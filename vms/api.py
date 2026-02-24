@@ -421,16 +421,22 @@ def move_assets_to_folder(asset_names: str | list, folder: str | None = None):
 
 
 @frappe.whitelist(methods=["GET"])
-def get_project_assets(project, folder=None, category=None):
-	"""Get project assets with server-side folder/category filtering.
+def get_project_assets(project, folder=None, category=None, page=1, page_size=20):
+	"""Get project assets with server-side folder/category filtering and pagination.
 
 	Parameters:
 		project: VMS Project ID (required)
 		folder: VMS Folder ID. None = root-level assets only. Ignored when category is set.
 		category: "For Review" or "Deliverable". Returns matching assets across ALL folders.
+		page: Page number (1-indexed, default 1)
+		page_size: Items per page (default 20, max 100)
 	"""
 	if not frappe.db.exists("VMS Project", project):
 		frappe.throw(_("Project {0} does not exist").format(project))
+
+	page = max(1, int(page))
+	page_size = min(100, max(1, int(page_size)))
+	start = (page - 1) * page_size
 
 	filters = {"project": project, "status": ["!=", "Uploading"]}
 
@@ -440,6 +446,8 @@ def get_project_assets(project, folder=None, category=None):
 		filters["folder"] = folder
 	else:
 		filters["folder"] = ["is", "not set"]
+
+	total = frappe.db.count("VMS Asset", filters=filters)
 
 	assets = frappe.get_all(
 		"VMS Asset",
@@ -460,7 +468,8 @@ def get_project_assets(project, folder=None, category=None):
 			"folder",
 		],
 		order_by="creation desc",
-		page_length=0,
+		start=start,
+		page_length=page_size,
 	)
 
 	# Enrich with uploader info
@@ -479,7 +488,13 @@ def get_project_assets(project, folder=None, category=None):
 		asset["uploader_name"] = u.get("full_name", asset.uploaded_by)
 		asset["uploader_image"] = u.get("user_image")
 
-	return assets
+	return {
+		"assets": assets,
+		"total": total,
+		"page": page,
+		"page_size": page_size,
+		"total_pages": -(-total // page_size),
+	}
 
 
 @frappe.whitelist()
