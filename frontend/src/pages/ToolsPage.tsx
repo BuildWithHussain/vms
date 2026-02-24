@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { useFrappePostCall, useFrappeGetCall, useFrappeEventListener } from "frappe-react-sdk"
 import { toast } from "sonner"
 import { formatDistanceToNow } from "date-fns"
@@ -99,7 +99,7 @@ function CompressTab() {
     "vms.tools_api.get_compress_status",
     activeJob ? { job_name: activeJob } : undefined,
     activeJob ? undefined : null,
-    { refreshInterval: activeJob ? 3000 : 0 }
+    {}
   )
 
   // Listen for realtime progress updates
@@ -125,7 +125,14 @@ function CompressTab() {
   }, [activeJob, mutateStatus, mutateJobs]))
 
   // Merge polled status into jobStatus
-  const currentStatus = statusData?.message || jobStatus
+  // Sync download_url from API refetch into jobStatus (socket events don't include it)
+  useEffect(() => {
+    if (statusData?.message?.download_url && jobStatus && !jobStatus.download_url) {
+      setJobStatus((prev) => prev ? { ...prev, ...statusData.message } : null)
+    }
+  }, [statusData?.message?.download_url]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const currentStatus = jobStatus || statusData?.message
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0]
