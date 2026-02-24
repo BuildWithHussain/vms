@@ -73,7 +73,8 @@ export function AppSidebar({ onOpenSettings }: { onOpenSettings: () => void }) {
 
   return (
     <Sidebar>
-      <SidebarHeader className="h-14 shrink-0 flex-row items-center border-b border-sidebar-border px-4">
+      <SidebarHeader className="h-14 shrink-0 flex-row items-center gap-2 border-b border-sidebar-border px-4">
+        <img src="/assets/vms/frontend/vms-logo.png" alt="VMS" className="size-7 rounded" />
         <span className="text-lg font-bold text-sidebar-foreground">VMS</span>
       </SidebarHeader>
       <SidebarContent>
