@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 import tempfile
@@ -82,7 +83,21 @@ def run_compression(job_name: str):
 
 
 def _ffmpeg_compress(input_path: str, output_path: str):
-	"""Run ffmpeg to compress video using the recommended settings from the issue."""
+	"""Run ffmpeg to compress video. Tries smart remux for non-MP4 files with compatible codecs."""
+	if _can_remux_to_mp4(input_path):
+		copy_cmd = [
+			"ffmpeg", "-hide_banner", "-y",
+			"-i", input_path,
+			"-c", "copy",
+			"-movflags", "+faststart",
+			output_path,
+		]
+		result = subprocess.run(copy_cmd, capture_output=True, text=True, timeout=3600)
+		if result.returncode == 0:
+			frappe.logger("vms").info("Smart remux succeeded — skipped transcoding")
+			return
+		frappe.logger("vms").info("Smart remux failed — falling back to full transcode")
+
 	cmd = [
 		"ffmpeg",
 		"-hide_banner",
@@ -115,6 +130,54 @@ def _get_extension(filename: str) -> str:
 	if "." in filename:
 		return "." + filename.rsplit(".", 1)[1].lower()
 	return ".mp4"
+
+
+def _probe_codecs(input_path: str) -> dict:
+	"""Use ffprobe to detect video/audio codecs and container format."""
+	cmd = [
+		"ffprobe", "-v", "quiet", "-print_format", "json",
+		"-show_format", "-show_streams", input_path,
+	]
+	try:
+		result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+		if result.returncode != 0:
+			return {}
+		return json.loads(result.stdout)
+	except Exception:
+		return {}
+
+
+def _can_remux_to_mp4(input_path: str) -> bool:
+	"""Check if input can be remuxed (stream copy) to MP4 without transcoding.
+
+	Returns True when the container is NOT already MP4/MOV and the codecs
+	are MP4-compatible (H.264/H.265 video + AAC audio). In that case a fast
+	remux avoids an expensive re-encode.
+	"""
+	probe = _probe_codecs(input_path)
+	if not probe:
+		return False
+
+	fmt = probe.get("format", {}).get("format_name", "")
+	# Already MP4/MOV — remuxing won't compress, user wants actual transcoding
+	if any(tag in fmt for tag in ("mp4", "mov", "m4a")):
+		return False
+
+	streams = probe.get("streams", [])
+	video_ok = False
+	audio_ok = True  # no audio streams is fine
+
+	for stream in streams:
+		codec = stream.get("codec_name", "").lower()
+		codec_type = stream.get("codec_type", "")
+
+		if codec_type == "video":
+			video_ok = codec in ("h264", "hevc", "h265")
+		elif codec_type == "audio":
+			if codec not in ("aac",):
+				audio_ok = False
+
+	return video_ok and audio_ok
 
 
 def _publish_progress(job):
