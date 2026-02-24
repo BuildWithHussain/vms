@@ -26,6 +26,7 @@ interface ReviewData {
   is_public_review?: 0 | 1
   review_token?: string | null
   transcription_status?: string
+  proxy_status?: string
   split_from?: { name: string; file_name: string } | null
   split_parts?: { name: string; file_name: string }[] | null
 }
@@ -112,6 +113,8 @@ function ReviewPageInner({
   const [isPolling, setIsPolling] = useState(asset.transcription_status === "Processing")
   const [isSplitPolling, setIsSplitPolling] = useState(asset.status === "Processing")
 
+  const { call: callGenerateProxy, loading: generatingProxy } = useFrappePostCall("vms.proxy.generate_proxy")
+
   const { call: callTogglePublicReview } = useFrappePostCall("vms.review_api.toggle_public_review")
   const { call: callStartTranscription, loading: startingTranscription } = useFrappePostCall(
     "vms.transcription.start_transcription",
@@ -136,6 +139,39 @@ function ReviewPageInner({
   const transcriptionStatus = transcriptionData?.message?.transcription_status || asset.transcription_status || ""
   const transcriptionText = transcriptionData?.message?.transcription || ""
   const speakerNames = transcriptionData?.message?.speaker_names || {}
+
+  // Poll for proxy generation status
+  const [isProxyPolling, setIsProxyPolling] = useState(asset.proxy_status === "Processing")
+
+  const { data: proxyStatusData } = useFrappeGetCall<{
+    message: { proxy_status: string; has_proxy: boolean }
+  }>(
+    "vms.proxy.get_proxy_status",
+    isProxyPolling ? { asset_name: asset.name } : undefined,
+    isProxyPolling ? `proxy-status-${asset.name}` : undefined,
+    {
+      revalidateOnFocus: false,
+      refreshInterval: isProxyPolling ? 5000 : 0,
+    },
+  )
+
+  const proxyStatus = proxyStatusData?.message?.proxy_status || asset.proxy_status || ""
+
+  // Stop proxy polling when done
+  useEffect(() => {
+    if (proxyStatus === "Ready" || proxyStatus === "Error") {
+      setIsProxyPolling(false)
+      if (proxyStatus === "Ready") {
+        toast.success("Streaming proxy generated! Reload to use it.")
+      }
+    }
+  }, [proxyStatus])
+
+  const handleGenerateProxy = useCallback(async () => {
+    await callGenerateProxy({ asset_name: asset.name })
+    setIsProxyPolling(true)
+    mutateReviewData()
+  }, [asset.name, callGenerateProxy, mutateReviewData])
 
   // Poll for split status while Processing
   const { data: splitStatusData } = useFrappeGetCall<{
@@ -228,6 +264,9 @@ function ReviewPageInner({
         onOpenSplit={() => setSplitDialogOpen(true)}
         splitFrom={asset.split_from}
         splitParts={asset.split_parts}
+        proxyStatus={proxyStatus}
+        onGenerateProxy={handleGenerateProxy}
+        isGeneratingProxy={generatingProxy}
       />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">

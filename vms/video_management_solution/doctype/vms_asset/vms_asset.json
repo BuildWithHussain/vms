@@ -29,6 +29,10 @@
   "transcription_status",
   "transcription",
   "speaker_names",
+  "section_break_proxy",
+  "proxy_status",
+  "column_break_proxy",
+  "proxy_r2_key",
   "section_break_split",
   "split_from",
   "section_break_trash",
@@ -180,6 +184,28 @@
    "hidden": 1
   },
   {
+   "fieldname": "section_break_proxy",
+   "fieldtype": "Section Break",
+   "label": "Streaming Proxy"
+  },
+  {
+   "fieldname": "proxy_status",
+   "fieldtype": "Select",
+   "label": "Proxy Status",
+   "options": "\nProcessing\nReady\nError",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_proxy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "proxy_r2_key",
+   "fieldtype": "Data",
+   "label": "Proxy R2 Key",
+   "read_only": 1
+  },
+  {
    "fieldname": "section_break_split",
    "fieldtype": "Section Break",
    "label": "Split History"
@@ -215,7 +241,7 @@
   }
  ],
  "links": [],
- "modified": "2026-02-14 12:00:00.000000",
+ "modified": "2026-02-25 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Video Management Solution",
  "name": "VMS Asset",

@@ -48,6 +48,7 @@ def get_review_data(asset_name: str, token: str | None = None):
 		"uploaded_at": asset.uploaded_at,
 		"is_public_review": asset.is_public_review,
 		"transcription_status": asset.transcription_status or "",
+		"proxy_status": asset.proxy_status or "",
 	}
 
 	# Only expose review_token to authenticated users
@@ -86,7 +87,11 @@ def get_review_data(asset_name: str, token: str | None = None):
 
 @frappe.whitelist(allow_guest=True)
 def get_review_view_url(asset_name: str, token: str | None = None):
-	"""Get a presigned view URL for video playback in review page."""
+	"""Get a presigned view URL for video playback in review page.
+
+	If a streaming proxy exists, serves the proxy URL instead of the
+	original to improve browser compatibility and reduce buffering.
+	"""
 	_validate_public_token(asset_name, token)
 
 	asset = frappe.get_doc("VMS Asset", asset_name)
@@ -94,8 +99,10 @@ def get_review_view_url(asset_name: str, token: str | None = None):
 	if not asset.r2_key:
 		frappe.throw(_("Asset has no R2 key"))
 
-	url = generate_presigned_view_url(asset.r2_key)
-	return {"url": url}
+	# Prefer proxy for streaming when available
+	r2_key = asset.proxy_r2_key if asset.proxy_r2_key and asset.proxy_status == "Ready" else asset.r2_key
+	url = generate_presigned_view_url(r2_key)
+	return {"url": url, "is_proxy": bool(asset.proxy_r2_key and asset.proxy_status == "Ready")}
 
 
 @frappe.whitelist(methods=["GET"], allow_guest=True)

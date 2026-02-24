@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowLeft01Icon, Download04Icon, Link01Icon, Copy01Icon, SubtitleIcon, Scissor01Icon, GitForkIcon } from "@hugeicons/core-free-icons"
+import { ArrowLeft01Icon, Download04Icon, Link01Icon, Copy01Icon, SubtitleIcon, Scissor01Icon, GitForkIcon, Video01Icon } from "@hugeicons/core-free-icons"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
@@ -31,6 +31,9 @@ interface ReviewHeaderProps {
   onOpenSplit?: () => void
   splitFrom?: { name: string; file_name: string } | null
   splitParts?: { name: string; file_name: string }[] | null
+  proxyStatus?: string
+  onGenerateProxy?: () => Promise<void>
+  isGeneratingProxy?: boolean
 }
 
 export function ReviewHeader({
@@ -51,6 +54,9 @@ export function ReviewHeader({
   onOpenSplit,
   splitFrom,
   splitParts,
+  proxyStatus,
+  onGenerateProxy,
+  isGeneratingProxy,
 }: ReviewHeaderProps) {
   const navigate = useNavigate()
   const { isGuest, token } = useReviewContext()
@@ -151,6 +157,28 @@ export function ReviewHeader({
           )}
         </div>
       </div>
+
+      {/* Generate Proxy button — auth users only, video only, no proxy yet */}
+      {!isGuest && isVideo && !proxyStatus && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onGenerateProxy}
+          disabled={isGeneratingProxy}
+        >
+          <HugeiconsIcon icon={Video01Icon} strokeWidth={2} data-icon="inline-start" size={16} />
+          <span className="hidden md:inline">Generate Proxy</span>
+        </Button>
+      )}
+      {!isGuest && isVideo && proxyStatus === "Processing" && (
+        <Button variant="outline" size="sm" disabled>
+          <Spinner className="size-3.5" />
+          <span className="hidden md:inline ml-1">Generating proxy...</span>
+        </Button>
+      )}
+      {!isGuest && isVideo && proxyStatus === "Ready" && (
+        <Badge variant="secondary" className="text-[10px] shrink-0">Proxy</Badge>
+      )}
 
       {/* Share button — auth users only */}
       {!isGuest && (
