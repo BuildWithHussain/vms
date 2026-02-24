@@ -334,3 +334,36 @@ export async function deleteAsset(
 		asset_name: assetName,
 	});
 }
+
+// ---------------------------------------------------------------------------
+// Sharing helpers
+// ---------------------------------------------------------------------------
+
+export interface ShareResult {
+	share_token: string;
+	share_url: string;
+}
+
+/**
+ * Enable sharing on a project and return the share token + URL.
+ */
+export async function enableProjectSharing(
+	request: APIRequestContext,
+	projectName: string,
+): Promise<ShareResult> {
+	return callMethod<ShareResult>(request, "vms.api.enable_project_sharing", {
+		project: projectName,
+	});
+}
+
+/**
+ * Disable sharing on a project (revokes all public links).
+ */
+export async function disableProjectSharing(
+	request: APIRequestContext,
+	projectName: string,
+): Promise<void> {
+	await callMethod(request, "vms.api.disable_project_sharing", {
+		project: projectName,
+	});
+}

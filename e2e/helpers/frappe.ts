@@ -17,7 +17,7 @@ const CSRF_FILE = "e2e/.auth/csrf.json";
 const AUTH_FILE = "e2e/.auth/user.json";
 
 // Node.js can't resolve .localhost TLDs, so API calls go via 127.0.0.1 + Host header.
-const SITE_HOST = process.env.SITE_HOST || "vms.localhost:8000";
+export const SITE_HOST = process.env.SITE_HOST || "vms.localhost:8000";
 export const API_BASE = process.env.API_BASE || "http://127.0.0.1:8000";
 
 // Cache for CSRF token (read from file once)
@@ -255,4 +255,60 @@ export async function docExists(
 	} catch {
 		return false;
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Guest API helpers (no auth cookies / CSRF — for testing allow_guest endpoints)
+// ---------------------------------------------------------------------------
+
+/**
+ * Make a GET request to a Frappe whitelisted method without authentication.
+ * Used for testing allow_guest=True endpoints.
+ */
+export async function guestGet<T = unknown>(
+	request: APIRequestContext,
+	method: string,
+	params: Record<string, string | number> = {},
+): Promise<{ status: number; data: T | null; error: string | null }> {
+	const searchParams = new URLSearchParams();
+	for (const [key, value] of Object.entries(params)) {
+		searchParams.set(key, String(value));
+	}
+
+	const response = await request.get(
+		`${API_BASE}/api/method/${method}?${searchParams.toString()}`,
+		{ headers: { Host: SITE_HOST } },
+	);
+
+	const json: FrappeResponse<T> = await response.json();
+	return {
+		status: response.status(),
+		data: json.message ?? null,
+		error: json.exc_type ?? null,
+	};
+}
+
+/**
+ * Make a POST request to a Frappe whitelisted method without authentication.
+ * Used for testing allow_guest=True POST endpoints.
+ */
+export async function guestPost<T = unknown>(
+	request: APIRequestContext,
+	method: string,
+	args: Record<string, unknown> = {},
+): Promise<{ status: number; data: T | null; error: string | null }> {
+	const response = await request.post(
+		`${API_BASE}/api/method/${method}`,
+		{
+			data: args,
+			headers: { Host: SITE_HOST, "Content-Type": "application/json" },
+		},
+	);
+
+	const json: FrappeResponse<T> = await response.json();
+	return {
+		status: response.status(),
+		data: json.message ?? null,
+		error: json.exc_type ?? null,
+	};
 }
