@@ -497,6 +497,67 @@ def get_project_assets(project, folder=None, category=None, page=1, page_size=20
 	}
 
 
+@frappe.whitelist(methods=["GET"])
+def get_inbox_assets(page=1, page_size=20):
+	"""Get paginated assets that have no project (Uncategorised / Inbox).
+
+	Parameters:
+		page: Page number (1-indexed, default 1)
+		page_size: Items per page (default 20, max 100)
+	"""
+	page = max(1, int(page))
+	page_size = min(100, max(1, int(page_size)))
+	start = (page - 1) * page_size
+
+	filters = {"project": ["is", "not set"], "status": ["!=", "Uploading"]}
+
+	total = frappe.db.count("VMS Asset", filters=filters)
+
+	assets = frappe.get_all(
+		"VMS Asset",
+		filters=filters,
+		fields=[
+			"name",
+			"file_name",
+			"category",
+			"status",
+			"file_size",
+			"file_type",
+			"uploaded_by",
+			"uploaded_at",
+			"creation",
+			"thumbnail_url",
+		],
+		order_by="creation desc",
+		start=start,
+		page_length=page_size,
+	)
+
+	# Enrich with uploader info
+	user_emails = list({a.uploaded_by for a in assets if a.uploaded_by})
+	user_map = {}
+	if user_emails:
+		users = frappe.get_all(
+			"User",
+			filters={"name": ["in", user_emails]},
+			fields=["name", "full_name", "user_image"],
+		)
+		user_map = {u.name: u for u in users}
+
+	for asset in assets:
+		u = user_map.get(asset.uploaded_by, {})
+		asset["uploader_name"] = u.get("full_name", asset.uploaded_by)
+		asset["uploader_image"] = u.get("user_image")
+
+	return {
+		"assets": assets,
+		"total": total,
+		"page": page,
+		"page_size": page_size,
+		"total_pages": -(-total // page_size),
+	}
+
+
 @frappe.whitelist()
 def get_vms_users():
 	"""Get all users with the Video Manager role."""

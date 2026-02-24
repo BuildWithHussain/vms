@@ -3,7 +3,7 @@ import { useSelection } from "@/hooks/useSelection"
 import { DropZoneOverlay } from "@/components/DropZoneOverlay"
 import { CategoryBadge } from "@/components/CategoryBadge"
 import { useNavigate } from "react-router"
-import { useFrappeGetDocList } from "frappe-react-sdk"
+import { useFrappeGetCall } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CloudUploadIcon, Delete02Icon, Download04Icon, Film01Icon, GridViewIcon, Album01Icon, ListViewIcon, Move01Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
@@ -34,6 +34,16 @@ import { UserAvatar } from "@/components/UserAvatar"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { VMSAsset } from "@/types"
 
+const PAGE_SIZE = 20
+
+interface PaginatedInboxAssets {
+  assets: VMSAsset[]
+  total: number
+  page: number
+  page_size: number
+  total_pages: number
+}
+
 export function UncategorisedPage() {
   const navigate = useNavigate()
   const [uploadOpen, setUploadOpen] = useState(false)
@@ -44,27 +54,18 @@ export function UncategorisedPage() {
   const { selected, toggleSelect, toggleSelectAll, clearSelection } = useSelection()
   const [droppedFiles, setDroppedFiles] = useState<File[]>([])
   const [view, setView] = useState<"list" | "grid">("grid")
+  const [page, setPage] = useState(1)
   const { downloadOne, downloadMany, isDownloading } = useDownload()
 
-  const { data: assets, mutate } = useFrappeGetDocList<VMSAsset>("VMS Asset", {
-    fields: [
-      "name",
-      "file_name",
-      "category",
-      "status",
-      "file_size",
-      "file_type",
-      "uploaded_by",
-      "uploaded_at",
-      "creation",
-      "thumbnail_url",
-      "uploaded_by.full_name as uploader_name",
-      "uploaded_by.user_image as uploader_image",
-    ] as string[],
-    filters: [["project", "=", ""]],
-    orderBy: { field: "creation", order: "desc" },
-    limit: 100,
-  })
+  const { data: inboxData, mutate } = useFrappeGetCall<{ message: PaginatedInboxAssets }>(
+    "vms.api.get_inbox_assets",
+    { page, page_size: PAGE_SIZE },
+    `inbox-assets-p${page}`,
+  )
+
+  const assets = inboxData?.message?.assets ?? null
+  const total = inboxData?.message?.total ?? 0
+  const totalPages = inboxData?.message?.total_pages ?? 1
 
   const handleMoveComplete = (targetProject: string) => {
     clearSelection()
@@ -99,14 +100,14 @@ export function UncategorisedPage() {
     setUploadOpen(true)
   }, [])
 
-  const allSelected = assets && assets.length > 0 && assets.every((a) => selected.has(a.name))
+  const allSelected = assets && assets.length > 0 && assets.every((a: VMSAsset) => selected.has(a.name))
 
   return (
     <DropZoneOverlay onDrop={handlePageDrop}>
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-bold md:text-2xl">Uncategorised</h1>
+          <h1 className="text-xl font-bold md:text-2xl">Uncategorised{total > 0 ? ` (${total})` : ""}</h1>
           <p className="mt-1 text-sm text-muted-foreground md:text-base">
             Assets uploaded without a project. Move them into a project when
             ready.
@@ -221,7 +222,7 @@ export function UncategorisedPage() {
               />
               <span className="text-sm text-muted-foreground">
                 {selected.size > 0
-                  ? `${selected.size} of ${assets.length} selected`
+                  ? `${selected.size} selected`
                   : "Select all"}
               </span>
             </div>
@@ -394,6 +395,30 @@ export function UncategorisedPage() {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          )}
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-end gap-2 pt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage(page - 1)}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {page} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => setPage(page + 1)}
+              >
+                Next
+              </Button>
             </div>
           )}
         </div>
