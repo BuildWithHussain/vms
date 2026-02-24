@@ -23,7 +23,6 @@ import {
   SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
@@ -121,14 +120,12 @@ export function AppSidebar({ onOpenSettings }: { onOpenSettings: () => void }) {
                             className="size-5"
                           />
                           <span>Notifications</span>
-                        </SidebarMenuButton>
-                        {unreadCount > 0 && (
-                          <SidebarMenuBadge>
-                            <span className="flex size-5 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+                          {unreadCount > 0 && (
+                            <span className="ml-auto flex size-5 shrink-0 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground group-data-[collapsible=icon]:hidden">
                               {unreadCount > 9 ? "9+" : unreadCount}
                             </span>
-                          </SidebarMenuBadge>
-                        )}
+                          )}
+                        </SidebarMenuButton>
                       </SidebarMenuItem>
                     )}
                   </React.Fragment>
