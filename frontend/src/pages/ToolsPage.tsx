@@ -96,9 +96,9 @@ function CompressTab() {
   const { data: statusData, mutate: mutateStatus } = useFrappeGetCall<{
     message: CompressStatus
   }>(
-    activeJob ? "vms.tools_api.get_compress_status" : null,
+    "vms.tools_api.get_compress_status",
     activeJob ? { job_name: activeJob } : undefined,
-    undefined,
+    activeJob ? undefined : null,
     { refreshInterval: activeJob ? 3000 : 0 }
   )
 
