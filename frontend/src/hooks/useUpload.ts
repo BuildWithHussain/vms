@@ -126,46 +126,60 @@ export function useUpload(options?: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  /** Upload a small file in a single PUT request. */
+  /** Upload a small file in a single PUT request, with retries + exponential backoff. */
   const uploadSinglePut = useCallback(
-    (item: FileUploadItem, uploadUrl: string): Promise<void> => {
-      return new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest()
-        const xhrRef = { current: xhr }
-        xhrMap.current.set(item.id, xhrRef)
+    async (item: FileUploadItem, uploadUrl: string): Promise<void> => {
+      let lastError: Error | undefined
+      for (let attempt = 0; attempt < MAX_PART_RETRIES; attempt++) {
+        try {
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest()
+            const xhrRef = { current: xhr }
+            xhrMap.current.set(item.id, xhrRef)
 
-        xhr.open("PUT", uploadUrl)
-        xhr.setRequestHeader(
-          "Content-Type",
-          item.file.type || "application/octet-stream"
-        )
+            xhr.open("PUT", uploadUrl)
+            xhr.setRequestHeader(
+              "Content-Type",
+              item.file.type || "application/octet-stream"
+            )
 
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) {
-            const pct = Math.round((e.loaded / e.total) * 100)
-            updateFile(item.id, { progress: pct })
+            xhr.upload.onprogress = (e) => {
+              if (e.lengthComputable) {
+                const pct = Math.round((e.loaded / e.total) * 100)
+                updateFile(item.id, { progress: pct })
+              }
+            }
+
+            xhr.onload = () => {
+              xhrMap.current.delete(item.id)
+              if (xhr.status >= 200 && xhr.status < 300) {
+                resolve()
+              } else {
+                reject(new Error(`Upload failed with status ${xhr.status}`))
+              }
+            }
+
+            xhr.onerror = () => {
+              xhrMap.current.delete(item.id)
+              reject(new Error("Network error during upload"))
+            }
+            xhr.onabort = () => {
+              xhrMap.current.delete(item.id)
+              reject(new DOMException("Upload cancelled", "AbortError"))
+            }
+            xhr.send(item.file)
+          })
+          return // Success — exit retry loop
+        } catch (e) {
+          if (e instanceof DOMException && e.name === "AbortError") throw e
+          lastError = e instanceof Error ? e : new Error("Upload failed")
+          if (attempt < MAX_PART_RETRIES - 1) {
+            updateFile(item.id, { progress: 0 })
+            await new Promise((r) => setTimeout(r, 1000 * 2 ** attempt))
           }
         }
-
-        xhr.onload = () => {
-          xhrMap.current.delete(item.id)
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve()
-          } else {
-            reject(new Error(`Upload failed with status ${xhr.status}`))
-          }
-        }
-
-        xhr.onerror = () => {
-          xhrMap.current.delete(item.id)
-          reject(new Error("Network error during upload"))
-        }
-        xhr.onabort = () => {
-          xhrMap.current.delete(item.id)
-          reject(new DOMException("Upload cancelled", "AbortError"))
-        }
-        xhr.send(item.file)
-      })
+      }
+      throw lastError || new Error("Upload failed after retries")
     },
     [updateFile]
   )
@@ -200,15 +214,7 @@ export function useUpload(options?: {
           const blob = item.file.slice(start, end)
           const partBytesBeforeThis = totalBytesUploaded
 
-          // Get presigned URL for this part
-          const partRes = await getPartUrl({
-            r2_key: r2Key,
-            upload_id: uploadId,
-            part_number: partNum,
-          })
-          const partUrl = (partRes.message as { url: string }).url
-
-          // Upload with retries
+          // Upload part with retries (includes getting presigned URL)
           let etag: string | undefined
           let lastError: Error | undefined
           for (let attempt = 0; attempt < MAX_PART_RETRIES; attempt++) {
@@ -216,6 +222,13 @@ export function useUpload(options?: {
               throw new DOMException("Upload cancelled", "AbortError")
             }
             try {
+              const partRes = await getPartUrl({
+                r2_key: r2Key,
+                upload_id: uploadId,
+                part_number: partNum,
+              })
+              const partUrl = (partRes.message as { url: string }).url
+
               etag = await uploadPart(
                 partUrl,
                 blob,
