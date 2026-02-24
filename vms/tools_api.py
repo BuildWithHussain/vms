@@ -59,7 +59,7 @@ def start_compression(r2_key: str, file_name: str, file_size: int | str = 0):
 
 	frappe.enqueue(
 		"vms.tools.run_compression",
-		job_name=job.name,
+		compress_job_name=job.name,
 		queue="long",
 		enqueue_after_commit=True,
 	)

@@ -14,9 +14,9 @@ from vms.r2 import (
 )
 
 
-def run_compression(job_name: str):
+def run_compression(compress_job_name: str):
 	"""Background job: download file from R2, compress with ffmpeg, upload result back to R2."""
-	job = frappe.get_doc("VMS Compress Job", job_name)
+	job = frappe.get_doc("VMS Compress Job", compress_job_name)
 
 	try:
 		job.status = "Processing"
