@@ -13,6 +13,7 @@ interface TranscriptionSettings {
   transcription_provider: string
   whisper_model: string
   openai_api_key: string
+  deepgram_api_key: string
 }
 
 export function TranscriptionSection() {
@@ -31,6 +32,7 @@ export function TranscriptionSection() {
         transcription_provider: data.transcription_provider || "OpenAI Whisper",
         whisper_model: data.whisper_model || "ggml-small.en",
         openai_api_key: data.openai_api_key || "",
+        deepgram_api_key: data.deepgram_api_key || "",
       }
       setForm(values)
       initialForm.current = values
@@ -104,7 +106,8 @@ export function TranscriptionSection() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="OpenAI Whisper">OpenAI Whisper (recommended)</SelectItem>
+                      <SelectItem value="OpenAI Whisper">OpenAI Whisper</SelectItem>
+                      <SelectItem value="Deepgram">Deepgram (speaker diarization)</SelectItem>
                       <SelectItem value="whisper.cpp">whisper.cpp (local)</SelectItem>
                     </SelectContent>
                   </Select>
@@ -124,6 +127,25 @@ export function TranscriptionSection() {
                       <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="underline">
                         platform.openai.com
                       </a>
+                    </p>
+                  </div>
+                )}
+                {form.transcription_provider === "Deepgram" && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="deepgram_api_key" className="text-xs">Deepgram API Key</Label>
+                    <Input
+                      id="deepgram_api_key"
+                      type="password"
+                      placeholder="Enter your Deepgram API key"
+                      value={form.deepgram_api_key ?? ""}
+                      onChange={(e) => handleChange("deepgram_api_key", e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Get an API key at{" "}
+                      <a href="https://console.deepgram.com" target="_blank" rel="noopener noreferrer" className="underline">
+                        console.deepgram.com
+                      </a>
+                      . Supports speaker diarization.
                     </p>
                   </div>
                 )}

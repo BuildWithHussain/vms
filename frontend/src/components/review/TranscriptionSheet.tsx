@@ -40,7 +40,7 @@ export function TranscriptionSheet({
   const matchCount = useMemo(() => {
     if (!searchQuery || !transcriptionText) return 0
     const regex = new RegExp(escapeRegex(searchQuery), "gi")
-    return (transcriptionText.replace(/\*\*\[\d{2}:\d{2}(?::\d{2})?\]\*\*/g, "").match(regex) || []).length
+    return (transcriptionText.replace(/\*\*\[\d{2}:\d{2}(?::\d{2})?\]\*\*/g, "").replace(/\*\*Speaker \d+:\*\*/g, "").match(regex) || []).length
   }, [searchQuery, transcriptionText])
 
   const formattedHtml = useMemo(() => {
@@ -246,11 +246,20 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
+const SPEAKER_COLORS = [
+  "text-blue-600 dark:text-blue-400",
+  "text-emerald-600 dark:text-emerald-400",
+  "text-violet-600 dark:text-violet-400",
+  "text-amber-600 dark:text-amber-400",
+  "text-rose-600 dark:text-rose-400",
+  "text-cyan-600 dark:text-cyan-400",
+]
+
 function formatTranscription(markdown: string, searchQuery?: string, currentMatch?: number): string {
   if (!markdown) return ""
 
-  // Split into timestamp tokens and text segments
-  const parts = markdown.split(/(\*\*\[\d{2}:\d{2}(?::\d{2})?\]\*\*)/)
+  // Split into timestamp tokens, speaker tokens, and text segments
+  const parts = markdown.split(/(\*\*\[\d{2}:\d{2}(?::\d{2})?\]\*\*|\*\*Speaker \d+:\*\*)/)
 
   let matchIndex = 0
   const html = parts.map((part) => {
@@ -258,6 +267,14 @@ function formatTranscription(markdown: string, searchQuery?: string, currentMatc
     const tsMatch = part.match(/^\*\*\[(\d{2}:\d{2}(?::\d{2})?)\]\*\*$/)
     if (tsMatch) {
       return `<span class="font-mono text-xs text-primary font-medium">[${escapeHtml(tsMatch[1])}]</span>`
+    }
+
+    // Speaker label → colored badge
+    const speakerMatch = part.match(/^\*\*Speaker (\d+):\*\*$/)
+    if (speakerMatch) {
+      const speakerNum = parseInt(speakerMatch[1], 10)
+      const colorClass = SPEAKER_COLORS[(speakerNum - 1) % SPEAKER_COLORS.length]
+      return `<span class="text-xs font-semibold ${colorClass}">Speaker ${speakerNum}:</span>`
     }
 
     // Regular text — escape HTML first, then highlight search matches

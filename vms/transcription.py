@@ -98,6 +98,112 @@ def run_whisper(audio_path: str, model_path: str, output_base: str) -> dict:
 	return {}
 
 
+DEEPGRAM_API_URL = "https://api.deepgram.com/v1/listen"
+
+
+def run_deepgram_transcription(audio_path: str, api_key: str) -> list[dict]:
+	"""Call Deepgram API with speaker diarization and return speaker-labeled segments."""
+	with open(audio_path, "rb") as audio_file:
+		response = requests.post(
+			DEEPGRAM_API_URL,
+			headers={
+				"Authorization": f"Token {api_key}",
+				"Content-Type": "audio/wav",
+			},
+			params={
+				"model": "nova-2",
+				"diarize": "true",
+				"utterances": "true",
+				"punctuate": "true",
+				"smart_format": "true",
+			},
+			data=audio_file,
+			timeout=1800,
+		)
+
+	if response.status_code != 200:
+		raise RuntimeError(f"Deepgram API failed ({response.status_code}): {response.text}")
+
+	return parse_deepgram_response(response.json())
+
+
+def parse_deepgram_response(data: dict) -> list[dict]:
+	"""Parse Deepgram response into segments with speaker labels.
+
+	Uses utterances (grouped by speaker turns) for cleaner output.
+	Falls back to word-level grouping if utterances unavailable.
+	"""
+	segments = []
+
+	# Prefer utterances — already grouped by speaker turn
+	utterances = data.get("results", {}).get("utterances", [])
+	if utterances:
+		for utt in utterances:
+			text = utt.get("transcript", "").strip()
+			if text:
+				segments.append({
+					"start": float(utt.get("start", 0)),
+					"end": float(utt.get("end", 0)),
+					"text": text,
+					"speaker": utt.get("speaker", 0),
+				})
+		return segments
+
+	# Fallback: group words by speaker from channels
+	channels = data.get("results", {}).get("channels", [])
+	if not channels:
+		return segments
+
+	words = channels[0].get("alternatives", [{}])[0].get("words", [])
+	if not words:
+		return segments
+
+	# Group consecutive words by same speaker
+	current_speaker = words[0].get("speaker", 0)
+	current_start = words[0].get("start", 0)
+	current_words = [words[0].get("word", "")]
+
+	for w in words[1:]:
+		speaker = w.get("speaker", 0)
+		if speaker != current_speaker:
+			segments.append({
+				"start": float(current_start),
+				"end": float(words[len(current_words) - 1].get("end", 0)),
+				"text": " ".join(current_words),
+				"speaker": current_speaker,
+			})
+			current_speaker = speaker
+			current_start = w.get("start", 0)
+			current_words = [w.get("word", "")]
+		else:
+			current_words.append(w.get("word", ""))
+
+	# Don't forget the last group
+	if current_words:
+		segments.append({
+			"start": float(current_start),
+			"end": float(words[-1].get("end", 0)),
+			"text": " ".join(current_words),
+			"speaker": current_speaker,
+		})
+
+	return segments
+
+
+def segments_to_markdown_with_speakers(segments: list[dict]) -> str:
+	"""Convert speaker-labeled segments to markdown with timestamps and speaker labels."""
+	if not segments:
+		return ""
+
+	lines = []
+	for seg in segments:
+		ts = format_timestamp(seg["start"])
+		speaker = seg.get("speaker", 0)
+		lines.append(f"**[{ts}]** **Speaker {speaker + 1}:** {seg['text']}")
+
+	return "\n\n".join(lines)
+
+
 OPENAI_MAX_FILE_SIZE = 24 * 1024 * 1024  # 24MB (leave margin below 25MB limit)
 CHUNK_DURATION_SECS = 1200  # 20 minutes per chunk
 
@@ -269,6 +375,9 @@ def start_transcription(asset_name: str):
 	if provider == "OpenAI Whisper":
 		if not settings.openai_api_key:
 			frappe.throw(_("OpenAI API key is not configured. Go to Settings > Transcription to add it."))
+	elif provider == "Deepgram":
+		if not settings.deepgram_api_key:
+			frappe.throw(_("Deepgram API key is not configured. Go to Settings > Transcription to add it."))
 	elif provider == "whisper.cpp":
 		if not ensure_whisper_installed():
 			frappe.throw(
@@ -343,6 +452,12 @@ def process_transcription(asset_name: str):
 				_compress_audio_to_mp3(audio_path, mp3_path)
 				frappe.logger().info(f"Running OpenAI Whisper API: {asset_name}")
 				segments = _transcribe_with_openai(mp3_path, api_key, tmpdir)
+				markdown = segments_to_markdown(segments)
+			elif provider == "Deepgram":
+				api_key = settings.get_password("deepgram_api_key")
+				frappe.logger().info(f"Running Deepgram API with diarization: {asset_name}")
+				segments = run_deepgram_transcription(audio_path, api_key)
+				markdown = segments_to_markdown_with_speakers(segments)
 			else:
 				model_name = settings.whisper_model or "ggml-small.en"
 				model_path = ensure_model_downloaded(model_name)
@@ -352,9 +467,9 @@ def process_transcription(asset_name: str):
 					audio_path, str(model_path), output_base
 				)
 				segments = parse_segments(whisper_output)
+				markdown = segments_to_markdown(segments)
 
-			# Format
-			markdown = segments_to_markdown(segments)
+			# Format is already computed above per provider
 
 			if not markdown and provider == "whisper.cpp":
 				# Fallback: try to read the .txt output
