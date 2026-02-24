@@ -16,6 +16,7 @@ import { toast } from "sonner"
 interface ReviewHeaderProps {
   assetName: string
   fileName: string
+  fileType?: string
   category?: string
   project?: { name: string; project_name: string } | null
   isPublicReview?: boolean
@@ -35,6 +36,7 @@ interface ReviewHeaderProps {
 export function ReviewHeader({
   assetName,
   fileName,
+  fileType,
   category,
   project,
   isPublicReview = false,
@@ -54,6 +56,7 @@ export function ReviewHeader({
   const { isGuest, token } = useReviewContext()
   const { downloadOne, isDownloading } = useDownload(token)
   const [toggling, setToggling] = useState(false)
+  const isVideo = !fileType || fileType.startsWith("video/") || fileType.startsWith("audio/")
 
   const handleBack = () => {
     if (project) {
@@ -190,8 +193,8 @@ export function ReviewHeader({
         </Popover>
       )}
 
-      {/* Split button — auth users only, hidden while Processing */}
-      {!isGuest && assetStatus !== "Processing" && (
+      {/* Split button — auth users only, video only, hidden while Processing */}
+      {!isGuest && isVideo && assetStatus !== "Processing" && (
         <>
           <Button
             variant="outline"
@@ -213,7 +216,7 @@ export function ReviewHeader({
           </Button>
         </>
       )}
-      {!isGuest && assetStatus === "Processing" && (
+      {!isGuest && isVideo && assetStatus === "Processing" && (
         <Button variant="outline" size="sm" disabled>
           <Spinner className="size-3.5" />
           <span className="hidden md:inline ml-1">
@@ -228,8 +231,8 @@ export function ReviewHeader({
         </Button>
       )}
 
-      {/* Transcribe button — auth users only */}
-      {!isGuest && (
+      {/* Transcribe button — auth users only, video/audio only */}
+      {!isGuest && isVideo && (
         <>
           {transcriptionStatus === "Processing" ? (
             <Button variant="outline" size="sm" onClick={onOpenTranscription}>

@@ -6,6 +6,7 @@ import { ReviewProvider } from "@/contexts/ReviewContext"
 import { useReviewContext } from "@/hooks/useReviewContext"
 import { ReviewHeader } from "@/components/review/ReviewHeader"
 import { VideoPlayer } from "@/components/review/VideoPlayer"
+import { ImageViewer } from "@/components/review/ImageViewer"
 import { CommentPanel } from "@/components/review/CommentPanel"
 import { TranscriptionSheet } from "@/components/review/TranscriptionSheet"
 import { SplitVideoDialog } from "@/components/review/SplitVideoDialog"
@@ -105,6 +106,7 @@ function ReviewPageInner({
   mutateReviewData: () => void
 }) {
   const { replayAnnotation, annotationMode, dismissReplay, cancelAnnotation, isGuest } = useReviewContext()
+  const isImage = asset.file_type?.startsWith("image/")
   const [transcriptionOpen, setTranscriptionOpen] = useState(false)
   const [splitDialogOpen, setSplitDialogOpen] = useState(false)
   const [isPolling, setIsPolling] = useState(asset.transcription_status === "Processing")
@@ -211,6 +213,7 @@ function ReviewPageInner({
       <ReviewHeader
         assetName={asset.name}
         fileName={asset.file_name}
+        fileType={asset.file_type}
         category={asset.category}
         project={asset.project}
         isPublicReview={asset.is_public_review === 1}
@@ -228,9 +231,9 @@ function ReviewPageInner({
       />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
-        {/* Video section */}
+        {/* Media section */}
         <div className="shrink-0 p-2 md:flex-1 md:min-h-0 md:p-4" onClick={replayAnnotation ? dismissReplay : undefined}>
-          <VideoPlayer assetName={asset.name} />
+          {isImage ? <ImageViewer assetName={asset.name} /> : <VideoPlayer assetName={asset.name} />}
         </div>
 
         {/* Comment panel */}
@@ -239,7 +242,7 @@ function ReviewPageInner({
         </div>
       </div>
 
-      {!isGuest && (
+      {!isGuest && !isImage && (
         <TranscriptionSheet
           open={transcriptionOpen}
           onOpenChange={setTranscriptionOpen}
@@ -253,7 +256,7 @@ function ReviewPageInner({
         />
       )}
 
-      {!isGuest && (
+      {!isGuest && !isImage && (
         <SplitVideoDialog
           open={splitDialogOpen}
           onOpenChange={setSplitDialogOpen}
