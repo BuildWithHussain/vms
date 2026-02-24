@@ -24,6 +24,9 @@ const ReviewPage = lazy(() =>
 const AuditLogPage = lazy(() =>
   import("@/pages/AuditLogPage").then((m) => ({ default: m.AuditLogPage })),
 )
+const TrashPage = lazy(() =>
+  import("@/pages/TrashPage").then((m) => ({ default: m.TrashPage })),
+)
 
 function PageSpinner() {
   return (
@@ -95,6 +98,7 @@ export default function App() {
         <Route path="projects" element={<Suspense fallback={<PageSpinner />}><ProjectsPage /></Suspense>} />
         <Route path="projects/:projectId" element={<Suspense fallback={<PageSpinner />}><ProjectDetailPage /></Suspense>} />
         <Route path="audit-logs" element={<Suspense fallback={<PageSpinner />}><AuditLogPage /></Suspense>} />
+        <Route path="trash" element={<Suspense fallback={<PageSpinner />}><TrashPage /></Suspense>} />
       </Route>
       <Route path="review/:assetId" element={<Suspense fallback={<PageSpinner />}><ReviewPage /></Suspense>} />
       <Route path="*" element={<Navigate to="/" replace />} />

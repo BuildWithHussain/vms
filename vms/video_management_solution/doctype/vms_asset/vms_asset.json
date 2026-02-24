@@ -29,7 +29,11 @@
   "transcription_status",
   "transcription",
   "section_break_split",
-  "split_from"
+  "split_from",
+  "section_break_trash",
+  "deleted_at",
+  "column_break_trash",
+  "deleted_by"
  ],
  "fields": [
   {
@@ -178,6 +182,28 @@
    "fieldtype": "Link",
    "label": "Split From",
    "options": "VMS Asset",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_trash",
+   "fieldtype": "Section Break",
+   "label": "Trash"
+  },
+  {
+   "fieldname": "deleted_at",
+   "fieldtype": "Datetime",
+   "label": "Deleted At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_trash",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "deleted_by",
+   "fieldtype": "Link",
+   "label": "Deleted By",
+   "options": "User",
    "read_only": 1
   }
  ],

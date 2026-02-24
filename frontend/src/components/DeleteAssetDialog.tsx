@@ -36,7 +36,7 @@ export function DeleteAssetDialog({
         await deleteAsset({ asset_name: assetName })
       }
       toast.success(
-        `Deleted ${assetNames.length} asset${assetNames.length > 1 ? "s" : ""}`
+        `Moved ${assetNames.length} asset${assetNames.length > 1 ? "s" : ""} to trash`
       )
       onOpenChange(false)
       onComplete?.()
@@ -54,10 +54,10 @@ export function DeleteAssetDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete {count > 1 ? `${count} assets` : "asset"}?</AlertDialogTitle>
+          <AlertDialogTitle>Move {count > 1 ? `${count} assets` : "asset"} to trash?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will permanently delete {count > 1 ? "these assets" : "this asset"} and
-            remove {count > 1 ? "them" : "it"} from storage. This action cannot be undone.
+            {count > 1 ? "These assets" : "This asset"} will be moved to trash.
+            You can restore {count > 1 ? "them" : "it"} from the Trash page before {count > 1 ? "they are" : "it is"} permanently deleted.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -67,7 +67,7 @@ export function DeleteAssetDialog({
             onClick={handleDelete}
             disabled={deleting}
           >
-            {deleting ? "Deleting..." : "Delete"}
+            {deleting ? "Moving to trash..." : "Move to Trash"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

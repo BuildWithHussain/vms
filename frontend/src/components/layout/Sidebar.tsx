@@ -14,6 +14,7 @@ import {
   Moon02Icon,
   ArrowUp01Icon,
   Bug01Icon,
+  Delete02Icon,
 } from "@hugeicons/core-free-icons"
 import {
   Sidebar,
@@ -131,6 +132,25 @@ export function AppSidebar({ onOpenSettings }: { onOpenSettings: () => void }) {
                   </React.Fragment>
                 )
               })}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={location.pathname === "/trash"}
+                  render={
+                    <NavLink
+                      to="/trash"
+                      onClick={() => setOpenMobile(false)}
+                    />
+                  }
+                  tooltip="Trash"
+                >
+                  <HugeiconsIcon
+                    icon={Delete02Icon}
+                    strokeWidth={2}
+                    className="size-5"
+                  />
+                  <span>Trash</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => {

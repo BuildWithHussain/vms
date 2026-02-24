@@ -145,23 +145,11 @@ doc_events = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"vms.tasks.all"
-# 	],
-# 	"daily": [
-# 		"vms.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"vms.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"vms.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"vms.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"daily": [
+		"vms.tasks.purge_expired_trash",
+	],
+}
 
 # Testing
 # -------

@@ -36,6 +36,10 @@ export interface VMSAsset {
   thumbnail_url?: string
   is_public_review?: 0 | 1
   review_token?: string | null
+  deleted_at?: string | null
+  deleted_by?: string | null
+  deleter_name?: string
+  project_name?: string
   creation: string
   modified: string
 }

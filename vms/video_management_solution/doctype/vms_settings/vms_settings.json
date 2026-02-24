@@ -18,6 +18,8 @@
   "presigned_url_expiry",
   "column_break_mlev",
   "allowed_extensions",
+  "trash_section",
+  "trash_retention_days",
   "transcription_section",
   "transcription_provider",
   "whisper_model",
@@ -109,6 +111,18 @@
   {
    "fieldname": "column_break_mlev",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "trash_section",
+   "fieldtype": "Section Break",
+   "label": "Trash"
+  },
+  {
+   "default": "7",
+   "description": "Number of days to keep deleted files in trash before permanent deletion. Set to 0 to disable trash (immediate deletion).",
+   "fieldname": "trash_retention_days",
+   "fieldtype": "Int",
+   "label": "Trash Retention (days)"
   },
   {
    "fieldname": "transcription_section",

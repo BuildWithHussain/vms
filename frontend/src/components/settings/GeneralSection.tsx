@@ -20,6 +20,7 @@ interface VMSSettings {
   max_file_size: number
   presigned_url_expiry: number
   allowed_extensions: string
+  trash_retention_days: number
 }
 
 
@@ -43,8 +44,10 @@ export function GeneralSection() {
   const [customMBInput, setCustomMBInput] = useState("")
   const [extensionTags, setExtensionTags] = useState<Tag[]>([])
   const [activeTagIndex, setActiveTagIndex] = useState<number | null>(null)
+  const [trashRetentionDays, setTrashRetentionDays] = useState(7)
   const initialMaxFileSizeMB = useRef(5 * 1024)
   const initialExtensionTags = useRef<Tag[]>([])
+  const initialTrashRetentionDays = useRef(7)
 
   useEffect(() => {
     if (data) {
@@ -74,12 +77,18 @@ export function GeneralSection() {
       const tags = exts.map((ext, i) => ({ id: String(i), text: ext }))
       setExtensionTags(tags)
       initialExtensionTags.current = tags
+
+      // Trash retention
+      const retention = data.trash_retention_days ?? 7
+      setTrashRetentionDays(retention)
+      initialTrashRetentionDays.current = retention
     }
   }, [data])
 
   const isDirty =
     JSON.stringify(form) !== JSON.stringify(initialForm.current) ||
     maxFileSizeMB !== initialMaxFileSizeMB.current ||
+    trashRetentionDays !== initialTrashRetentionDays.current ||
     JSON.stringify(extensionTags.map((t) => t.text)) !==
       JSON.stringify(initialExtensionTags.current.map((t) => t.text))
 
@@ -103,6 +112,7 @@ export function GeneralSection() {
         ...form,
         max_file_size: maxFileSizeMB * MB_TO_BYTES,
         allowed_extensions: extensionTags.map((t) => t.text).join(","),
+        trash_retention_days: trashRetentionDays,
       })
       await mutate()
       toast.success("Settings saved")
@@ -361,6 +371,35 @@ export function GeneralSection() {
                   Type an extension and press Enter to add.
                 </p>
               </div>
+            </div>
+          </div>
+
+          {/* Trash Settings */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold">Trash</h3>
+              <p className="text-xs text-muted-foreground">
+                Deleted files are kept in trash before permanent deletion.
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="trash_retention_days" className="text-xs">
+                Retention Period (days)
+              </Label>
+              <Input
+                id="trash_retention_days"
+                type="number"
+                min={0}
+                max={365}
+                className="w-28"
+                value={trashRetentionDays}
+                onChange={(e) =>
+                  setTrashRetentionDays(Math.max(0, parseInt(e.target.value) || 0))
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Default: 7 days. Set to 0 to disable trash (files are deleted immediately).
+              </p>
             </div>
           </div>
 

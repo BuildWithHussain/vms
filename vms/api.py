@@ -438,7 +438,7 @@ def get_project_assets(project, folder=None, category=None, page=1, page_size=20
 	page_size = min(100, max(1, int(page_size)))
 	start = (page - 1) * page_size
 
-	filters = {"project": project, "status": ["!=", "Uploading"]}
+	filters = {"project": project, "status": ["!=", "Uploading"], "deleted_at": ["is", "not set"]}
 
 	if category:
 		filters["category"] = category
@@ -509,7 +509,7 @@ def get_inbox_assets(page=1, page_size=20):
 	page_size = min(100, max(1, int(page_size)))
 	start = (page - 1) * page_size
 
-	filters = {"project": ["is", "not set"], "status": ["!=", "Uploading"]}
+	filters = {"project": ["is", "not set"], "status": ["!=", "Uploading"], "deleted_at": ["is", "not set"]}
 
 	total = frappe.db.count("VMS Asset", filters=filters)
 
@@ -580,11 +580,38 @@ def get_vms_users():
 
 @frappe.whitelist()
 def delete_asset(asset_name: str):
-	"""Delete an asset and its R2 object(s)."""
+	"""Soft-delete an asset by moving it to trash.
+
+	If trash_retention_days is 0 in VMS Settings, performs a hard delete instead.
+	"""
+	settings = frappe.get_single("VMS Settings")
+	retention_days = int(settings.trash_retention_days or 7)
+
+	if retention_days == 0:
+		return _hard_delete_asset(asset_name)
+
+	asset = frappe.get_doc("VMS Asset", asset_name)
+	asset.deleted_at = frappe.utils.now_datetime()
+	asset.deleted_by = frappe.session.user
+	asset.save(ignore_permissions=True)
+
+	_create_audit_log(
+		action="Delete",
+		asset_name=asset_name,
+		file_name=asset.file_name,
+		file_type=asset.file_type,
+		project=asset.project,
+		file_size=asset.file_size,
+	)
+
+	return {"status": "ok"}
+
+
+def _hard_delete_asset(asset_name: str):
+	"""Permanently delete an asset and its R2 object(s)."""
 	asset = frappe.get_doc("VMS Asset", asset_name)
 	r2_key = asset.r2_key
 
-	# Capture metadata before deletion for the audit log
 	audit_data = {
 		"file_name": asset.file_name,
 		"file_type": asset.file_type,
@@ -592,7 +619,7 @@ def delete_asset(asset_name: str):
 		"file_size": asset.file_size,
 	}
 
-	# Delete linked review comments first (they have a required Link to VMS Asset)
+	# Delete linked review comments
 	comments = frappe.get_all(
 		"VMS Review Comment",
 		filters={"asset": asset_name},
@@ -601,7 +628,7 @@ def delete_asset(asset_name: str):
 	for comment_name in comments:
 		frappe.delete_doc("VMS Review Comment", comment_name, ignore_permissions=True)
 
-	# Delete attached thumbnail File doc
+	# Delete attached thumbnail File docs
 	thumbnail_files = frappe.get_all(
 		"File",
 		filters={
@@ -613,9 +640,7 @@ def delete_asset(asset_name: str):
 	for file_name in thumbnail_files:
 		frappe.delete_doc("File", file_name, ignore_permissions=True)
 
-	# Delete the asset doc before R2 — DB operations are transactional,
-	# R2 deletion is not, so we do it last to avoid orphaned docs.
-	asset.delete()
+	asset.delete(ignore_permissions=True)
 
 	_create_audit_log(
 		action="Delete",
@@ -623,8 +648,6 @@ def delete_asset(asset_name: str):
 		**audit_data,
 	)
 
-	# Only delete from R2 after all DB operations succeed.
-	# Ignore errors (e.g. key already deleted / doesn't exist) so orphaned docs can still be cleaned up.
 	if r2_key:
 		try:
 			delete_r2_object(r2_key)
@@ -632,6 +655,124 @@ def delete_asset(asset_name: str):
 			frappe.logger("vms").warning(f"R2 object {r2_key} not found or already deleted")
 
 	return {"status": "ok"}
+
+
+@frappe.whitelist(methods=["GET"])
+def get_trash_assets(page=1, page_size=20):
+	"""Get paginated assets in trash (deleted_at is set)."""
+	page = max(1, int(page))
+	page_size = min(100, max(1, int(page_size)))
+	start = (page - 1) * page_size
+
+	filters = {"deleted_at": ["is", "set"]}
+
+	total = frappe.db.count("VMS Asset", filters=filters)
+
+	assets = frappe.get_all(
+		"VMS Asset",
+		filters=filters,
+		fields=[
+			"name",
+			"file_name",
+			"category",
+			"status",
+			"file_size",
+			"file_type",
+			"uploaded_by",
+			"uploaded_at",
+			"creation",
+			"thumbnail_url",
+			"project",
+			"deleted_at",
+			"deleted_by",
+		],
+		order_by="deleted_at desc",
+		start=start,
+		page_length=page_size,
+	)
+
+	# Enrich with user info (uploader + deleter)
+	user_emails = list(
+		{a.uploaded_by for a in assets if a.uploaded_by}
+		| {a.deleted_by for a in assets if a.deleted_by}
+	)
+	user_map = {}
+	if user_emails:
+		users = frappe.get_all(
+			"User",
+			filters={"name": ["in", user_emails]},
+			fields=["name", "full_name", "user_image"],
+		)
+		user_map = {u.name: u for u in users}
+
+	# Enrich with project names
+	project_ids = list({a.project for a in assets if a.project})
+	project_map = {}
+	if project_ids:
+		projects = frappe.get_all(
+			"VMS Project",
+			filters={"name": ["in", project_ids]},
+			fields=["name", "project_name"],
+		)
+		project_map = {p.name: p.project_name for p in projects}
+
+	for asset in assets:
+		u = user_map.get(asset.uploaded_by, {})
+		asset["uploader_name"] = u.get("full_name", asset.uploaded_by)
+		asset["uploader_image"] = u.get("user_image")
+		d = user_map.get(asset.deleted_by, {})
+		asset["deleter_name"] = d.get("full_name", asset.deleted_by)
+		asset["project_name"] = project_map.get(asset.project, asset.project)
+
+	return {
+		"assets": assets,
+		"total": total,
+		"page": page,
+		"page_size": page_size,
+		"total_pages": -(-total // page_size) if total else 0,
+	}
+
+
+@frappe.whitelist()
+def restore_asset(asset_name: str):
+	"""Restore an asset from trash."""
+	asset = frappe.get_doc("VMS Asset", asset_name)
+	if not asset.deleted_at:
+		frappe.throw(_("Asset is not in trash"))
+
+	asset.deleted_at = None
+	asset.deleted_by = None
+	asset.save(ignore_permissions=True)
+
+	return {"status": "ok"}
+
+
+@frappe.whitelist()
+def permanently_delete_asset(asset_name: str):
+	"""Permanently delete a trashed asset (hard delete)."""
+	asset = frappe.get_doc("VMS Asset", asset_name)
+	if not asset.deleted_at:
+		frappe.throw(_("Asset is not in trash. Use delete_asset to move it to trash first."))
+
+	return _hard_delete_asset(asset_name)
+
+
+@frappe.whitelist()
+def empty_trash():
+	"""Permanently delete all assets in trash."""
+	trashed = frappe.get_all(
+		"VMS Asset",
+		filters={"deleted_at": ["is", "set"]},
+		pluck="name",
+	)
+
+	for asset_name in trashed:
+		try:
+			_hard_delete_asset(asset_name)
+		except Exception:
+			frappe.logger("vms").warning(f"Failed to hard-delete {asset_name} during empty_trash")
+
+	return {"status": "ok", "count": len(trashed)}
 
 
 @frappe.whitelist()
@@ -849,7 +990,7 @@ def search_assets(query: str, project: str | None = None, limit: int = 10):
 			)
 	except Exception:
 		# Fallback to SQL LIKE search if index doesn't exist
-		like_filters = {"file_name": ["like", f"%{query}%"], "status": ["!=", "Uploading"]}
+		like_filters = {"file_name": ["like", f"%{query}%"], "status": ["!=", "Uploading"], "deleted_at": ["is", "not set"]}
 		if project:
 			like_filters["project"] = project
 
