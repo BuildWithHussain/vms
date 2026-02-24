@@ -420,6 +420,68 @@ def move_assets_to_folder(asset_names: str | list, folder: str | None = None):
 	return {"status": "ok", "count": len(asset_names)}
 
 
+@frappe.whitelist(methods=["GET"])
+def get_project_assets(project, folder=None, category=None):
+	"""Get project assets with server-side folder/category filtering.
+
+	Parameters:
+		project: VMS Project ID (required)
+		folder: VMS Folder ID. None = root-level assets only. Ignored when category is set.
+		category: "For Review" or "Deliverable". Returns matching assets across ALL folders.
+	"""
+	if not frappe.db.exists("VMS Project", project):
+		frappe.throw(_("Project {0} does not exist").format(project))
+
+	filters = {"project": project, "status": ["!=", "Uploading"]}
+
+	if category:
+		filters["category"] = category
+	elif folder:
+		filters["folder"] = folder
+	else:
+		filters["folder"] = ["is", "not set"]
+
+	assets = frappe.get_all(
+		"VMS Asset",
+		filters=filters,
+		fields=[
+			"name",
+			"file_name",
+			"category",
+			"status",
+			"file_size",
+			"file_type",
+			"uploaded_by",
+			"uploaded_at",
+			"creation",
+			"thumbnail_url",
+			"is_public_review",
+			"review_token",
+			"folder",
+		],
+		order_by="creation desc",
+		page_length=0,
+	)
+
+	# Enrich with uploader info
+	user_emails = list({a.uploaded_by for a in assets if a.uploaded_by})
+	user_map = {}
+	if user_emails:
+		users = frappe.get_all(
+			"User",
+			filters={"name": ["in", user_emails]},
+			fields=["name", "full_name", "user_image"],
+		)
+		user_map = {u.name: u for u in users}
+
+	for asset in assets:
+		u = user_map.get(asset.uploaded_by, {})
+		asset["uploader_name"] = u.get("full_name", asset.uploaded_by)
+		asset["uploader_image"] = u.get("user_image")
+
+	return assets
+
+
 @frappe.whitelist()
 def get_vms_users():
 	"""Get all users with the Video Manager role."""

@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react"
 import { useSelection } from "@/hooks/useSelection"
 import { useParams, useNavigate } from "react-router"
-import { useFrappeGetDoc, useFrappeGetDocList, useFrappePostCall } from "frappe-react-sdk"
+import { useFrappeGetDoc, useFrappeGetDocList, useFrappeGetCall, useFrappePostCall } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowLeft01Icon,
@@ -82,28 +82,33 @@ export function ProjectDetailPage() {
     projectId!
   )
 
-  const { data: assets, mutate: mutateAssets } = useFrappeGetDocList<VMSAsset>("VMS Asset", {
-    fields: [
-      "name",
-      "file_name",
-      "category",
-      "status",
-      "file_size",
-      "file_type",
-      "uploaded_by",
-      "uploaded_at",
-      "creation",
-      "thumbnail_url",
-      "is_public_review",
-      "review_token",
-      "folder",
-      "uploaded_by.full_name as uploader_name",
-      "uploaded_by.user_image as uploader_image",
-    ] as string[],
-    filters: [["project", "=", projectId!]],
-    orderBy: { field: "creation", order: "desc" },
-    limit: 100,
-  })
+  const { data: folderAssetsData, mutate: mutateFolderAssets } = useFrappeGetCall<{ message: VMSAsset[] }>(
+    "vms.api.get_project_assets",
+    { project: projectId!, folder: currentFolder ?? undefined },
+    `project-assets-folder-${projectId}-${currentFolder ?? "root"}`,
+  )
+
+  const { data: forReviewData, mutate: mutateForReview } = useFrappeGetCall<{ message: VMSAsset[] }>(
+    "vms.api.get_project_assets",
+    { project: projectId!, category: "For Review" },
+    `project-assets-review-${projectId}`,
+  )
+
+  const { data: deliverablesData, mutate: mutateDeliverables } = useFrappeGetCall<{ message: VMSAsset[] }>(
+    "vms.api.get_project_assets",
+    { project: projectId!, category: "Deliverable" },
+    `project-assets-deliverables-${projectId}`,
+  )
+
+  const folderAssets = folderAssetsData?.message ?? []
+  const forReviewItems = forReviewData?.message ?? []
+  const deliverableItems = deliverablesData?.message ?? []
+
+  const mutateAssets = useCallback(() => {
+    mutateFolderAssets()
+    mutateForReview()
+    mutateDeliverables()
+  }, [mutateFolderAssets, mutateForReview, mutateDeliverables])
 
   const { data: folders, mutate: mutateFolders } = useFrappeGetDocList<VMSFolder>("VMS Folder", {
     fields: ["name", "folder_name", "creation"],
@@ -125,34 +130,21 @@ export function ProjectDetailPage() {
     [callTogglePublicReview, mutateAssets],
   )
 
-  // Filter assets by current folder
-  const folderAssets = useMemo(
-    () =>
-      (assets ?? []).filter((a) =>
-        currentFolder ? a.folder === currentFolder : !a.folder
-      ),
-    [assets, currentFolder],
-  )
-
-  const forReviewItems = useMemo(
-    () => (assets ?? []).filter((a) => a.category === "For Review"),
-    [assets]
-  )
-
-  const deliverableItems = useMemo(
-    () => (assets ?? []).filter((a) => a.category === "Deliverable"),
-    [assets]
+  const allAssets = useMemo(
+    () => [...folderAssets, ...forReviewItems, ...deliverableItems].filter(
+      (a, i, arr) => arr.findIndex((b) => b.name === a.name) === i,
+    ),
+    [folderAssets, forReviewItems, deliverableItems],
   )
 
   const handleBulkDownload = () => {
-    if (!assets) return
-    const toDownload = assets.filter((a) => selected.has(a.name))
+    const toDownload = allAssets.filter((a) => selected.has(a.name))
     downloadMany(toDownload)
   }
 
   const handleAssetClick = useCallback(
     (assetName: string) => {
-      const asset = (assets ?? []).find((a) => a.name === assetName)
+      const asset = allAssets.find((a) => a.name === assetName)
       if (!asset || asset.status !== "Ready") return
       if (asset.file_type?.startsWith("video/")) {
         navigate(`/review/${assetName}`)
@@ -160,7 +152,7 @@ export function ProjectDetailPage() {
         setPreviewAsset(asset)
       }
     },
-    [assets, navigate],
+    [allAssets, navigate],
   )
 
   const handleDeleteComplete = () => {
@@ -550,7 +542,7 @@ export function ProjectDetailPage() {
       />
 
       {selected.size === 1 && (() => {
-        const selectedAsset = assets?.find((a) => a.name === Array.from(selected)[0])
+        const selectedAsset = allAssets.find((a) => a.name === Array.from(selected)[0])
         return selectedAsset ? (
           <RenameAssetDialog
             open={renameOpen}
