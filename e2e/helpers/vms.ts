@@ -123,7 +123,7 @@ export async function createTestAsset(
 	return createDoc<VMSAsset>(request, "VMS Asset", {
 		project: options.project,
 		file_name,
-		category: options.category ?? "Asset",
+		category: options.category ?? "Footage",
 		status: options.status ?? "Ready",
 	});
 }
@@ -491,4 +491,56 @@ export async function cleanupCompressJobs(
 			console.warn(`Failed to delete compress job ${job.name}:`, error);
 		}
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Search helpers
+// ---------------------------------------------------------------------------
+
+export interface SearchAssetResult {
+	name: string;
+	file_name: string;
+	project: string;
+	category: string;
+	file_type: string;
+	project_name: string;
+}
+
+export interface SearchProjectResult {
+	name: string;
+	project_name: string;
+	status: string;
+}
+
+/**
+ * Search assets via the command palette search API (GET endpoint).
+ */
+export async function searchAssets(
+	request: APIRequestContext,
+	options: { query: string; project?: string; limit?: number },
+): Promise<{ results: SearchAssetResult[] }> {
+	const params: Record<string, string | number> = { query: options.query };
+	if (options.project) params.project = options.project;
+	if (options.limit) params.limit = options.limit;
+	return callGetMethod<{ results: SearchAssetResult[] }>(
+		request,
+		"vms.api.search_assets",
+		params,
+	);
+}
+
+/**
+ * Search projects via the command palette search API (GET endpoint).
+ */
+export async function searchProjects(
+	request: APIRequestContext,
+	options: { query: string; limit?: number },
+): Promise<{ results: SearchProjectResult[] }> {
+	const params: Record<string, string | number> = { query: options.query };
+	if (options.limit) params.limit = options.limit;
+	return callGetMethod<{ results: SearchProjectResult[] }>(
+		request,
+		"vms.api.search_projects",
+		params,
+	);
 }
