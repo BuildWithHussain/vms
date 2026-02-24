@@ -133,7 +133,7 @@ test.describe("Uploads", () => {
 		await deleteAsset(request, asset_name);
 	});
 
-	test("should delete an uploaded asset and its R2 object", async ({
+	test("should soft-delete an uploaded asset to trash then permanently delete", async ({
 		request,
 	}) => {
 		const { asset_name } = await uploadTestFile(request, {
@@ -143,8 +143,23 @@ test.describe("Uploads", () => {
 			project: projectName,
 		});
 
-		// Delete the asset
-		await deleteAsset(request, asset_name);
+		// Soft-delete the asset (moves to trash)
+		await callMethod(request, "vms.api.delete_asset", {
+			asset_name,
+		});
+
+		// Verify the asset still exists but has deleted_at set
+		const trashResponse = await request.get(
+			`/api/resource/VMS Asset/${encodeURIComponent(asset_name)}`,
+		);
+		expect(trashResponse.ok()).toBeTruthy();
+		const trashData = await trashResponse.json();
+		expect(trashData.data.deleted_at).toBeTruthy();
+
+		// Permanently delete the asset
+		await callMethod(request, "vms.api.permanently_delete_asset", {
+			asset_name,
+		});
 
 		// Verify the asset record is gone
 		const response = await request.get(

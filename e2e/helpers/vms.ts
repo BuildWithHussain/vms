@@ -320,13 +320,17 @@ export async function uploadTestFile(
 }
 
 /**
- * Delete an asset via the VMS API (cleans up both DB record and object storage).
+ * Soft-delete an asset via the VMS API (moves to trash).
  */
 export async function deleteAsset(
 	request: APIRequestContext,
 	assetName: string,
 ): Promise<void> {
 	await callMethod(request, "vms.api.delete_asset", {
+		asset_name: assetName,
+	});
+	// Permanently delete to clean up DB + R2 for tests
+	await callMethod(request, "vms.api.permanently_delete_asset", {
 		asset_name: assetName,
 	});
 }
