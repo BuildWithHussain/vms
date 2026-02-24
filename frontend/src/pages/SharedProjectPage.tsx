@@ -213,12 +213,12 @@ function SharedAssetCard({
 
   return (
     <Card className="group flex flex-col overflow-hidden pt-0">
-      <div className="relative aspect-video bg-muted">
+      <div className="relative flex aspect-video items-center justify-center bg-muted">
         {asset.thumbnail_url ? (
           <img
             src={asset.thumbnail_url}
             alt={asset.file_name}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain"
           />
         ) : (
           <div className="flex h-full items-center justify-center">

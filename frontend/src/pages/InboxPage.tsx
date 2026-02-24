@@ -328,9 +328,9 @@ export function UncategorisedPage() {
                   className="flex cursor-pointer flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md"
                   onClick={() => handleAssetClick(asset)}
                 >
-                  <div className="aspect-video w-full bg-muted">
+                  <div className="flex aspect-video w-full items-center justify-center bg-muted">
                     {asset.thumbnail_url ? (
-                      <img src={asset.thumbnail_url} alt="" className="h-full w-full object-cover" />
+                      <img src={asset.thumbnail_url} alt="" className="h-full w-full object-contain" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
                         <HugeiconsIcon icon={Film01Icon} size={32} strokeWidth={1.5} />

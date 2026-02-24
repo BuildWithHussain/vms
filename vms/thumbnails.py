@@ -5,7 +5,7 @@ import tempfile
 
 import frappe
 import requests
-from PIL import Image
+from PIL import Image, ImageOps
 
 from vms.r2 import generate_presigned_view_url
 
@@ -29,6 +29,7 @@ def _download_file(presigned_url, dest_path):
 def _generate_image_thumbnail(src_path, thumb_path):
 	"""Resize image to max THUMB_MAX_WIDTH wide, save as WebP."""
 	img = Image.open(src_path)
+	img = ImageOps.exif_transpose(img)
 	img = img.convert("RGB")
 	if img.width > THUMB_MAX_WIDTH:
 		ratio = THUMB_MAX_WIDTH / img.width

@@ -8,3 +8,4 @@ vms.patches.rename_asset_category_to_footage
 # Patches added in this section will be executed after doctypes are migrated
 vms.patches.generate_thumbnails_for_existing_assets
 vms.patches.migrate_thumbnails_to_webp
+vms.patches.regenerate_image_thumbnails_exif
