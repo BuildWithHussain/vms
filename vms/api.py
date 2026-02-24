@@ -1140,6 +1140,33 @@ def reset_setup():
 	return {"status": "ok"}
 
 
+# ── Asset Format Conversion ──────────────────────────────────────────────────
+
+
+@frappe.whitelist()
+def convert_asset_to_mp4(asset_name: str):
+	"""Start converting an asset to MP4 format. Sets status to Processing and enqueues a background job."""
+	asset = frappe.get_doc("VMS Asset", asset_name)
+
+	if asset.status != "Ready":
+		frappe.throw(_("Asset must be in Ready status to convert"))
+
+	if asset.file_type == "video/mp4":
+		frappe.throw(_("Asset is already in MP4 format"))
+
+	asset.status = "Processing"
+	asset.save(ignore_permissions=True)
+
+	frappe.enqueue(
+		"vms.tools.run_asset_conversion",
+		asset_name=asset.name,
+		queue="long",
+		enqueue_after_commit=True,
+	)
+
+	return {"status": "ok", "asset_name": asset.name}
+
+
 # ── Project Sharing ──────────────────────────────────────────────────────────
 
 

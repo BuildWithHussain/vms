@@ -1002,10 +1002,14 @@ function PaginationControls({
   )
 }
 
+const VIDEO_EXTENSIONS = new Set([".mkv", ".avi", ".wmv", ".flv", ".webm", ".mov", ".ts", ".m4v"])
+
 function isConvertibleToMp4(asset: VMSAsset): boolean {
-  return asset.status === "Ready" &&
-    !!asset.file_type?.startsWith("video/") &&
-    asset.file_type !== "video/mp4"
+  if (asset.status !== "Ready" || asset.file_type === "video/mp4") return false
+  if (asset.file_type?.startsWith("video/")) return true
+  // .mkv etc. often get application/octet-stream — check extension
+  const ext = asset.file_name.toLowerCase().match(/\.[^.]+$/)?.[0]
+  return ext ? VIDEO_EXTENSIONS.has(ext) : false
 }
 
 function AssetList({
