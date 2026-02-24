@@ -242,6 +242,33 @@ export async function getList<T = Record<string, unknown>>(
 }
 
 /**
+ * Call a Frappe whitelisted GET method (with auth).
+ */
+export async function callGetMethod<T = unknown>(
+	request: APIRequestContext,
+	method: string,
+	params: Record<string, string | number> = {},
+): Promise<T> {
+	const searchParams = new URLSearchParams();
+	for (const [key, value] of Object.entries(params)) {
+		searchParams.set(key, String(value));
+	}
+
+	const response = await request.get(
+		`${API_BASE}/api/method/${method}?${searchParams.toString()}`,
+		{ headers: apiHeaders() },
+	);
+
+	if (!response.ok()) {
+		const error = await response.text();
+		throw new Error(`Failed to call GET ${method}: ${error}`);
+	}
+
+	const result: FrappeResponse<T> = await response.json();
+	return result.message as T;
+}
+
+/**
  * Check if a document exists.
  */
 export async function docExists(

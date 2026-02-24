@@ -1,6 +1,7 @@
 import { APIRequestContext } from "@playwright/test";
 import {
 	callMethod,
+	callGetMethod,
 	createDoc,
 	deleteDoc,
 	getDoc,
@@ -366,4 +367,128 @@ export async function disableProjectSharing(
 	await callMethod(request, "vms.api.disable_project_sharing", {
 		project: projectName,
 	});
+}
+
+// ---------------------------------------------------------------------------
+// Tools (compression) helpers
+// ---------------------------------------------------------------------------
+
+export interface ToolUploadUrlResponse {
+	upload_url: string;
+	r2_key: string;
+}
+
+export interface StartCompressionResponse {
+	job_name: string;
+	status: string;
+}
+
+export interface CompressStatusResponse {
+	job_name: string;
+	status: string;
+	progress: number;
+	original_file_name: string;
+	original_size: number;
+	compressed_size: number;
+	compressed_file_name: string;
+	error_message: string;
+	download_url?: string;
+}
+
+export interface CompressJobsResponse {
+	jobs: Array<{
+		name: string;
+		original_file_name: string;
+		original_size: number;
+		compressed_size: number;
+		status: string;
+		progress: number;
+		creation: string;
+	}>;
+	total: number;
+	page: number;
+	page_size: number;
+	total_pages: number;
+}
+
+/**
+ * Get a presigned upload URL for a tool input file.
+ */
+export async function getToolUploadUrl(
+	request: APIRequestContext,
+	options: { file_name: string; content_type: string },
+): Promise<ToolUploadUrlResponse> {
+	return callMethod<ToolUploadUrlResponse>(
+		request,
+		"vms.tools_api.get_tool_upload_url",
+		{
+			file_name: options.file_name,
+			content_type: options.content_type,
+		},
+	);
+}
+
+/**
+ * Start a compression job.
+ */
+export async function startCompression(
+	request: APIRequestContext,
+	options: { r2_key: string; file_name: string; file_size?: number },
+): Promise<StartCompressionResponse> {
+	return callMethod<StartCompressionResponse>(
+		request,
+		"vms.tools_api.start_compression",
+		{
+			r2_key: options.r2_key,
+			file_name: options.file_name,
+			file_size: options.file_size ?? 0,
+		},
+	);
+}
+
+/**
+ * Get the status of a compression job (GET endpoint).
+ */
+export async function getCompressStatus(
+	request: APIRequestContext,
+	jobName: string,
+): Promise<CompressStatusResponse> {
+	return callGetMethod<CompressStatusResponse>(
+		request,
+		"vms.tools_api.get_compress_status",
+		{ job_name: jobName },
+	);
+}
+
+/**
+ * List compression jobs for the current user (GET endpoint).
+ */
+export async function getCompressJobs(
+	request: APIRequestContext,
+	options: { page?: number; page_size?: number } = {},
+): Promise<CompressJobsResponse> {
+	return callGetMethod<CompressJobsResponse>(
+		request,
+		"vms.tools_api.get_compress_jobs",
+		{
+			page: options.page ?? 1,
+			page_size: options.page_size ?? 20,
+		},
+	);
+}
+
+/**
+ * Cleanup compress jobs created during tests.
+ */
+export async function cleanupCompressJobs(
+	request: APIRequestContext,
+): Promise<void> {
+	const result = await getCompressJobs(request, { page_size: 50 });
+	for (const job of result.jobs) {
+		try {
+			await deleteDoc(request, "VMS Compress Job", job.name);
+		} catch (error) {
+			console.warn(`Failed to delete compress job ${job.name}:`, error);
+		}
+	}
 }
