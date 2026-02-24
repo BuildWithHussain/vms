@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react"
 import { useSelection } from "@/hooks/useSelection"
 import { useParams, useNavigate } from "react-router"
-import { useFrappeGetDoc, useFrappeGetDocList, useFrappeGetCall, useFrappePostCall } from "frappe-react-sdk"
+import { useFrappeGetDoc, useFrappeGetDocList, useFrappeGetCall, useFrappePostCall, useFrappeEventListener } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   ArrowLeft01Icon,
@@ -18,6 +18,7 @@ import {
   Copy01Icon,
   PencilEdit01Icon,
   Share01Icon,
+  Exchange01Icon,
 } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { formatBytes } from "@/lib/utils"
@@ -42,6 +43,7 @@ import { MediaPlayerDialog } from "@/components/MediaPlayerDialog"
 import { CreateFolderDialog } from "@/components/CreateFolderDialog"
 import { RenameFolderDialog } from "@/components/RenameFolderDialog"
 import { MoveToFolderDialog } from "@/components/MoveToFolderDialog"
+import { DeleteFolderDialog } from "@/components/DeleteFolderDialog"
 import { DropZoneOverlay } from "@/components/DropZoneOverlay"
 import { CategoryBadge } from "@/components/CategoryBadge"
 import { useDownload } from "@/hooks/useDownload"
@@ -77,6 +79,7 @@ export function ProjectDetailPage() {
   const [createFolderOpen, setCreateFolderOpen] = useState(false)
   const [renameFolderOpen, setRenameFolderOpen] = useState(false)
   const [moveToFolderOpen, setMoveToFolderOpen] = useState(false)
+  const [deleteFolderOpen, setDeleteFolderOpen] = useState(false)
   const [droppedFiles, setDroppedFiles] = useState<File[]>([])
   const [previewAsset, setPreviewAsset] = useState<VMSAsset | null>(null)
   const [view, setView] = useState<"list" | "grid">("grid")
@@ -87,10 +90,11 @@ export function ProjectDetailPage() {
   const { downloadOne, downloadMany, isDownloading } = useDownload()
 
   const { call: callTogglePublicReview } = useFrappePostCall("vms.review_api.toggle_public_review")
-  const { call: callDeleteFolder } = useFrappePostCall("vms.api.delete_folder")
+
   const { call: callMoveToFolder } = useFrappePostCall("vms.api.move_assets_to_folder")
   const { call: callEnableSharing } = useFrappePostCall("vms.api.enable_project_sharing")
   const { call: callDisableSharing } = useFrappePostCall("vms.api.disable_project_sharing")
+  const { call: callConvertToMp4 } = useFrappePostCall("vms.api.convert_asset_to_mp4")
 
   const { data: project, mutate: mutateProject } = useFrappeGetDoc<VMSProject>(
     "VMS Project",
@@ -143,6 +147,34 @@ export function ProjectDetailPage() {
     [folders, currentFolder],
   )
 
+  // Listen for asset conversion completion to refresh the list
+  useFrappeEventListener<{
+    asset_name: string
+    status: string
+    error_message?: string
+  }>("asset_conversion_progress", useCallback((data) => {
+    if (data.status === "Ready") {
+      toast.success("Conversion complete", { description: "Asset has been converted to MP4." })
+      mutateAssets()
+    } else if (data.status === "Error") {
+      toast.error("Conversion failed", { description: data.error_message || "An error occurred during conversion." })
+      mutateAssets()
+    }
+  }, [mutateAssets]))
+
+  const handleConvertToMp4 = useCallback(
+    async (assetName: string) => {
+      try {
+        await callConvertToMp4({ asset_name: assetName })
+        toast("Converting to MP4...", { description: "The file will be converted in the background." })
+        mutateAssets()
+      } catch {
+        toast.error("Failed to start conversion")
+      }
+    },
+    [callConvertToMp4, mutateAssets],
+  )
+
   const handleTogglePublicReview = useCallback(
     async (assetName: string, enable: boolean) => {
       await callTogglePublicReview({ asset_name: assetName, enable: enable ? 1 : 0 })
@@ -193,18 +225,15 @@ export function ProjectDetailPage() {
     clearSelection()
   }
 
-  const handleDeleteFolder = async () => {
+  const handleDeleteFolder = () => {
     if (!currentFolder) return
-    try {
-      await callDeleteFolder({ folder_name: currentFolder })
-      toast.success("Folder deleted")
-      setCurrentFolder(null)
-      mutateFolders()
-      mutateAssets()
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : "Failed to delete folder"
-      toast.error(message)
-    }
+    setDeleteFolderOpen(true)
+  }
+
+  const handleDeleteFolderComplete = () => {
+    setCurrentFolder(null)
+    mutateFolders()
+    mutateAssets()
   }
 
   const handleMoveToFolderComplete = () => {
@@ -461,6 +490,7 @@ export function ProjectDetailPage() {
             onPlay={handleAssetClick}
             onTogglePublicReview={handleTogglePublicReview}
             onCategoryChanged={() => mutateAssets()}
+            onConvert={handleConvertToMp4}
             folders={currentFolder ? undefined : folders ?? undefined}
             onFolderClick={handleFolderClick}
             onDropToFolder={currentFolder ? undefined : handleDropToFolder}
@@ -513,6 +543,7 @@ export function ProjectDetailPage() {
             onPlay={handleAssetClick}
             onTogglePublicReview={handleTogglePublicReview}
             onCategoryChanged={() => mutateAssets()}
+            onConvert={handleConvertToMp4}
             isLoading={isLoadingForReview}
             emptyMessage={
               <Empty>
@@ -541,6 +572,7 @@ export function ProjectDetailPage() {
             onPlay={handleAssetClick}
             onTogglePublicReview={handleTogglePublicReview}
             onCategoryChanged={() => mutateAssets()}
+            onConvert={handleConvertToMp4}
             isLoading={isLoadingDeliverables}
             emptyMessage={
               <Empty>
@@ -607,13 +639,22 @@ export function ProjectDetailPage() {
       />
 
       {currentFolder && currentFolderDoc && (
-        <RenameFolderDialog
-          open={renameFolderOpen}
-          onOpenChange={setRenameFolderOpen}
-          folderName={currentFolder}
-          folderDisplayName={currentFolderDoc.folder_name}
-          onComplete={handleFolderRenamed}
-        />
+        <>
+          <RenameFolderDialog
+            open={renameFolderOpen}
+            onOpenChange={setRenameFolderOpen}
+            folderName={currentFolder}
+            folderDisplayName={currentFolderDoc.folder_name}
+            onComplete={handleFolderRenamed}
+          />
+          <DeleteFolderDialog
+            open={deleteFolderOpen}
+            onOpenChange={setDeleteFolderOpen}
+            folderName={currentFolder}
+            folderDisplayName={currentFolderDoc.folder_name}
+            onComplete={handleDeleteFolderComplete}
+          />
+        </>
       )}
 
       <MoveToFolderDialog
@@ -961,6 +1002,12 @@ function PaginationControls({
   )
 }
 
+function isConvertibleToMp4(asset: VMSAsset): boolean {
+  return asset.status === "Ready" &&
+    !!asset.file_type?.startsWith("video/") &&
+    asset.file_type !== "video/mp4"
+}
+
 function AssetList({
   items,
   allItems,
@@ -972,6 +1019,7 @@ function AssetList({
   onPlay,
   onTogglePublicReview,
   onCategoryChanged,
+  onConvert,
   emptyMessage,
   folders,
   onFolderClick,
@@ -989,6 +1037,7 @@ function AssetList({
   onPlay: (assetName: string) => void
   onTogglePublicReview: (assetName: string, enable: boolean) => Promise<void>
   onCategoryChanged?: () => void
+  onConvert?: (assetName: string) => void
   emptyMessage: React.ReactNode
   folders?: VMSFolder[]
   onFolderClick?: (folderName: string) => void
@@ -1142,6 +1191,19 @@ function AssetList({
                     <div className="flex shrink-0 items-center gap-2">
                       {asset.status === "Ready" && (
                         <>
+                          {isConvertibleToMp4(asset) && onConvert && (
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              title="Convert to MP4"
+                              onClick={(e: React.MouseEvent) => {
+                                e.stopPropagation()
+                                onConvert(asset.name)
+                              }}
+                            >
+                              <HugeiconsIcon icon={Exchange01Icon} strokeWidth={2} />
+                            </Button>
+                          )}
                           <SharePopover asset={asset} onToggle={onTogglePublicReview} />
                           <Button
                             variant="ghost"
@@ -1252,6 +1314,19 @@ function AssetList({
                   <div className="flex items-center gap-1">
                     {asset.status === "Ready" && (
                       <>
+                        {isConvertibleToMp4(asset) && onConvert && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            title="Convert to MP4"
+                            onClick={(e: React.MouseEvent) => {
+                              e.stopPropagation()
+                              onConvert(asset.name)
+                            }}
+                          >
+                            <HugeiconsIcon icon={Exchange01Icon} strokeWidth={2} />
+                          </Button>
+                        )}
                         <SharePopover asset={asset} onToggle={onTogglePublicReview} />
                         <Button
                           variant="ghost"
