@@ -126,6 +126,7 @@ def get_comments(asset_name: str, sort_by: str = "timestamp", token: str | None 
 			"guest_name",
 			"is_resolved",
 			"has_annotation",
+			"is_edited",
 			"creation",
 			"modified",
 		],
@@ -270,6 +271,24 @@ def delete_comment(comment_name: str):
 		frappe.delete_doc("VMS Review Comment", reply_name, ignore_permissions=True)
 
 	frappe.delete_doc("VMS Review Comment", comment_name, ignore_permissions=True)
+
+	return {"status": "ok"}
+
+
+@frappe.whitelist()
+def edit_comment(comment_name: str, comment_text: str):
+	"""Edit a comment's text. Only the comment author can edit."""
+	if not frappe.db.exists("VMS Review Comment", comment_name):
+		frappe.throw(_("Comment {0} does not exist").format(comment_name))
+
+	doc = frappe.get_doc("VMS Review Comment", comment_name)
+
+	if doc.commented_by != frappe.session.user:
+		frappe.throw(_("You can only edit your own comments"), frappe.PermissionError)
+
+	doc.comment_text = comment_text
+	doc.is_edited = 1
+	doc.save(ignore_permissions=True)
 
 	return {"status": "ok"}
 

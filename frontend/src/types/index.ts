@@ -82,6 +82,7 @@ export interface VMSReviewComment {
   commenter_image?: string | null
   is_resolved: 0 | 1
   has_annotation: 0 | 1
+  is_edited: 0 | 1
   annotation_data?: string | null
   creation: string
   modified: string

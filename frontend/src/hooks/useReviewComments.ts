@@ -34,6 +34,10 @@ export function useReviewComments(
     "vms.review_api.delete_comment",
   )
 
+  const { call: callEditComment } = useFrappePostCall(
+    "vms.review_api.edit_comment",
+  )
+
   const { call: callResolveComment } = useFrappePostCall(
     "vms.review_api.resolve_comment",
   )
@@ -63,6 +67,14 @@ export function useReviewComments(
     [assetId, token, callAddComment, mutate],
   )
 
+  const editComment = useCallback(
+    async (commentName: string, commentText: string) => {
+      await callEditComment({ comment_name: commentName, comment_text: commentText })
+      mutate()
+    },
+    [callEditComment, mutate],
+  )
+
   const deleteComment = useCallback(
     async (commentName: string) => {
       await callDeleteComment({ comment_name: commentName })
@@ -87,6 +99,7 @@ export function useReviewComments(
     isLoading,
     isAdding,
     addComment,
+    editComment,
     deleteComment,
     resolveComment,
     mutate,

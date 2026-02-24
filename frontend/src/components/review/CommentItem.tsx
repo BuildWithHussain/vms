@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   CheckmarkCircle02Icon,
@@ -6,6 +6,7 @@ import {
   MailReply01Icon,
   Clock01Icon,
   PenTool01Icon,
+  PencilEdit01Icon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,12 +20,20 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
   Avatar,
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { formatTimestamp } from "@/hooks/useVideoPlayer"
+import { CommentEditor, type CommentEditorHandle } from "./CommentEditor"
 import type { VMSReviewComment } from "@/types"
 
 interface CommentItemProps {
@@ -34,7 +43,9 @@ interface CommentItemProps {
   onReply: (parentName: string, timestamp?: number | null) => void
   onResolve: (name: string, resolved: boolean) => void
   onDelete: (name: string) => void
+  onEdit: (name: string, newText: string) => Promise<void>
   onViewAnnotation?: (commentName: string, timestamp?: number | null) => void
+  currentUser?: string
   isNested?: boolean
   isGuest?: boolean
 }
@@ -46,14 +57,20 @@ export function CommentItem({
   onReply,
   onResolve,
   onDelete,
+  onEdit,
   onViewAnnotation,
+  currentUser,
   isNested = false,
   isGuest = false,
 }: CommentItemProps) {
   const [showReplies, setShowReplies] = useState(true)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const editEditorRef = useRef<CommentEditorHandle>(null)
   const hasTimestamp = comment.video_timestamp != null
   const isGuestComment = !!comment.guest_name && !comment.commented_by
+  const isOwnComment = !!currentUser && comment.commented_by === currentUser
 
   return (
     <div className={isNested ? "ml-8 border-l pl-3" : ""}>
@@ -130,6 +147,9 @@ export function CommentItem({
                   hour: "numeric",
                   minute: "2-digit",
                 })}
+                {comment.is_edited === 1 && (
+                  <span className="ml-1 italic">(edited)</span>
+                )}
               </span>
 
               <div className="ml-auto flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
@@ -141,6 +161,16 @@ export function CommentItem({
                     title="Reply"
                   >
                     <HugeiconsIcon icon={MailReply01Icon} size={14} strokeWidth={2} />
+                  </Button>
+                )}
+                {isOwnComment && (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setShowEditDialog(true)}
+                    title="Edit"
+                  >
+                    <HugeiconsIcon icon={PencilEdit01Icon} size={14} strokeWidth={2} />
                   </Button>
                 )}
                 {!isGuest && (
@@ -195,7 +225,9 @@ export function CommentItem({
                 onReply={onReply}
                 onResolve={onResolve}
                 onDelete={onDelete}
+                onEdit={onEdit}
                 onViewAnnotation={onViewAnnotation}
+                currentUser={currentUser}
                 isNested
                 isGuest={isGuest}
               />
@@ -222,6 +254,53 @@ export function CommentItem({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit comment</DialogTitle>
+          </DialogHeader>
+          <CommentEditor
+            ref={editEditorRef}
+            initialContent={comment.comment_text}
+            placeholder="Edit your comment..."
+            onSubmit={async () => {
+              if (!editEditorRef.current || editEditorRef.current.isEmpty()) return
+              setIsEditing(true)
+              try {
+                await onEdit(comment.name, editEditorRef.current.getHTML())
+                setShowEditDialog(false)
+              } finally {
+                setIsEditing(false)
+              }
+            }}
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEditDialog(false)}
+              disabled={isEditing}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={isEditing}
+              onClick={async () => {
+                if (!editEditorRef.current || editEditorRef.current.isEmpty()) return
+                setIsEditing(true)
+                try {
+                  await onEdit(comment.name, editEditorRef.current.getHTML())
+                  setShowEditDialog(false)
+                } finally {
+                  setIsEditing(false)
+                }
+              }}
+            >
+              {isEditing ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

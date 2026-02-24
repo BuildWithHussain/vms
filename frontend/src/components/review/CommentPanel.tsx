@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { Sorting01Icon } from "@hugeicons/core-free-icons"
+import { useFrappeAuth } from "frappe-react-sdk"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -24,6 +25,8 @@ export function CommentPanel() {
     seekTo,
   } = useReviewContext()
 
+  const { currentUser } = useFrappeAuth()
+
   const [sortBy, setSortBy] = useState<"timestamp" | "recent">("recent")
   const [replyTo, setReplyTo] = useState<{
     name: string
@@ -36,6 +39,7 @@ export function CommentPanel() {
     isLoading,
     isAdding,
     addComment,
+    editComment,
     deleteComment,
     resolveComment,
   } = useReviewComments(assetId, sortBy, token)
@@ -138,7 +142,9 @@ export function CommentPanel() {
                 onReply={handleReply}
                 onResolve={resolveComment}
                 onDelete={deleteComment}
+                onEdit={editComment}
                 onViewAnnotation={viewAnnotation}
+                currentUser={currentUser ?? undefined}
                 isGuest={isGuest}
               />
             ))

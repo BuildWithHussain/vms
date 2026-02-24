@@ -17,7 +17,8 @@
   "column_break_2",
   "is_resolved",
   "has_annotation",
-  "annotation_data"
+  "annotation_data",
+  "is_edited"
  ],
  "fields": [
   {
@@ -95,6 +96,12 @@
    "fieldtype": "JSON",
    "label": "Annotation Data",
    "hidden": 1
+  },
+  {
+   "fieldname": "is_edited",
+   "fieldtype": "Check",
+   "label": "Edited",
+   "default": "0"
   }
  ],
  "links": [],
