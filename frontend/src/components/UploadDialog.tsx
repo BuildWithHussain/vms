@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from "react"
+import { useFrappePostCall } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CloudUploadIcon, Tick02Icon, Cancel01Icon, AlertCircleIcon, RefreshIcon } from "@hugeicons/core-free-icons"
 import {
@@ -74,6 +75,27 @@ export function UploadDialog({
       onComplete?.()
     },
   })
+
+  const { call: sendUploadReport } = useFrappePostCall("vms.api.send_upload_report")
+  const reportSentRef = useRef(false)
+
+  const allDone = files.length > 0 && files.every((f) => f.status === "done" || f.status === "error" || f.status === "cancelled")
+
+  useEffect(() => {
+    if (allDone && files.length >= 2 && !reportSentRef.current) {
+      reportSentRef.current = true
+      const payload = files.map((f) => ({
+        name: f.displayName,
+        size: f.file.size,
+        status: f.status,
+        error: f.error,
+      }))
+      sendUploadReport({ files: JSON.stringify(payload) }).catch(() => {})
+    }
+    if (!allDone && files.length === 0) {
+      reportSentRef.current = false
+    }
+  }, [allDone, files, sendUploadReport])
 
   const existingSet = new Set(existingFileNames ?? [])
 
@@ -196,8 +218,6 @@ export function UploadDialog({
       onOpenChange(nextOpen)
     }
   }
-
-  const allDone = files.length > 0 && files.every((f) => f.status === "done" || f.status === "error" || f.status === "cancelled")
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>

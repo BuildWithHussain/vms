@@ -258,6 +258,72 @@ def confirm_upload(asset_name: str, file_size: int):
 	return {"status": "ok", "asset_name": asset.name}
 
 
+@frappe.whitelist()
+def send_upload_report(files: str):
+	"""Send an email report to the uploader after bulk upload completes."""
+	file_list = json.loads(files)
+	if len(file_list) < 2:
+		return {"status": "skipped"}
+
+	total = len(file_list)
+	completed = sum(1 for f in file_list if f.get("status") == "done")
+	failed = sum(1 for f in file_list if f.get("status") == "error")
+	cancelled = sum(1 for f in file_list if f.get("status") == "cancelled")
+
+	user = frappe.session.user
+	user_name = frappe.db.get_value("User", user, "full_name") or user
+	site_url = frappe.utils.get_url()
+
+	rows = ""
+	for f in file_list:
+		status_label = f.get("status", "unknown")
+		if status_label == "done":
+			status_icon = "&#9989;"
+		elif status_label == "error":
+			status_icon = "&#10060;"
+		else:
+			status_icon = "&#9888;"
+		size_mb = f.get("size", 0) / (1024 * 1024)
+		error_note = f" &mdash; {frappe.utils.escape_html(f['error'])}" if f.get("error") else ""
+		rows += (
+			f'<tr><td style="padding:6px 8px;">{status_icon}</td>'
+			f'<td style="padding:6px 8px;">{frappe.utils.escape_html(f["name"])}</td>'
+			f'<td style="padding:6px 8px;">{size_mb:.1f} MB</td>'
+			f'<td style="padding:6px 8px;">{status_label}{error_note}</td></tr>'
+		)
+
+	subject = f"Upload Report: {completed}/{total} files uploaded successfully"
+	message = f"""\
+<p>Hi {frappe.utils.escape_html(user_name)},</p>
+<p>Your bulk upload has completed. Here's a summary:</p>
+<table style="border-collapse:collapse;width:100%;">
+<tr style="background:#f5f5f5;">
+<th style="padding:6px 8px;text-align:left;"></th>
+<th style="padding:6px 8px;text-align:left;">File</th>
+<th style="padding:6px 8px;text-align:left;">Size</th>
+<th style="padding:6px 8px;text-align:left;">Status</th>
+</tr>
+{rows}
+</table>
+<p style="margin-top:16px;"><strong>Summary:</strong> {completed} completed\
+{f", {failed} failed" if failed else ""}\
+{f", {cancelled} cancelled" if cancelled else ""} out of {total} total.</p>
+<p><a href="{site_url}/vms">Open VMS</a></p>
+"""
+
+	try:
+		frappe.sendmail(
+			recipients=[user],
+			subject=subject,
+			message=message,
+			now=True,
+		)
+	except Exception:
+		frappe.log_error(title=_("VMS: Failed to send upload report email"))
+
+	return {"status": "ok"}
+
+
 def _create_audit_log(
 	action: str,
 	asset_name: str,
