@@ -117,8 +117,8 @@ export function VideoPlayer({ assetName }: VideoPlayerProps) {
   const isCanvasActive = annotationMode || !!replayAnnotation
 
   return (
-    <div ref={containerRef} className="flex flex-col overflow-hidden rounded-lg border bg-black">
-      <div ref={videoWrapperRef} className="relative flex items-center justify-center bg-black aspect-video">
+    <div ref={containerRef} className="flex flex-col overflow-hidden rounded-lg border bg-black md:h-full">
+      <div ref={videoWrapperRef} className="relative flex items-center justify-center bg-black aspect-video md:aspect-auto md:min-h-0 md:flex-1">
         <video
           ref={videoRef}
           src={videoUrl ?? undefined}
