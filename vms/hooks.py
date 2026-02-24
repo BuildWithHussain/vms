@@ -148,6 +148,7 @@ doc_events = {
 scheduler_events = {
 	"daily": [
 		"vms.tasks.purge_expired_trash",
+		"vms.tasks.cleanup_expired_compress_jobs",
 	],
 }
 

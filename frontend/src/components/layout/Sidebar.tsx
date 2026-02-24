@@ -15,6 +15,7 @@ import {
   ArrowUp01Icon,
   Bug01Icon,
   Delete02Icon,
+  Wrench01Icon,
 } from "@hugeicons/core-free-icons"
 import {
   Sidebar,
@@ -45,6 +46,7 @@ const navItems = [
   { to: "/uncategorised", label: "Uncategorised", icon: Album01Icon },
   { to: "/projects", label: "Projects", icon: FolderVideoIcon },
   { to: "/audit-logs", label: "Audit Logs", icon: Audit01Icon },
+  { to: "/tools", label: "Tools", icon: Wrench01Icon },
 ]
 
 export function AppSidebar({ onOpenSettings }: { onOpenSettings: () => void }) {

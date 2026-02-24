@@ -21,6 +21,7 @@ interface VMSSettings {
   presigned_url_expiry: number
   allowed_extensions: string
   trash_retention_days: number
+  tools_retention_days: number
 }
 
 
@@ -45,9 +46,11 @@ export function GeneralSection() {
   const [extensionTags, setExtensionTags] = useState<Tag[]>([])
   const [activeTagIndex, setActiveTagIndex] = useState<number | null>(null)
   const [trashRetentionDays, setTrashRetentionDays] = useState(7)
+  const [toolsRetentionDays, setToolsRetentionDays] = useState(7)
   const initialMaxFileSizeMB = useRef(5 * 1024)
   const initialExtensionTags = useRef<Tag[]>([])
   const initialTrashRetentionDays = useRef(7)
+  const initialToolsRetentionDays = useRef(7)
 
   useEffect(() => {
     if (data) {
@@ -82,6 +85,11 @@ export function GeneralSection() {
       const retention = data.trash_retention_days ?? 7
       setTrashRetentionDays(retention)
       initialTrashRetentionDays.current = retention
+
+      // Tools retention
+      const toolsRetention = data.tools_retention_days ?? 7
+      setToolsRetentionDays(toolsRetention)
+      initialToolsRetentionDays.current = toolsRetention
     }
   }, [data])
 
@@ -89,6 +97,7 @@ export function GeneralSection() {
     JSON.stringify(form) !== JSON.stringify(initialForm.current) ||
     maxFileSizeMB !== initialMaxFileSizeMB.current ||
     trashRetentionDays !== initialTrashRetentionDays.current ||
+    toolsRetentionDays !== initialToolsRetentionDays.current ||
     JSON.stringify(extensionTags.map((t) => t.text)) !==
       JSON.stringify(initialExtensionTags.current.map((t) => t.text))
 
@@ -113,6 +122,7 @@ export function GeneralSection() {
         max_file_size: maxFileSizeMB * MB_TO_BYTES,
         allowed_extensions: extensionTags.map((t) => t.text).join(","),
         trash_retention_days: trashRetentionDays,
+        tools_retention_days: toolsRetentionDays,
       })
       await mutate()
       toast.success("Settings saved")
@@ -399,6 +409,35 @@ export function GeneralSection() {
               />
               <p className="text-xs text-muted-foreground">
                 Default: 7 days. Set to 0 to disable trash (files are deleted immediately).
+              </p>
+            </div>
+          </div>
+
+          {/* Tools Settings */}
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold">Tools</h3>
+              <p className="text-xs text-muted-foreground">
+                Compressed files are kept temporarily before automatic deletion.
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="tools_retention_days" className="text-xs">
+                Output Retention (days)
+              </Label>
+              <Input
+                id="tools_retention_days"
+                type="number"
+                min={0}
+                max={30}
+                className="w-28"
+                value={toolsRetentionDays}
+                onChange={(e) =>
+                  setToolsRetentionDays(Math.max(0, parseInt(e.target.value) || 0))
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                Default: 7 days. Set to 0 to delete immediately after processing.
               </p>
             </div>
           </div>

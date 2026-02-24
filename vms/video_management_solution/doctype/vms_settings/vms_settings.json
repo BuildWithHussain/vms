@@ -20,6 +20,8 @@
   "allowed_extensions",
   "trash_section",
   "trash_retention_days",
+  "tools_section",
+  "tools_retention_days",
   "transcription_section",
   "transcription_provider",
   "whisper_model",
@@ -123,6 +125,18 @@
    "fieldname": "trash_retention_days",
    "fieldtype": "Int",
    "label": "Trash Retention (days)"
+  },
+  {
+   "fieldname": "tools_section",
+   "fieldtype": "Section Break",
+   "label": "Tools"
+  },
+  {
+   "default": "7",
+   "description": "Number of days to keep compressed files before automatic deletion. Set to 0 to delete immediately after download.",
+   "fieldname": "tools_retention_days",
+   "fieldtype": "Int",
+   "label": "Tools Output Retention (days)"
   },
   {
    "fieldname": "transcription_section",
