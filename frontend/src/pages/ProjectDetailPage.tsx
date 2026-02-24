@@ -94,19 +94,19 @@ export function ProjectDetailPage() {
     projectId!
   )
 
-  const { data: folderAssetsData, mutate: mutateFolderAssets } = useFrappeGetCall<{ message: PaginatedAssets }>(
+  const { data: folderAssetsData, mutate: mutateFolderAssets, isLoading: isLoadingFolder } = useFrappeGetCall<{ message: PaginatedAssets }>(
     "vms.api.get_project_assets",
     { project: projectId!, folder: currentFolder ?? undefined, page: activeTab === "all" ? page : 1, page_size: PAGE_SIZE },
     `project-assets-folder-${projectId}-${currentFolder ?? "root"}-p${activeTab === "all" ? page : 1}`,
   )
 
-  const { data: forReviewData, mutate: mutateForReview } = useFrappeGetCall<{ message: PaginatedAssets }>(
+  const { data: forReviewData, mutate: mutateForReview, isLoading: isLoadingForReview } = useFrappeGetCall<{ message: PaginatedAssets }>(
     "vms.api.get_project_assets",
     { project: projectId!, category: "For Review", page: activeTab === "for-review" ? page : 1, page_size: PAGE_SIZE },
     `project-assets-review-${projectId}-p${activeTab === "for-review" ? page : 1}`,
   )
 
-  const { data: deliverablesData, mutate: mutateDeliverables } = useFrappeGetCall<{ message: PaginatedAssets }>(
+  const { data: deliverablesData, mutate: mutateDeliverables, isLoading: isLoadingDeliverables } = useFrappeGetCall<{ message: PaginatedAssets }>(
     "vms.api.get_project_assets",
     { project: projectId!, category: "Deliverable", page: activeTab === "deliverables" ? page : 1, page_size: PAGE_SIZE },
     `project-assets-deliverables-${projectId}-p${activeTab === "deliverables" ? page : 1}`,
@@ -456,6 +456,7 @@ export function ProjectDetailPage() {
             onFolderClick={handleFolderClick}
             onDropToFolder={currentFolder ? undefined : handleDropToFolder}
             draggable={(folders ?? []).length > 0 || !!currentFolder}
+            isLoading={isLoadingFolder}
             emptyMessage={
               currentFolder ? (
                 <Empty>
@@ -503,6 +504,7 @@ export function ProjectDetailPage() {
             onPlay={handleAssetClick}
             onTogglePublicReview={handleTogglePublicReview}
             onCategoryChanged={() => mutateAssets()}
+            isLoading={isLoadingForReview}
             emptyMessage={
               <Empty>
                 <EmptyHeader>
@@ -530,6 +532,7 @@ export function ProjectDetailPage() {
             onPlay={handleAssetClick}
             onTogglePublicReview={handleTogglePublicReview}
             onCategoryChanged={() => mutateAssets()}
+            isLoading={isLoadingDeliverables}
             emptyMessage={
               <Empty>
                 <EmptyHeader>
@@ -879,6 +882,7 @@ function AssetList({
   onFolderClick,
   onDropToFolder,
   draggable: canDragProp,
+  isLoading,
 }: {
   items: VMSAsset[]
   allItems: VMSAsset[]
@@ -895,6 +899,7 @@ function AssetList({
   onFolderClick?: (folderName: string) => void
   onDropToFolder?: (assetNames: string[], folderName: string) => void
   draggable?: boolean
+  isLoading?: boolean
 }) {
   const canDrag = canDragProp ?? false
 
@@ -933,6 +938,44 @@ function AssetList({
 
   const hasFolders = folders && folders.length > 0
   const hasItems = items.length > 0
+
+  if (isLoading && !hasItems) {
+    return view === "list" ? (
+      <div className="space-y-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Card key={i} size="sm">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-16 shrink-0 rounded" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
+    ) : (
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Card key={i} className="flex flex-col overflow-hidden pt-0">
+            <Skeleton className="aspect-video w-full rounded-none" />
+            <CardHeader>
+              <Skeleton className="h-4 w-3/4" />
+            </CardHeader>
+            <CardContent className="mt-auto space-y-2">
+              <div className="flex gap-1.5">
+                <Skeleton className="h-5 w-14 rounded-full" />
+                <Skeleton className="h-5 w-12 rounded-full" />
+              </div>
+              <div className="flex items-center gap-3">
+                <Skeleton className="size-5 rounded-full" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )
+  }
 
   if (!hasFolders && !hasItems) {
     return <>{emptyMessage}</>
