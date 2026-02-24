@@ -5,9 +5,8 @@ import {
 	uploadTestFile,
 	enableProjectSharing,
 	disableProjectSharing,
-	ShareResult,
 } from "../helpers/vms";
-import { guestGet, guestPost } from "../helpers/frappe";
+import { guestGet } from "../helpers/frappe";
 
 test.describe("Project Sharing", () => {
 	let projectName: string;
@@ -128,7 +127,7 @@ test.describe("Project Sharing", () => {
 			projectName,
 		);
 
-		const { status, data } = await guestPost<{ url: string }>(
+		const { status, data } = await guestGet<{ url: string }>(
 			request,
 			"vms.api.get_shared_asset_download_url",
 			{
@@ -241,7 +240,7 @@ test.describe("Project Sharing", () => {
 		// Explicitly clear storageState so no auth cookies are inherited.
 		const guestContext = await browser.newContext({
 			storageState: { cookies: [], origins: [] },
-			baseURL: "http://vms.localhost:8000",
+			baseURL: process.env.BASE_URL || "http://vms.localhost:8000",
 		});
 		const guestPage = await guestContext.newPage();
 

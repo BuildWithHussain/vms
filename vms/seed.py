@@ -13,4 +13,6 @@ def seed_test_settings():
 	settings.r2_bucket_name = "vms-media"
 	settings.r2_secret_access_key = "minioadmin"
 	settings.setup_complete = 1
+	settings.transcription_provider = "OpenAI Whisper"
+	settings.openai_api_key = "sk-test-dummy-key-for-ci"
 	settings.save(ignore_permissions=True)
