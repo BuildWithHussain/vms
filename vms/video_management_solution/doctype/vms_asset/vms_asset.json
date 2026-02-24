@@ -28,6 +28,7 @@
   "section_break_transcription",
   "transcription_status",
   "transcription",
+  "speaker_names",
   "section_break_split",
   "split_from",
   "section_break_trash",
@@ -171,6 +172,12 @@
    "fieldname": "transcription",
    "fieldtype": "Markdown Editor",
    "label": "Transcription"
+  },
+  {
+   "fieldname": "speaker_names",
+   "fieldtype": "JSON",
+   "label": "Speaker Names",
+   "hidden": 1
   },
   {
    "fieldname": "section_break_split",

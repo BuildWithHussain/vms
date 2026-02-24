@@ -114,10 +114,13 @@ function ReviewPageInner({
   const { call: callStartTranscription, loading: startingTranscription } = useFrappePostCall(
     "vms.transcription.start_transcription",
   )
+  const { call: callSaveSpeakerNames } = useFrappePostCall(
+    "vms.transcription.save_speaker_names",
+  )
 
   // Fetch transcription content — auto-poll every 5s while Processing
   const { data: transcriptionData, mutate: mutateTranscription } = useFrappeGetCall<{
-    message: { transcription_status: string; transcription: string }
+    message: { transcription_status: string; transcription: string; speaker_names: Record<string, string> }
   }>(
     "vms.transcription.get_transcription",
     { asset_name: asset.name },
@@ -130,6 +133,7 @@ function ReviewPageInner({
 
   const transcriptionStatus = transcriptionData?.message?.transcription_status || asset.transcription_status || ""
   const transcriptionText = transcriptionData?.message?.transcription || ""
+  const speakerNames = transcriptionData?.message?.speaker_names || {}
 
   // Poll for split status while Processing
   const { data: splitStatusData } = useFrappeGetCall<{
@@ -171,6 +175,15 @@ function ReviewPageInner({
     mutateReviewData()
     mutateTranscription()
   }, [asset.name, callStartTranscription, mutateReviewData, mutateTranscription])
+
+  const handleSaveSpeakerNames = useCallback(async (names: Record<string, string>) => {
+    // Optimistic update
+    mutateTranscription((prev) => {
+      if (!prev) return prev
+      return { ...prev, message: { ...prev.message, speaker_names: names } }
+    }, { revalidate: false })
+    await callSaveSpeakerNames({ asset_name: asset.name, speaker_names: JSON.stringify(names) })
+  }, [asset.name, callSaveSpeakerNames, mutateTranscription])
 
   const handleTogglePublicReview = useCallback(
     async (enable: boolean) => {
@@ -235,6 +248,8 @@ function ReviewPageInner({
           onTranscribe={handleStartTranscription}
           isTranscribing={startingTranscription}
           onRefresh={() => mutateTranscription()}
+          speakerNames={speakerNames}
+          onSaveSpeakerNames={handleSaveSpeakerNames}
         />
       )}
 

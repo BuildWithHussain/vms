@@ -1,6 +1,15 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { SubtitleIcon, Refresh01Icon, Search01Icon, Cancel01Icon, ArrowUp01Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons"
+import {
+  SubtitleIcon,
+  Refresh01Icon,
+  Search01Icon,
+  Cancel01Icon,
+  ArrowUp01Icon,
+  ArrowDown01Icon,
+  PencilEdit01Icon,
+  Tick01Icon,
+} from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Spinner } from "@/components/ui/spinner"
@@ -11,6 +20,11 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 interface TranscriptionSheetProps {
   open: boolean
@@ -20,6 +34,8 @@ interface TranscriptionSheetProps {
   onTranscribe: () => Promise<void>
   isTranscribing: boolean
   onRefresh: () => void
+  speakerNames?: Record<string, string>
+  onSaveSpeakerNames?: (names: Record<string, string>) => void
 }
 
 export function TranscriptionSheet({
@@ -30,12 +46,23 @@ export function TranscriptionSheet({
   onTranscribe,
   isTranscribing,
   onRefresh,
+  speakerNames = {},
+  onSaveSpeakerNames,
 }: TranscriptionSheetProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [currentMatch, setCurrentMatch] = useState(0)
   const [searchOpen, setSearchOpen] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Detect unique speakers from the markdown
+  const detectedSpeakers = useMemo(() => {
+    if (!transcriptionText) return []
+    const matches = transcriptionText.match(/\*\*Speaker (\d+):\*\*/g)
+    if (!matches) return []
+    const nums = [...new Set(matches.map((m) => m.match(/\d+/)![0]))]
+    return nums.sort((a, b) => parseInt(a) - parseInt(b))
+  }, [transcriptionText])
 
   const matchCount = useMemo(() => {
     if (!searchQuery || !transcriptionText) return 0
@@ -44,8 +71,8 @@ export function TranscriptionSheet({
   }, [searchQuery, transcriptionText])
 
   const formattedHtml = useMemo(() => {
-    return formatTranscription(transcriptionText, searchQuery, currentMatch)
-  }, [transcriptionText, searchQuery, currentMatch])
+    return formatTranscription(transcriptionText, speakerNames, searchQuery, currentMatch)
+  }, [transcriptionText, speakerNames, searchQuery, currentMatch])
 
   const scrollToMatch = useCallback((index: number) => {
     if (!contentRef.current) return
@@ -57,7 +84,6 @@ export function TranscriptionSheet({
 
   const goToMatch = useCallback((index: number) => {
     setCurrentMatch(index)
-    // scroll after render
     setTimeout(() => scrollToMatch(index), 50)
   }, [scrollToMatch])
 
@@ -84,19 +110,16 @@ export function TranscriptionSheet({
     }
   }, [handleNextMatch, handlePrevMatch])
 
-  // Reset match index when query changes
   useEffect(() => {
     setCurrentMatch(0)
   }, [searchQuery])
 
-  // Focus search input when opened
   useEffect(() => {
     if (searchOpen) {
       setTimeout(() => inputRef.current?.focus(), 100)
     }
   }, [searchOpen])
 
-  // Reset search when sheet closes
   useEffect(() => {
     if (!open) {
       setSearchOpen(false)
@@ -105,7 +128,19 @@ export function TranscriptionSheet({
     }
   }, [open])
 
+  const handleRenameSpeaker = useCallback((speakerNum: string, newName: string) => {
+    if (!onSaveSpeakerNames) return
+    const updated = { ...speakerNames }
+    if (newName.trim()) {
+      updated[speakerNum] = newName.trim()
+    } else {
+      delete updated[speakerNum]
+    }
+    onSaveSpeakerNames(updated)
+  }, [speakerNames, onSaveSpeakerNames])
+
   const isComplete = transcriptionStatus === "Complete" && transcriptionText
+  const hasSpeakers = detectedSpeakers.length > 0
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -183,6 +218,14 @@ export function TranscriptionSheet({
                 </div>
               )}
 
+              {hasSpeakers && (
+                <SpeakerList
+                  speakers={detectedSpeakers}
+                  speakerNames={speakerNames}
+                  onRename={handleRenameSpeaker}
+                />
+              )}
+
               <div
                 ref={contentRef}
                 className="prose prose-sm max-w-none text-sm leading-relaxed text-foreground"
@@ -238,6 +281,93 @@ export function TranscriptionSheet({
   )
 }
 
+function SpeakerList({
+  speakers,
+  speakerNames,
+  onRename,
+}: {
+  speakers: string[]
+  speakerNames: Record<string, string>
+  onRename: (speakerNum: string, newName: string) => void
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 rounded-md border bg-muted/30 px-3 py-2">
+      <span className="text-xs font-medium text-muted-foreground mr-1">Speakers:</span>
+      {speakers.map((num) => (
+        <SpeakerChip
+          key={num}
+          speakerNum={num}
+          displayName={speakerNames[num]}
+          onRename={(name) => onRename(num, name)}
+        />
+      ))}
+    </div>
+  )
+}
+
+function SpeakerChip({
+  speakerNum,
+  displayName,
+  onRename,
+}: {
+  speakerNum: string
+  displayName?: string
+  onRename: (name: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [editValue, setEditValue] = useState("")
+  const editInputRef = useRef<HTMLInputElement>(null)
+  const colorIdx = (parseInt(speakerNum) - 1) % SPEAKER_COLORS.length
+  const colorClass = SPEAKER_COLORS[colorIdx]
+  const bgClass = SPEAKER_BG_COLORS[colorIdx]
+
+  useEffect(() => {
+    if (open) {
+      setEditValue(displayName || "")
+      setTimeout(() => editInputRef.current?.focus(), 50)
+    }
+  }, [open, displayName])
+
+  const handleSave = () => {
+    onRename(editValue)
+    setOpen(false)
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-colors hover:opacity-80 ${bgClass} ${colorClass}`}
+        >
+          {displayName || `Speaker ${speakerNum}`}
+          <HugeiconsIcon icon={PencilEdit01Icon} size={10} strokeWidth={2} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-2" align="start">
+        <div className="flex items-center gap-1.5">
+          <Input
+            ref={editInputRef}
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSave()
+              if (e.key === "Escape") setOpen(false)
+            }}
+            placeholder={`Speaker ${speakerNum}`}
+            className="h-7 text-xs"
+          />
+          <Button variant="ghost" size="icon-sm" onClick={handleSave}>
+            <HugeiconsIcon icon={Tick01Icon} size={14} strokeWidth={2} />
+          </Button>
+        </div>
+        <p className="mt-1 text-[10px] text-muted-foreground">
+          Clear to reset to default
+        </p>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
@@ -255,29 +385,40 @@ const SPEAKER_COLORS = [
   "text-cyan-600 dark:text-cyan-400",
 ]
 
-function formatTranscription(markdown: string, searchQuery?: string, currentMatch?: number): string {
+const SPEAKER_BG_COLORS = [
+  "bg-blue-50 dark:bg-blue-950/50",
+  "bg-emerald-50 dark:bg-emerald-950/50",
+  "bg-violet-50 dark:bg-violet-950/50",
+  "bg-amber-50 dark:bg-amber-950/50",
+  "bg-rose-50 dark:bg-rose-950/50",
+  "bg-cyan-50 dark:bg-cyan-950/50",
+]
+
+function formatTranscription(
+  markdown: string,
+  speakerNames: Record<string, string>,
+  searchQuery?: string,
+  currentMatch?: number,
+): string {
   if (!markdown) return ""
 
-  // Split into timestamp tokens, speaker tokens, and text segments
   const parts = markdown.split(/(\*\*\[\d{2}:\d{2}(?::\d{2})?\]\*\*|\*\*Speaker \d+:\*\*)/)
 
   let matchIndex = 0
   const html = parts.map((part) => {
-    // Timestamp token → styled span
     const tsMatch = part.match(/^\*\*\[(\d{2}:\d{2}(?::\d{2})?)\]\*\*$/)
     if (tsMatch) {
       return `<span class="font-mono text-xs text-primary font-medium">[${escapeHtml(tsMatch[1])}]</span>`
     }
 
-    // Speaker label → colored badge
     const speakerMatch = part.match(/^\*\*Speaker (\d+):\*\*$/)
     if (speakerMatch) {
       const speakerNum = parseInt(speakerMatch[1], 10)
       const colorClass = SPEAKER_COLORS[(speakerNum - 1) % SPEAKER_COLORS.length]
-      return `<span class="text-xs font-semibold ${colorClass}">Speaker ${speakerNum}:</span>`
+      const label = speakerNames[String(speakerNum)] || `Speaker ${speakerNum}`
+      return `<span class="text-xs font-semibold ${colorClass}">${escapeHtml(label)}:</span>`
     }
 
-    // Regular text — escape HTML first, then highlight search matches
     let text = escapeHtml(part)
 
     if (searchQuery) {

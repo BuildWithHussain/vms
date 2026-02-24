@@ -409,14 +409,28 @@ def get_transcription(asset_name: str):
 	data = frappe.db.get_value(
 		"VMS Asset",
 		asset_name,
-		["transcription_status", "transcription"],
+		["transcription_status", "transcription", "speaker_names"],
 		as_dict=True,
 	)
 
 	return {
 		"transcription_status": data.transcription_status or "",
 		"transcription": data.transcription or "",
+		"speaker_names": frappe.parse_json(data.speaker_names) if data.speaker_names else {},
 	}
+
+
+@frappe.whitelist(methods=["POST"])
+def save_speaker_names(asset_name: str, speaker_names: dict | str):
+	"""Save custom speaker name mappings for an asset's transcription."""
+	if not frappe.db.exists("VMS Asset", asset_name):
+		frappe.throw(_("Asset {0} does not exist").format(asset_name))
+
+	if isinstance(speaker_names, str):
+		speaker_names = frappe.parse_json(speaker_names)
+
+	frappe.db.set_value("VMS Asset", asset_name, "speaker_names", frappe.as_json(speaker_names))
+	return {"status": "ok"}
 
 
 def process_transcription(asset_name: str):
