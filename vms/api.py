@@ -1,4 +1,5 @@
 import json
+import uuid
 
 import frappe
 import requests
@@ -1137,3 +1138,161 @@ def reset_setup():
 	settings.save(ignore_permissions=True)
 	frappe.db.commit()
 	return {"status": "ok"}
+
+
+# ── Project Sharing ──────────────────────────────────────────────────────────
+
+
+@frappe.whitelist()
+def enable_project_sharing(project: str):
+	"""Generate a share token for a project and return the public URL."""
+	doc = frappe.get_doc("VMS Project", project)
+	if not doc.share_token:
+		doc.share_token = uuid.uuid4().hex
+		doc.save(ignore_permissions=True)
+
+	site_url = frappe.utils.get_url()
+	return {
+		"share_token": doc.share_token,
+		"share_url": f"{site_url}/vms/shared/{project}?token={doc.share_token}",
+	}
+
+
+@frappe.whitelist()
+def disable_project_sharing(project: str):
+	"""Remove the share token, revoking all public links."""
+	doc = frappe.get_doc("VMS Project", project)
+	doc.share_token = None
+	doc.save(ignore_permissions=True)
+	return {"status": "ok"}
+
+
+def _validate_project_token(project_name, token):
+	"""Validate guest access via project share token.
+
+	Returns True if guest access is valid, False if user is authenticated.
+	Raises AuthenticationError if guest access is invalid.
+	"""
+	if frappe.session.user and frappe.session.user != "Guest":
+		return False
+
+	if not token:
+		frappe.throw(_("Authentication required"), frappe.AuthenticationError)
+
+	result = frappe.db.get_value(
+		"VMS Project",
+		project_name,
+		["share_token"],
+		as_dict=True,
+	)
+
+	if not result or not result.share_token or result.share_token != token:
+		frappe.throw(_("Invalid or expired share link"), frappe.AuthenticationError)
+
+	return True
+
+
+@frappe.whitelist(allow_guest=True, methods=["GET"])
+def get_shared_project(project: str, token: str | None = None):
+	"""Get project info for a shared project (guest-accessible)."""
+	_validate_project_token(project, token)
+
+	doc = frappe.db.get_value(
+		"VMS Project",
+		project,
+		["name", "project_name", "status", "description", "thumbnail_url"],
+		as_dict=True,
+	)
+	if not doc:
+		frappe.throw(_("Project not found"), frappe.DoesNotExistError)
+
+	return doc
+
+
+@frappe.whitelist(allow_guest=True, methods=["GET"])
+def get_shared_project_assets(project: str, token: str | None = None, page=1, page_size=20):
+	"""Get assets for a shared project (guest-accessible, paginated)."""
+	_validate_project_token(project, token)
+
+	# Verify project still has sharing enabled
+	share_token = frappe.db.get_value("VMS Project", project, "share_token")
+	if not share_token:
+		frappe.throw(_("This project is no longer shared"), frappe.AuthenticationError)
+
+	page = max(1, int(page))
+	page_size = min(100, max(1, int(page_size)))
+	start = (page - 1) * page_size
+
+	filters = {"project": project, "status": ["!=", "Uploading"], "deleted_at": ["is", "not set"]}
+
+	total = frappe.db.count("VMS Asset", filters=filters)
+
+	assets = frappe.get_all(
+		"VMS Asset",
+		filters=filters,
+		fields=[
+			"name",
+			"file_name",
+			"category",
+			"file_size",
+			"file_type",
+			"uploaded_at",
+			"creation",
+			"thumbnail_url",
+		],
+		order_by="creation desc",
+		start=start,
+		page_length=page_size,
+	)
+
+	return {
+		"assets": assets,
+		"total": total,
+		"page": page,
+		"page_size": page_size,
+		"total_pages": -(-total // page_size) if total else 0,
+	}
+
+
+@frappe.whitelist(allow_guest=True)
+def get_shared_asset_view_url(asset_name: str, project: str, token: str | None = None):
+	"""Get a presigned view URL for an asset in a shared project (guest-accessible)."""
+	_validate_project_token(project, token)
+
+	asset = frappe.db.get_value(
+		"VMS Asset",
+		asset_name,
+		["r2_key", "project"],
+		as_dict=True,
+	)
+
+	if not asset or asset.project != project:
+		frappe.throw(_("Asset not found in this project"), frappe.DoesNotExistError)
+
+	if not asset.r2_key:
+		frappe.throw(_("Asset has no R2 key"))
+
+	url = generate_presigned_view_url(asset.r2_key)
+	return {"url": url}
+
+
+@frappe.whitelist(allow_guest=True)
+def get_shared_asset_download_url(asset_name: str, project: str, token: str | None = None):
+	"""Get a presigned download URL for an asset in a shared project (guest-accessible)."""
+	_validate_project_token(project, token)
+
+	asset = frappe.db.get_value(
+		"VMS Asset",
+		asset_name,
+		["r2_key", "file_name", "project"],
+		as_dict=True,
+	)
+
+	if not asset or asset.project != project:
+		frappe.throw(_("Asset not found in this project"), frappe.DoesNotExistError)
+
+	if not asset.r2_key:
+		frappe.throw(_("Asset has no R2 key"))
+
+	url = generate_presigned_download_url(asset.r2_key, asset.file_name)
+	return {"url": url}

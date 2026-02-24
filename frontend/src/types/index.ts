@@ -6,6 +6,7 @@ export interface VMSProject {
   owner_user: string
   due_date?: string
   thumbnail_url?: string
+  share_token?: string | null
   creation: string
   modified: string
 }

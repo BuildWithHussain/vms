@@ -13,7 +13,9 @@
   "due_date",
   "section_break_1",
   "description",
-  "thumbnail_url"
+  "thumbnail_url",
+  "share_section",
+  "share_token"
  ],
  "fields": [
   {
@@ -70,6 +72,19 @@
    "fieldtype": "Data",
    "label": "Thumbnail URL",
    "hidden": 1
+  },
+  {
+   "fieldname": "share_section",
+   "fieldtype": "Section Break",
+   "hidden": 1
+  },
+  {
+   "fieldname": "share_token",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Share Token",
+   "read_only": 1,
+   "unique": 1
   }
  ],
  "links": [],

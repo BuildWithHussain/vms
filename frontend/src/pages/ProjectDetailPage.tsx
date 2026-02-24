@@ -17,6 +17,7 @@ import {
   ListViewIcon,
   Copy01Icon,
   PencilEdit01Icon,
+  Share01Icon,
 } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { formatBytes } from "@/lib/utils"
@@ -88,8 +89,10 @@ export function ProjectDetailPage() {
   const { call: callTogglePublicReview } = useFrappePostCall("vms.review_api.toggle_public_review")
   const { call: callDeleteFolder } = useFrappePostCall("vms.api.delete_folder")
   const { call: callMoveToFolder } = useFrappePostCall("vms.api.move_assets_to_folder")
+  const { call: callEnableSharing } = useFrappePostCall("vms.api.enable_project_sharing")
+  const { call: callDisableSharing } = useFrappePostCall("vms.api.disable_project_sharing")
 
-  const { data: project } = useFrappeGetDoc<VMSProject>(
+  const { data: project, mutate: mutateProject } = useFrappeGetDoc<VMSProject>(
     "VMS Project",
     projectId!
   )
@@ -296,6 +299,12 @@ export function ProjectDetailPage() {
           <div className="flex items-center gap-3">
             <h1 className="truncate text-xl font-bold md:text-2xl">{project.project_name}</h1>
             <Badge variant="outline" className="shrink-0">{project.status}</Badge>
+            <ProjectSharePopover
+              project={project}
+              onEnable={callEnableSharing}
+              onDisable={callDisableSharing}
+              onMutate={mutateProject}
+            />
           </div>
           <p className="truncate text-sm text-muted-foreground">{project.name}</p>
         </div>
@@ -689,6 +698,92 @@ function SharePopover({
           )}
           {isPublic && !shareUrl && (
             <p className="text-xs text-muted-foreground">Generating link...</p>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function ProjectSharePopover({
+  project,
+  onEnable,
+  onDisable,
+  onMutate,
+}: {
+  project: VMSProject
+  onEnable: (args: { project: string }) => Promise<{ message: { share_token: string; share_url: string } }>
+  onDisable: (args: { project: string }) => Promise<unknown>
+  onMutate: () => void
+}) {
+  const [toggling, setToggling] = useState(false)
+  const isShared = !!project.share_token
+
+  const shareUrl = project.share_token
+    ? `${window.location.origin}/vms/shared/${project.name}?token=${project.share_token}`
+    : ""
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      toast.success("Link copied to clipboard")
+    } catch {
+      toast.error("Failed to copy link")
+    }
+  }
+
+  const handleToggle = async (checked: boolean) => {
+    setToggling(true)
+    try {
+      if (checked) {
+        await onEnable({ project: project.name })
+      } else {
+        await onDisable({ project: project.name })
+      }
+      onMutate()
+    } catch {
+      toast.error("Failed to update sharing")
+    } finally {
+      setToggling(false)
+    }
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger
+        className={buttonVariants({ variant: "ghost", size: "icon-sm", className: isShared ? "text-primary" : "" })}
+        title="Share project"
+      >
+        <HugeiconsIcon icon={Share01Icon} strokeWidth={2} size={16} />
+      </PopoverTrigger>
+      <PopoverContent className="w-80" align="start">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="project-share-toggle" className="text-sm font-medium">
+              Public share link
+            </Label>
+            <Switch
+              id="project-share-toggle"
+              checked={isShared}
+              onCheckedChange={handleToggle}
+              disabled={toggling}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Anyone with this link can view all assets in this project.
+          </p>
+          {isShared && shareUrl && (
+            <div className="flex items-center gap-2">
+              <Input
+                value={shareUrl}
+                readOnly
+                className="text-xs"
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+              />
+              <Button variant="outline" size="icon-sm" onClick={handleCopy}>
+                <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} size={14} />
+              </Button>
+            </div>
           )}
         </div>
       </PopoverContent>
