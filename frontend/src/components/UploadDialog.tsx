@@ -201,7 +201,7 @@ export function UploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Upload Assets</DialogTitle>
           <DialogDescription>
@@ -211,7 +211,7 @@ export function UploadDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
           <div className="space-y-2">
             <Label>Category</Label>
             <Select value={category} onValueChange={setCategory} disabled={isUploading}>
@@ -352,7 +352,7 @@ export function UploadDialog({
 
           {/* File list */}
           {files.length > 0 && (
-            <div className="max-h-60 space-y-2 overflow-y-auto">
+            <div className="space-y-2">
               {files.map((item) => (
                 <FileRow key={item.id} item={item} onCancel={cancelFile} onRetry={retryFile} />
               ))}
