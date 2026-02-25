@@ -11,10 +11,16 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select"
 import { Tag, TagInput } from "emblor"
 import { cn } from "@/lib/utils"
+
+const RETENTION_LABELS: Record<string, string> = {
+  "0": "Never",
+  "7": "7 days",
+  "14": "14 days",
+  "30": "30 days",
+}
 
 interface VMSSettings {
   name: string
@@ -408,7 +414,9 @@ export function GeneralSection() {
                 onValueChange={setTrashRetentionDays}
               >
                 <SelectTrigger className="w-36">
-                  <SelectValue />
+                  <span className="flex flex-1 text-left" data-slot="select-value">
+                    {RETENTION_LABELS[trashRetentionDays] ?? trashRetentionDays}
+                  </span>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="0">Never</SelectItem>
@@ -440,7 +448,9 @@ export function GeneralSection() {
                 onValueChange={setToolsRetentionDays}
               >
                 <SelectTrigger className="w-36">
-                  <SelectValue />
+                  <span className="flex flex-1 text-left" data-slot="select-value">
+                    {RETENTION_LABELS[toolsRetentionDays] ?? toolsRetentionDays}
+                  </span>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="0">Never</SelectItem>
