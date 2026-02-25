@@ -28,6 +28,7 @@ export function DeleteAssetDialog({
   const [deleting, setDeleting] = useState(false)
 
   const { call: deleteAsset } = useFrappePostCall("vms.api.delete_asset")
+  const { call: restoreAsset } = useFrappePostCall("vms.api.restore_asset")
 
   const handleDelete = async () => {
     setDeleting(true)
@@ -35,9 +36,25 @@ export function DeleteAssetDialog({
       for (const assetName of assetNames) {
         await deleteAsset({ asset_name: assetName })
       }
-      toast.success(
-        `Moved ${assetNames.length} asset${assetNames.length > 1 ? "s" : ""} to trash`
-      )
+      const count = assetNames.length
+      const names = [...assetNames]
+      toast(`Moved ${count} asset${count > 1 ? "s" : ""} to trash`, {
+        duration: 5000,
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            try {
+              for (const name of names) {
+                await restoreAsset({ asset_name: name })
+              }
+              toast.success(`Restored ${count} asset${count > 1 ? "s" : ""}`)
+              onComplete?.()
+            } catch {
+              toast.error("Failed to restore")
+            }
+          },
+        },
+      })
       onOpenChange(false)
       onComplete?.()
     } catch (e: unknown) {

@@ -30,12 +30,28 @@ export function DeleteFolderDialog({
   const [deleting, setDeleting] = useState(false)
 
   const { call: deleteFolder } = useFrappePostCall("vms.api.delete_folder")
+  const { call: restoreFolder } = useFrappePostCall("vms.api.restore_folder")
 
   const handleDelete = async () => {
     setDeleting(true)
     try {
       await deleteFolder({ folder_name: folderName })
-      toast.success("Folder moved to trash")
+      const name = folderName
+      toast("Folder moved to trash", {
+        duration: 5000,
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            try {
+              await restoreFolder({ folder_name: name })
+              toast.success("Folder restored")
+              onComplete?.()
+            } catch {
+              toast.error("Failed to restore folder")
+            }
+          },
+        },
+      })
       onOpenChange(false)
       onComplete?.()
     } catch (e: unknown) {
