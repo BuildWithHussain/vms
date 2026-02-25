@@ -15,6 +15,7 @@ import {
   GridViewIcon,
   ListViewIcon,
   Copy01Icon,
+  MoreVerticalIcon,
   PencilEdit01Icon,
   Share01Icon,
 } from "@hugeicons/core-free-icons"
@@ -27,6 +28,20 @@ import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { AssetDropdownMenu, AssetContextMenu } from "@/components/AssetCardMenu"
 import type { AssetMenuActions } from "@/components/AssetCardMenu"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   Card,
@@ -83,6 +98,9 @@ export function ProjectDetailPage() {
   const [deleteFolderOpen, setDeleteFolderOpen] = useState(false)
   const [droppedFiles, setDroppedFiles] = useState<File[]>([])
   const [previewAsset, setPreviewAsset] = useState<VMSAsset | null>(null)
+  const [folderToAction, setFolderToAction] = useState<VMSFolder | null>(null)
+  const [cardRenameFolderOpen, setCardRenameFolderOpen] = useState(false)
+  const [cardDeleteFolderOpen, setCardDeleteFolderOpen] = useState(false)
   const [view, setView] = useState<"list" | "grid">("grid")
   const { selected, toggleSelect, toggleSelectAll, clearSelection } = useSelection()
   const [activeTab, setActiveTab] = useState("all")
@@ -325,6 +343,28 @@ export function ProjectDetailPage() {
     },
     [handleTogglePublicReview],
   )
+
+  const handleCardFolderRename = useCallback((folder: VMSFolder) => {
+    setFolderToAction(folder)
+    setCardRenameFolderOpen(true)
+  }, [])
+
+  const handleCardFolderDelete = useCallback((folder: VMSFolder) => {
+    setFolderToAction(folder)
+    setCardDeleteFolderOpen(true)
+  }, [])
+
+  const handleCardFolderRenameComplete = () => {
+    mutateFolders()
+    mutateAssets()
+    setFolderToAction(null)
+  }
+
+  const handleCardFolderDeleteComplete = () => {
+    mutateFolders()
+    mutateAssets()
+    setFolderToAction(null)
+  }
 
   if (!project) {
     return (
@@ -576,6 +616,8 @@ export function ProjectDetailPage() {
             onToggleSharing={handleMenuToggleSharing}
             folders={currentFolder ? undefined : folders ?? undefined}
             onFolderClick={handleFolderClick}
+            onFolderRename={currentFolder ? undefined : handleCardFolderRename}
+            onFolderDelete={currentFolder ? undefined : handleCardFolderDelete}
             onDropToFolder={currentFolder ? undefined : handleDropToFolder}
             draggable={(folders ?? []).length > 0 || !!currentFolder}
             isLoading={isLoadingFolder}
@@ -748,6 +790,25 @@ export function ProjectDetailPage() {
         </>
       )}
 
+      {folderToAction && (
+        <>
+          <RenameFolderDialog
+            open={cardRenameFolderOpen}
+            onOpenChange={setCardRenameFolderOpen}
+            folderName={folderToAction.name}
+            folderDisplayName={folderToAction.folder_name}
+            onComplete={handleCardFolderRenameComplete}
+          />
+          <DeleteFolderDialog
+            open={cardDeleteFolderOpen}
+            onOpenChange={setCardDeleteFolderOpen}
+            folderName={folderToAction.name}
+            folderDisplayName={folderToAction.folder_name}
+            onComplete={handleCardFolderDeleteComplete}
+          />
+        </>
+      )}
+
       <MoveToFolderDialog
         open={moveToFolderOpen}
         onOpenChange={setMoveToFolderOpen}
@@ -852,11 +913,15 @@ function FolderCard({
   view,
   onClick,
   onDrop,
+  onRename,
+  onDelete,
 }: {
   folder: VMSFolder
   view: "list" | "grid"
   onClick: () => void
   onDrop?: (assetNames: string[]) => void
+  onRename?: () => void
+  onDelete?: () => void
 }) {
   const [dragOver, setDragOver] = useState(false)
 
@@ -891,8 +956,53 @@ function FolderCard({
 
   const dropHighlight = dragOver ? "ring-2 ring-primary bg-primary/5" : ""
 
+  const hasMenu = !!onRename || !!onDelete
+
+  const menuContent = hasMenu ? (
+    <>
+      {onRename && (
+        <ContextMenuItem onClick={(e) => { e.stopPropagation(); onRename() }}>
+          <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={2} />
+          Rename
+        </ContextMenuItem>
+      )}
+      {onRename && onDelete && <ContextMenuSeparator />}
+      {onDelete && (
+        <ContextMenuItem variant="destructive" onClick={(e) => { e.stopPropagation(); onDelete() }}>
+          <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+          Delete
+        </ContextMenuItem>
+      )}
+    </>
+  ) : null
+
+  const dropdownMenu = hasMenu ? (
+    <div onClick={(e) => e.stopPropagation()}>
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" />}>
+          <HugeiconsIcon icon={MoreVerticalIcon} size={16} strokeWidth={2} />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+          {onRename && (
+            <DropdownMenuItem onClick={onRename}>
+              <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={2} />
+              Rename
+            </DropdownMenuItem>
+          )}
+          {onRename && onDelete && <DropdownMenuSeparator />}
+          {onDelete && (
+            <DropdownMenuItem variant="destructive" onClick={onDelete}>
+              <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+              Delete
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  ) : null
+
   if (view === "list") {
-    return (
+    const listCard = (
       <Card
         size="sm"
         className={`cursor-pointer transition-shadow hover:shadow-md ${dropHighlight}`}
@@ -900,20 +1010,36 @@ function FolderCard({
         {...dropProps}
       >
         <CardHeader>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-16 shrink-0 items-center justify-center rounded bg-muted">
               <HugeiconsIcon icon={Folder02Icon} size={20} strokeWidth={1.5} className="text-muted-foreground" />
             </div>
-            <CardTitle className="truncate text-sm">
-              {folder.folder_name}
-            </CardTitle>
+            <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+              <CardTitle className="truncate text-sm">
+                {folder.folder_name}
+              </CardTitle>
+              {dropdownMenu}
+            </div>
           </div>
         </CardHeader>
       </Card>
     )
+
+    if (!hasMenu) return listCard
+
+    return (
+      <ContextMenu>
+        <ContextMenuTrigger className="flex flex-col">
+          {listCard}
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          {menuContent}
+        </ContextMenuContent>
+      </ContextMenu>
+    )
   }
 
-  return (
+  const gridCard = (
     <Card
       className={`flex cursor-pointer flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md ${dropHighlight}`}
       onClick={onClick}
@@ -923,11 +1049,27 @@ function FolderCard({
         <HugeiconsIcon icon={Folder02Icon} size={48} strokeWidth={1.5} className="text-muted-foreground/40" />
       </div>
       <CardHeader>
-        <CardTitle className="truncate text-sm">
-          {folder.folder_name}
-        </CardTitle>
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <CardTitle className="truncate text-sm">
+            {folder.folder_name}
+          </CardTitle>
+          {dropdownMenu}
+        </div>
       </CardHeader>
     </Card>
+  )
+
+  if (!hasMenu) return gridCard
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger className="flex flex-col">
+        {gridCard}
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        {menuContent}
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }
 
@@ -1046,6 +1188,8 @@ function AssetList({
   emptyMessage,
   folders,
   onFolderClick,
+  onFolderRename,
+  onFolderDelete,
   onDropToFolder,
   draggable: canDragProp,
   isLoading,
@@ -1068,6 +1212,8 @@ function AssetList({
   emptyMessage: React.ReactNode
   folders?: VMSFolder[]
   onFolderClick?: (folderName: string) => void
+  onFolderRename?: (folder: VMSFolder) => void
+  onFolderDelete?: (folder: VMSFolder) => void
   onDropToFolder?: (assetNames: string[], folderName: string) => void
   draggable?: boolean
   isLoading?: boolean
@@ -1189,6 +1335,8 @@ function AssetList({
               view="list"
               onClick={() => onFolderClick?.(folder.name)}
               onDrop={onDropToFolder ? (names) => onDropToFolder(names, folder.name) : undefined}
+              onRename={onFolderRename ? () => onFolderRename(folder) : undefined}
+              onDelete={onFolderDelete ? () => onFolderDelete(folder) : undefined}
             />
           ))}
           {items.map((asset) => (
@@ -1276,6 +1424,8 @@ function AssetList({
               view="grid"
               onClick={() => onFolderClick?.(folder.name)}
               onDrop={onDropToFolder ? (names) => onDropToFolder(names, folder.name) : undefined}
+              onRename={onFolderRename ? () => onFolderRename(folder) : undefined}
+              onDelete={onFolderDelete ? () => onFolderDelete(folder) : undefined}
             />
           ))}
           {items.map((asset) => (
