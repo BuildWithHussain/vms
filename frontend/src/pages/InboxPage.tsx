@@ -290,7 +290,7 @@ export function UncategorisedPage() {
                     onClick={() => handleAssetClick(asset)}
                   >
                     <CardHeader>
-                      <div className="flex items-center gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
                         <div onClick={(e) => e.stopPropagation()}>
                           <Checkbox
                             checked={selected.has(asset.name)}
@@ -306,7 +306,7 @@ export function UncategorisedPage() {
                             </div>
                           )}
                         </div>
-                        <div className="flex flex-1 items-center justify-between gap-2 overflow-hidden">
+                        <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
                           <CardTitle className="truncate text-sm">
                             {asset.file_name}
                           </CardTitle>
@@ -368,7 +368,7 @@ export function UncategorisedPage() {
                       )}
                     </div>
                     <CardHeader>
-                      <div className="flex items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center justify-between gap-2">
                         <div className="flex min-w-0 items-start gap-2">
                           <div onClick={(e) => e.stopPropagation()} className="mt-0.5">
                             <Checkbox
