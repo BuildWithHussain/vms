@@ -15,6 +15,10 @@ export interface VMSFolder {
   name: string
   folder_name: string
   project: string
+  deleted_at?: string | null
+  deleted_by?: string | null
+  deleter_name?: string
+  project_name?: string
   creation: string
   modified: string
 }
@@ -62,7 +66,7 @@ export interface ConfirmUploadResponse {
 
 export interface VMSAuditLog {
   name: string
-  action: "Download" | "Delete" | "Rename"
+  action: "Download" | "Delete" | "Permanent Delete" | "Rename" | "Restore"
   asset_name: string
   user: string
   timestamp: string

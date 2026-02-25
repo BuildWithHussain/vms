@@ -6,11 +6,9 @@ import requests
 from frappe import _
 
 from vms.r2 import (
-	abort_multipart_upload,
 	complete_multipart_upload,
 	configure_bucket_cors,
 	create_multipart_upload,
-	delete_r2_object,
 	generate_presigned_download_url,
 	generate_presigned_part_url,
 	generate_presigned_upload_url,
@@ -68,12 +66,9 @@ def get_bucket_usage():
 @frappe.whitelist()
 def fail_upload(asset_name: str):
 	"""Mark an asset as Failed and delete the record."""
-	if not frappe.db.exists("VMS Asset", asset_name):
-		return {"status": "ok"}
+	from vms.deletion import cleanup_failed_upload
 
-	asset = frappe.get_doc("VMS Asset", asset_name)
-	if asset.status == "Uploading":
-		asset.delete(ignore_permissions=True)
+	cleanup_failed_upload(asset_name)
 	return {"status": "ok"}
 
 
@@ -221,17 +216,9 @@ def complete_multipart(asset_name: str, upload_id: str, parts: str | list):
 @frappe.whitelist()
 def abort_multipart(asset_name: str, upload_id: str):
 	"""Abort a multipart upload and clean up."""
-	if not frappe.db.exists("VMS Asset", asset_name):
-		return {"status": "ok"}
+	from vms.deletion import cleanup_aborted_multipart
 
-	asset = frappe.get_doc("VMS Asset", asset_name)
-	if asset.status == "Uploading":
-		try:
-			abort_multipart_upload(asset.r2_key, upload_id)
-		except Exception:
-			frappe.logger("vms").warning(f"Failed to abort multipart upload for {asset_name}")
-		asset.delete(ignore_permissions=True)
-
+	cleanup_aborted_multipart(asset_name, upload_id)
 	return {"status": "ok"}
 
 
@@ -333,24 +320,17 @@ def _create_audit_log(
 	project: str | None = None,
 	file_size: int | None = None,
 ):
-	"""Create an audit log entry. Never raises — failures are logged silently."""
-	try:
-		doc = frappe.get_doc(
-			{
-				"doctype": "VMS Audit Log",
-				"action": action,
-				"asset_name": asset_name,
-				"user": frappe.session.user,
-				"timestamp": frappe.utils.now_datetime(),
-				"file_name": file_name,
-				"file_type": file_type,
-				"project": project,
-				"file_size": file_size,
-			}
-		)
-		doc.insert(ignore_permissions=True)
-	except Exception:
-		frappe.logger("vms").warning(f"Failed to create audit log for {action} on {asset_name}")
+	"""Create an audit log entry. Delegates to deletion module."""
+	from vms.deletion import _create_audit_log as _audit
+
+	_audit(
+		action=action,
+		asset_name=asset_name,
+		file_name=file_name,
+		file_type=file_type,
+		project=project,
+		file_size=file_size,
+	)
 
 
 @frappe.whitelist()
@@ -411,8 +391,10 @@ def create_folder(folder_name: str, project: str):
 	if not frappe.db.exists("VMS Project", project):
 		frappe.throw(_("Project {0} does not exist").format(project))
 
-	# Check for duplicate folder name in the same project
-	existing = frappe.db.exists("VMS Folder", {"folder_name": folder_name, "project": project})
+	# Check for duplicate folder name in the same project (exclude trashed)
+	existing = frappe.db.exists(
+		"VMS Folder", {"folder_name": folder_name, "project": project, "deleted_at": ["is", "not set"]}
+	)
 	if existing:
 		frappe.throw(_("A folder named '{0}' already exists in this project").format(folder_name))
 
@@ -437,9 +419,10 @@ def rename_folder(folder_name_id: str, new_name: str):
 
 	folder = frappe.get_doc("VMS Folder", folder_name_id)
 
-	# Check for duplicate name in same project
+	# Check for duplicate name in same project (exclude trashed)
 	existing = frappe.db.exists(
-		"VMS Folder", {"folder_name": new_name, "project": folder.project, "name": ["!=", folder.name]}
+		"VMS Folder",
+		{"folder_name": new_name, "project": folder.project, "name": ["!=", folder.name], "deleted_at": ["is", "not set"]},
 	)
 	if existing:
 		frappe.throw(_("A folder named '{0}' already exists in this project").format(new_name))
@@ -452,20 +435,91 @@ def rename_folder(folder_name_id: str, new_name: str):
 
 @frappe.whitelist()
 def delete_folder(folder_name: str):
-	"""Delete a folder and move its assets back to the project root."""
-	folder = frappe.get_doc("VMS Folder", folder_name)
+	"""Soft-delete a folder (move to trash)."""
+	from vms.deletion import soft_delete_folder
 
-	# Move all assets in this folder back to project root (folder = None)
-	frappe.db.set_value(
-		"VMS Asset",
-		{"folder": folder_name},
-		"folder",
-		None,
-		update_modified=False,
+	soft_delete_folder(folder_name)
+	return {"status": "ok"}
+
+
+@frappe.whitelist()
+def restore_folder(folder_name: str):
+	"""Restore a folder from trash."""
+	from vms.deletion import restore_folder as _restore_folder
+
+	_restore_folder(folder_name)
+	return {"status": "ok"}
+
+
+@frappe.whitelist()
+def permanently_delete_folder(folder_name: str):
+	"""Permanently delete a trashed folder."""
+	from vms.deletion import hard_delete_folder
+
+	hard_delete_folder(folder_name)
+	return {"status": "ok"}
+
+
+@frappe.whitelist(methods=["GET"])
+def get_trash_folders(page=1, page_size=20):
+	"""Get paginated folders in trash (deleted_at is set)."""
+	page = max(1, int(page))
+	page_size = min(100, max(1, int(page_size)))
+	start = (page - 1) * page_size
+
+	filters = {"deleted_at": ["is", "set"]}
+
+	total = frappe.db.count("VMS Folder", filters=filters)
+
+	folders = frappe.get_all(
+		"VMS Folder",
+		filters=filters,
+		fields=[
+			"name",
+			"folder_name",
+			"project",
+			"deleted_at",
+			"deleted_by",
+		],
+		order_by="deleted_at desc",
+		start=start,
+		page_length=page_size,
 	)
 
-	folder.delete(ignore_permissions=True)
-	return {"status": "ok"}
+	# Enrich with user info
+	user_emails = list({f.deleted_by for f in folders if f.deleted_by})
+	user_map = {}
+	if user_emails:
+		users = frappe.get_all(
+			"User",
+			filters={"name": ["in", user_emails]},
+			fields=["name", "full_name", "user_image"],
+		)
+		user_map = {u.name: u for u in users}
+
+	# Enrich with project names
+	project_ids = list({f.project for f in folders if f.project})
+	project_map = {}
+	if project_ids:
+		projects = frappe.get_all(
+			"VMS Project",
+			filters={"name": ["in", project_ids]},
+			fields=["name", "project_name"],
+		)
+		project_map = {p.name: p.project_name for p in projects}
+
+	for folder in folders:
+		d = user_map.get(folder.deleted_by, {})
+		folder["deleter_name"] = d.get("full_name", folder.deleted_by)
+		folder["project_name"] = project_map.get(folder.project, folder.project)
+
+	return {
+		"folders": folders,
+		"total": total,
+		"page": page,
+		"page_size": page_size,
+		"total_pages": -(-total // page_size) if total else 0,
+	}
 
 
 @frappe.whitelist()
@@ -647,80 +701,10 @@ def get_vms_users():
 
 @frappe.whitelist()
 def delete_asset(asset_name: str):
-	"""Soft-delete an asset by moving it to trash.
+	"""Soft-delete an asset by moving it to trash."""
+	from vms.deletion import soft_delete_asset
 
-	If trash_retention_days is 0 in VMS Settings, performs a hard delete instead.
-	"""
-	settings = frappe.get_single("VMS Settings")
-	retention_days = int(settings.trash_retention_days or 7)
-
-	if retention_days == 0:
-		return _hard_delete_asset(asset_name)
-
-	asset = frappe.get_doc("VMS Asset", asset_name)
-	asset.deleted_at = frappe.utils.now_datetime()
-	asset.deleted_by = frappe.session.user
-	asset.save(ignore_permissions=True)
-
-	_create_audit_log(
-		action="Delete",
-		asset_name=asset_name,
-		file_name=asset.file_name,
-		file_type=asset.file_type,
-		project=asset.project,
-		file_size=asset.file_size,
-	)
-
-	return {"status": "ok"}
-
-
-def _hard_delete_asset(asset_name: str):
-	"""Permanently delete an asset and its R2 object(s)."""
-	asset = frappe.get_doc("VMS Asset", asset_name)
-	r2_key = asset.r2_key
-
-	audit_data = {
-		"file_name": asset.file_name,
-		"file_type": asset.file_type,
-		"project": asset.project,
-		"file_size": asset.file_size,
-	}
-
-	# Delete linked review comments
-	comments = frappe.get_all(
-		"VMS Review Comment",
-		filters={"asset": asset_name},
-		pluck="name",
-	)
-	for comment_name in comments:
-		frappe.delete_doc("VMS Review Comment", comment_name, ignore_permissions=True)
-
-	# Delete attached thumbnail File docs
-	thumbnail_files = frappe.get_all(
-		"File",
-		filters={
-			"attached_to_doctype": "VMS Asset",
-			"attached_to_name": asset_name,
-		},
-		pluck="name",
-	)
-	for file_name in thumbnail_files:
-		frappe.delete_doc("File", file_name, ignore_permissions=True)
-
-	asset.delete(ignore_permissions=True)
-
-	_create_audit_log(
-		action="Delete",
-		asset_name=asset_name,
-		**audit_data,
-	)
-
-	if r2_key:
-		try:
-			delete_r2_object(r2_key)
-		except Exception:
-			frappe.logger("vms").warning(f"R2 object {r2_key} not found or already deleted")
-
+	soft_delete_asset(asset_name)
 	return {"status": "ok"}
 
 
@@ -803,43 +787,28 @@ def get_trash_assets(page=1, page_size=20):
 @frappe.whitelist()
 def restore_asset(asset_name: str):
 	"""Restore an asset from trash."""
-	asset = frappe.get_doc("VMS Asset", asset_name)
-	if not asset.deleted_at:
-		frappe.throw(_("Asset is not in trash"))
+	from vms.deletion import restore_asset as _restore
 
-	asset.deleted_at = None
-	asset.deleted_by = None
-	asset.save(ignore_permissions=True)
-
+	_restore(asset_name)
 	return {"status": "ok"}
 
 
 @frappe.whitelist()
 def permanently_delete_asset(asset_name: str):
 	"""Permanently delete a trashed asset (hard delete)."""
-	asset = frappe.get_doc("VMS Asset", asset_name)
-	if not asset.deleted_at:
-		frappe.throw(_("Asset is not in trash. Use delete_asset to move it to trash first."))
+	from vms.deletion import hard_delete_asset
 
-	return _hard_delete_asset(asset_name)
+	hard_delete_asset(asset_name)
+	return {"status": "ok"}
 
 
 @frappe.whitelist()
 def empty_trash():
-	"""Permanently delete all assets in trash."""
-	trashed = frappe.get_all(
-		"VMS Asset",
-		filters={"deleted_at": ["is", "set"]},
-		pluck="name",
-	)
+	"""Permanently delete all assets and folders in trash."""
+	from vms.deletion import empty_all_trash
 
-	for asset_name in trashed:
-		try:
-			_hard_delete_asset(asset_name)
-		except Exception:
-			frappe.logger("vms").warning(f"Failed to hard-delete {asset_name} during empty_trash")
-
-	return {"status": "ok", "count": len(trashed)}
+	result = empty_all_trash()
+	return {"status": "ok", "count": result["asset_count"] + result["folder_count"]}
 
 
 @frappe.whitelist()

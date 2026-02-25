@@ -9,7 +9,11 @@
  "field_order": [
   "naming_series",
   "folder_name",
-  "project"
+  "project",
+  "section_break_trash",
+  "deleted_at",
+  "column_break_trash",
+  "deleted_by"
  ],
  "fields": [
   {
@@ -34,12 +38,34 @@
    "label": "Project",
    "options": "VMS Project",
    "reqd": 1
+  },
+  {
+   "fieldname": "section_break_trash",
+   "fieldtype": "Section Break",
+   "label": "Trash"
+  },
+  {
+   "fieldname": "deleted_at",
+   "fieldtype": "Datetime",
+   "label": "Deleted At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_trash",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "deleted_by",
+   "fieldtype": "Link",
+   "label": "Deleted By",
+   "options": "User",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-11 19:03:08.151559",
+ "modified": "2026-02-25 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Video Management Solution",
  "name": "VMS Folder",

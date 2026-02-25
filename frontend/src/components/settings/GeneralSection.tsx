@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Slider } from "@/components/ui/slider"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Tag, TagInput } from "emblor"
 import { cn } from "@/lib/utils"
 
@@ -20,8 +27,8 @@ interface VMSSettings {
   max_file_size: number
   presigned_url_expiry: number
   allowed_extensions: string
-  trash_retention_days: number
-  tools_retention_days: number
+  trash_retention_days: string
+  tools_retention_days: string
 }
 
 
@@ -45,12 +52,12 @@ export function GeneralSection() {
   const [customMBInput, setCustomMBInput] = useState("")
   const [extensionTags, setExtensionTags] = useState<Tag[]>([])
   const [activeTagIndex, setActiveTagIndex] = useState<number | null>(null)
-  const [trashRetentionDays, setTrashRetentionDays] = useState(7)
-  const [toolsRetentionDays, setToolsRetentionDays] = useState(7)
+  const [trashRetentionDays, setTrashRetentionDays] = useState("0")
+  const [toolsRetentionDays, setToolsRetentionDays] = useState("0")
   const initialMaxFileSizeMB = useRef(5 * 1024)
   const initialExtensionTags = useRef<Tag[]>([])
-  const initialTrashRetentionDays = useRef(7)
-  const initialToolsRetentionDays = useRef(7)
+  const initialTrashRetentionDays = useRef("0")
+  const initialToolsRetentionDays = useRef("0")
 
   useEffect(() => {
     if (data) {
@@ -82,12 +89,12 @@ export function GeneralSection() {
       initialExtensionTags.current = tags
 
       // Trash retention
-      const retention = data.trash_retention_days ?? 7
+      const retention = String(data.trash_retention_days ?? "0")
       setTrashRetentionDays(retention)
       initialTrashRetentionDays.current = retention
 
       // Tools retention
-      const toolsRetention = data.tools_retention_days ?? 7
+      const toolsRetention = String(data.tools_retention_days ?? "0")
       setToolsRetentionDays(toolsRetention)
       initialToolsRetentionDays.current = toolsRetention
     }
@@ -394,21 +401,24 @@ export function GeneralSection() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="trash_retention_days" className="text-xs">
-                Retention Period (days)
+                Auto-delete after
               </Label>
-              <Input
-                id="trash_retention_days"
-                type="number"
-                min={0}
-                max={365}
-                className="w-28"
+              <Select
                 value={trashRetentionDays}
-                onChange={(e) =>
-                  setTrashRetentionDays(Math.max(0, parseInt(e.target.value) || 0))
-                }
-              />
+                onValueChange={setTrashRetentionDays}
+              >
+                <SelectTrigger className="w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Never</SelectItem>
+                  <SelectItem value="7">7 days</SelectItem>
+                  <SelectItem value="14">14 days</SelectItem>
+                  <SelectItem value="30">30 days</SelectItem>
+                </SelectContent>
+              </Select>
               <p className="text-xs text-muted-foreground">
-                Default: 7 days. Set to 0 to disable trash (files are deleted immediately).
+                Automatically purge trashed items after this period. Default is Never (manual deletion only).
               </p>
             </div>
           </div>
@@ -423,21 +433,24 @@ export function GeneralSection() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="tools_retention_days" className="text-xs">
-                Output Retention (days)
+                Auto-delete after
               </Label>
-              <Input
-                id="tools_retention_days"
-                type="number"
-                min={0}
-                max={30}
-                className="w-28"
+              <Select
                 value={toolsRetentionDays}
-                onChange={(e) =>
-                  setToolsRetentionDays(Math.max(0, parseInt(e.target.value) || 0))
-                }
-              />
+                onValueChange={setToolsRetentionDays}
+              >
+                <SelectTrigger className="w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Never</SelectItem>
+                  <SelectItem value="7">7 days</SelectItem>
+                  <SelectItem value="14">14 days</SelectItem>
+                  <SelectItem value="30">30 days</SelectItem>
+                </SelectContent>
+              </Select>
               <p className="text-xs text-muted-foreground">
-                Default: 7 days. Set to 0 to delete immediately after processing.
+                Automatically delete tool output files after this period. Default is Never (manual deletion only).
               </p>
             </div>
           </div>

@@ -121,11 +121,12 @@
    "label": "Trash"
   },
   {
-   "default": "7",
-   "description": "Number of days to keep deleted files in trash before permanent deletion. Set to 0 to disable trash (immediate deletion).",
+   "default": "0",
+   "description": "Automatically purge trashed items after this many days. 0 means Never (manual deletion only).",
    "fieldname": "trash_retention_days",
-   "fieldtype": "Int",
-   "label": "Trash Retention (days)"
+   "fieldtype": "Select",
+   "label": "Auto-delete after",
+   "options": "0\n7\n14\n30"
   },
   {
    "fieldname": "tools_section",
@@ -133,11 +134,12 @@
    "label": "Tools"
   },
   {
-   "default": "7",
-   "description": "Number of days to keep compressed files before automatic deletion. Set to 0 to delete immediately after download.",
+   "default": "0",
+   "description": "Automatically delete tool output files after this many days. 0 means Never (manual deletion only).",
    "fieldname": "tools_retention_days",
-   "fieldtype": "Int",
-   "label": "Tools Output Retention (days)"
+   "fieldtype": "Select",
+   "label": "Auto-delete after",
+   "options": "0\n7\n14\n30"
   },
   {
    "fieldname": "transcription_section",
@@ -178,7 +180,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-02-09 10:21:40.740559",
+ "modified": "2026-02-25 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Video Management Solution",
  "name": "VMS Settings",

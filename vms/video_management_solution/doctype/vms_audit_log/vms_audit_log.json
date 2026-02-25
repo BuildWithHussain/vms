@@ -10,6 +10,7 @@
   "naming_series",
   "action",
   "asset_name",
+  "target_doctype",
   "column_break_1",
   "user",
   "timestamp",
@@ -34,15 +35,20 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Action",
-   "options": "Download\nDelete\nRename",
+   "options": "Download\nDelete\nPermanent Delete\nRename\nRestore",
    "reqd": 1
   },
   {
    "fieldname": "asset_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Asset Name",
-   "reqd": 1
+   "label": "Asset Name"
+  },
+  {
+   "fieldname": "target_doctype",
+   "fieldtype": "Data",
+   "label": "Target DocType",
+   "hidden": 1
   },
   {
    "fieldname": "column_break_1",
@@ -95,7 +101,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-02-10 16:50:55.486388",
+ "modified": "2026-02-25 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Video Management Solution",
  "name": "VMS Audit Log",

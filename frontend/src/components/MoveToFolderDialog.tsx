@@ -44,7 +44,7 @@ export function MoveToFolderDialog({
 
   const { data: folders } = useFrappeGetDocList<VMSFolder>("VMS Folder", {
     fields: ["name", "folder_name"],
-    filters: [["project", "=", project]],
+    filters: [["project", "=", project], ["deleted_at", "is", "not set"]],
     orderBy: { field: "folder_name", order: "asc" },
     limit: 100,
   })

@@ -18,7 +18,11 @@
   "is_resolved",
   "has_annotation",
   "annotation_data",
-  "is_edited"
+  "is_edited",
+  "section_break_trash",
+  "deleted_at",
+  "deleted_by",
+  "deleted_via"
  ],
  "fields": [
   {
@@ -102,10 +106,35 @@
    "fieldtype": "Check",
    "label": "Edited",
    "default": "0"
+  },
+  {
+   "fieldname": "section_break_trash",
+   "fieldtype": "Section Break",
+   "label": "Trash"
+  },
+  {
+   "fieldname": "deleted_at",
+   "fieldtype": "Datetime",
+   "label": "Deleted At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "deleted_by",
+   "fieldtype": "Link",
+   "label": "Deleted By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "deleted_via",
+   "fieldtype": "Data",
+   "label": "Deleted Via",
+   "read_only": 1,
+   "hidden": 1
   }
  ],
  "links": [],
- "modified": "2026-02-10 10:00:00.000000",
+ "modified": "2026-02-25 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Video Management Solution",
  "name": "VMS Review Comment",

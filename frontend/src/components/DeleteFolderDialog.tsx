@@ -10,7 +10,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 
 interface DeleteFolderDialogProps {
@@ -28,19 +27,15 @@ export function DeleteFolderDialog({
   folderDisplayName,
   onComplete,
 }: DeleteFolderDialogProps) {
-  const [confirmText, setConfirmText] = useState("")
   const [deleting, setDeleting] = useState(false)
 
   const { call: deleteFolder } = useFrappePostCall("vms.api.delete_folder")
 
-  const isConfirmed = confirmText === folderDisplayName
-
   const handleDelete = async () => {
-    if (!isConfirmed) return
     setDeleting(true)
     try {
       await deleteFolder({ folder_name: folderName })
-      toast.success("Folder deleted")
+      toast.success("Folder moved to trash")
       onOpenChange(false)
       onComplete?.()
     } catch (e: unknown) {
@@ -51,32 +46,14 @@ export function DeleteFolderDialog({
     }
   }
 
-  const handleOpenChange = (value: boolean) => {
-    if (!value) setConfirmText("")
-    onOpenChange(value)
-  }
-
   return (
-    <AlertDialog open={open} onOpenChange={handleOpenChange}>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete folder?</AlertDialogTitle>
-          <AlertDialogDescription asChild>
-            <div className="space-y-3">
-              <p>
-                This will delete the folder <strong className="text-foreground">{folderDisplayName}</strong> and
-                move all its assets back to the project root. This action cannot be undone.
-              </p>
-              <p>
-                Type <strong className="text-foreground">{folderDisplayName}</strong> to confirm.
-              </p>
-              <Input
-                value={confirmText}
-                onChange={(e) => setConfirmText(e.target.value)}
-                placeholder={folderDisplayName}
-                autoFocus
-              />
-            </div>
+          <AlertDialogTitle>Move folder to trash?</AlertDialogTitle>
+          <AlertDialogDescription>
+            The folder <strong className="text-foreground">{folderDisplayName}</strong> will be
+            moved to trash. You can restore it from the Trash page.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -84,9 +61,9 @@ export function DeleteFolderDialog({
           <Button
             variant="destructive"
             onClick={handleDelete}
-            disabled={!isConfirmed || deleting}
+            disabled={deleting}
           >
-            {deleting ? "Deleting..." : "Delete Folder"}
+            {deleting ? "Moving..." : "Move to Trash"}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

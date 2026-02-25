@@ -337,6 +337,180 @@ export async function deleteAsset(
 }
 
 // ---------------------------------------------------------------------------
+// Deletion / Trash helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Soft-delete an asset (move to trash) without permanently deleting.
+ */
+export async function softDeleteAsset(
+	request: APIRequestContext,
+	assetName: string,
+): Promise<void> {
+	await callMethod(request, "vms.api.delete_asset", {
+		asset_name: assetName,
+	});
+}
+
+/**
+ * Restore an asset from trash.
+ */
+export async function restoreAsset(
+	request: APIRequestContext,
+	assetName: string,
+): Promise<void> {
+	await callMethod(request, "vms.api.restore_asset", {
+		asset_name: assetName,
+	});
+}
+
+/**
+ * Permanently delete a trashed asset.
+ */
+export async function permanentlyDeleteAsset(
+	request: APIRequestContext,
+	assetName: string,
+): Promise<void> {
+	await callMethod(request, "vms.api.permanently_delete_asset", {
+		asset_name: assetName,
+	});
+}
+
+/**
+ * Empty trash (all assets + folders).
+ */
+export async function emptyTrash(
+	request: APIRequestContext,
+): Promise<{ status: string; count: number }> {
+	return callMethod<{ status: string; count: number }>(
+		request,
+		"vms.api.empty_trash",
+		{},
+	);
+}
+
+/**
+ * Get trashed assets.
+ */
+export async function getTrashAssets(
+	request: APIRequestContext,
+	options: { page?: number; page_size?: number } = {},
+): Promise<{ assets: VMSAsset[]; total: number }> {
+	return callGetMethod<{ assets: VMSAsset[]; total: number }>(
+		request,
+		"vms.api.get_trash_assets",
+		{
+			page: options.page ?? 1,
+			page_size: options.page_size ?? 20,
+		},
+	);
+}
+
+/**
+ * VMS Folder document interface.
+ */
+export interface VMSFolder {
+	name: string;
+	folder_name: string;
+	project: string;
+	deleted_at?: string | null;
+	deleted_by?: string | null;
+}
+
+/**
+ * Create a test folder via API.
+ */
+export async function createTestFolder(
+	request: APIRequestContext,
+	project: string,
+	folderName?: string,
+): Promise<VMSFolder> {
+	const name = folderName || `E2E Folder ${Date.now()}`;
+	return callMethod<VMSFolder>(request, "vms.api.create_folder", {
+		folder_name: name,
+		project,
+	});
+}
+
+/**
+ * Soft-delete a folder (move to trash).
+ */
+export async function softDeleteFolder(
+	request: APIRequestContext,
+	folderName: string,
+): Promise<void> {
+	await callMethod(request, "vms.api.delete_folder", {
+		folder_name: folderName,
+	});
+}
+
+/**
+ * Restore a folder from trash.
+ */
+export async function restoreFolder(
+	request: APIRequestContext,
+	folderName: string,
+): Promise<void> {
+	await callMethod(request, "vms.api.restore_folder", {
+		folder_name: folderName,
+	});
+}
+
+/**
+ * Permanently delete a trashed folder.
+ */
+export async function permanentlyDeleteFolder(
+	request: APIRequestContext,
+	folderName: string,
+): Promise<void> {
+	await callMethod(request, "vms.api.permanently_delete_folder", {
+		folder_name: folderName,
+	});
+}
+
+/**
+ * Get trashed folders.
+ */
+export async function getTrashFolders(
+	request: APIRequestContext,
+	options: { page?: number; page_size?: number } = {},
+): Promise<{ folders: VMSFolder[]; total: number }> {
+	return callGetMethod<{ folders: VMSFolder[]; total: number }>(
+		request,
+		"vms.api.get_trash_folders",
+		{
+			page: options.page ?? 1,
+			page_size: options.page_size ?? 20,
+		},
+	);
+}
+
+/**
+ * Cleanup: hard-delete all folders in a project (for test teardown).
+ */
+export async function cleanupTestFolders(
+	request: APIRequestContext,
+	project: string,
+): Promise<void> {
+	const folders = await getList<VMSFolder>(request, "VMS Folder", {
+		fields: ["name", "deleted_at"],
+		filters: { project },
+		limit: 100,
+	});
+	for (const folder of folders) {
+		try {
+			// If not trashed, trash it first
+			if (!folder.deleted_at) {
+				await softDeleteFolder(request, folder.name);
+			}
+			await permanentlyDeleteFolder(request, folder.name);
+		} catch (error) {
+			console.warn(`Failed to delete folder ${folder.name}:`, error);
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Sharing helpers
 // ---------------------------------------------------------------------------
 

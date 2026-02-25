@@ -137,7 +137,7 @@ export function ProjectDetailPage() {
 
   const { data: folders, mutate: mutateFolders } = useFrappeGetDocList<VMSFolder>("VMS Folder", {
     fields: ["name", "folder_name", "creation"],
-    filters: [["project", "=", projectId!]],
+    filters: [["project", "=", projectId!], ["deleted_at", "is", "not set"]],
     orderBy: { field: "folder_name", order: "asc" },
     limit: 100,
   })

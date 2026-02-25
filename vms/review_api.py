@@ -122,7 +122,7 @@ def get_comments(asset_name: str, sort_by: str = "timestamp", token: str | None 
 
 	comments = frappe.get_all(
 		"VMS Review Comment",
-		filters={"asset": asset_name},
+		filters={"asset": asset_name, "deleted_at": ["is", "not set"]},
 		fields=[
 			"name",
 			"asset",
@@ -264,21 +264,10 @@ def get_annotation_data(comment_name: str, token: str | None = None):
 
 @frappe.whitelist()
 def delete_comment(comment_name: str):
-	"""Delete a comment and all its replies."""
-	if not frappe.db.exists("VMS Review Comment", comment_name):
-		frappe.throw(_("Comment {0} does not exist").format(comment_name))
+	"""Soft-delete a comment and all its replies."""
+	from vms.deletion import soft_delete_comment
 
-	# Delete replies first
-	replies = frappe.get_all(
-		"VMS Review Comment",
-		filters={"parent_comment": comment_name},
-		pluck="name",
-	)
-	for reply_name in replies:
-		frappe.delete_doc("VMS Review Comment", reply_name, ignore_permissions=True)
-
-	frappe.delete_doc("VMS Review Comment", comment_name, ignore_permissions=True)
-
+	soft_delete_comment(comment_name)
 	return {"status": "ok"}
 
 
