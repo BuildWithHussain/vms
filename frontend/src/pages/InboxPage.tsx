@@ -9,6 +9,8 @@ import { CloudUploadIcon, Delete02Icon, Download04Icon, Film01Icon, GridViewIcon
 import { Badge } from "@/components/ui/badge"
 import { formatBytes } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { AssetDropdownMenu, AssetContextMenu } from "@/components/AssetCardMenu"
+import type { AssetMenuActions } from "@/components/AssetCardMenu"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   Card,
@@ -99,6 +101,42 @@ export function UncategorisedPage() {
     setDroppedFiles(files)
     setUploadOpen(true)
   }, [])
+
+  // Individual asset menu handlers
+  const handleMenuRename = useCallback(
+    (asset: VMSAsset) => {
+      clearSelection()
+      toggleSelect(asset.name)
+      setRenameOpen(true)
+    },
+    [clearSelection, toggleSelect],
+  )
+
+  const handleMenuDelete = useCallback(
+    (asset: VMSAsset) => {
+      clearSelection()
+      toggleSelect(asset.name)
+      setDeleteOpen(true)
+    },
+    [clearSelection, toggleSelect],
+  )
+
+  const handleMenuMove = useCallback(
+    (asset: VMSAsset) => {
+      clearSelection()
+      toggleSelect(asset.name)
+      setMoveOpen(true)
+    },
+    [clearSelection, toggleSelect],
+  )
+
+  const menuActions: AssetMenuActions = {
+    onOpen: handleAssetClick,
+    onDownload: (asset) => downloadOne(asset.name, asset.file_name),
+    onRename: handleMenuRename,
+    onDelete: handleMenuDelete,
+    onMoveToFolder: handleMenuMove,
+  }
 
   const allSelected = assets && assets.length > 0 && assets.every((a: VMSAsset) => selected.has(a.name))
 
@@ -245,113 +283,109 @@ export function UncategorisedPage() {
           {view === "list" ? (
             <div className="space-y-2">
               {assets.map((asset) => (
-                <Card
-                  key={asset.name}
-                  size="sm"
-                  className="cursor-pointer transition-shadow hover:shadow-md"
-                  onClick={() => handleAssetClick(asset)}
-                >
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <div onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selected.has(asset.name)}
-                          onCheckedChange={() => toggleSelect(asset.name)}
-                        />
-                      </div>
-                      <div className="h-10 w-16 shrink-0 overflow-hidden rounded bg-muted">
-                        {asset.thumbnail_url ? (
-                          <img src={asset.thumbnail_url} alt="" className="h-full w-full object-cover" />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
-                            <HugeiconsIcon icon={Film01Icon} size={18} strokeWidth={1.5} />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-1 items-center justify-between gap-2 overflow-hidden">
-                        <CardTitle className="truncate text-sm">
-                          {asset.file_name}
-                        </CardTitle>
-                        <div className="flex shrink-0 items-center gap-2">
-                          {asset.status === "Ready" && (
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              onClick={(e: React.MouseEvent) => {
-                                e.stopPropagation()
-                                downloadOne(asset.name, asset.file_name)
-                              }}
-                            >
-                              <HugeiconsIcon icon={Download04Icon} strokeWidth={2} />
-                            </Button>
-                          )}
-                          <CategoryBadge
-                            assetName={asset.name}
-                            category={asset.category}
-                            onChanged={() => mutate()}
+                <AssetContextMenu key={asset.name} asset={asset} actions={menuActions}>
+                  <Card
+                    size="sm"
+                    className="cursor-pointer transition-shadow hover:shadow-md"
+                    onClick={() => handleAssetClick(asset)}
+                  >
+                    <CardHeader>
+                      <div className="flex items-center gap-3">
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={selected.has(asset.name)}
+                            onCheckedChange={() => toggleSelect(asset.name)}
                           />
-                          <Badge
-                            variant={
-                              asset.status === "Ready" ? "secondary" : "outline"
-                            }
-                          >
-                            {asset.status}
-                          </Badge>
+                        </div>
+                        <div className="h-10 w-16 shrink-0 overflow-hidden rounded bg-muted">
+                          {asset.thumbnail_url ? (
+                            <img src={asset.thumbnail_url} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
+                              <HugeiconsIcon icon={Film01Icon} size={18} strokeWidth={1.5} />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-1 items-center justify-between gap-2 overflow-hidden">
+                          <CardTitle className="truncate text-sm">
+                            {asset.file_name}
+                          </CardTitle>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <CategoryBadge
+                              assetName={asset.name}
+                              category={asset.category}
+                              onChanged={() => mutate()}
+                            />
+                            <Badge
+                              variant={
+                                asset.status === "Ready" ? "secondary" : "outline"
+                              }
+                            >
+                              {asset.status}
+                            </Badge>
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <AssetDropdownMenu asset={asset} actions={menuActions} />
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pl-10">
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <UserAvatar name={asset.uploader_name} image={asset.uploader_image} />
-                      {asset.file_size && (
-                        <span>
-                          {formatBytes(asset.file_size)}
-                        </span>
-                      )}
-                      {asset.uploaded_at && (
-                        <span>
-                          Uploaded{" "}
-                          {new Date(asset.uploaded_at).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardHeader>
+                    <CardContent className="pl-10">
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <UserAvatar name={asset.uploader_name} image={asset.uploader_image} />
+                        {asset.file_size && (
+                          <span>
+                            {formatBytes(asset.file_size)}
+                          </span>
+                        )}
+                        {asset.uploaded_at && (
+                          <span>
+                            Uploaded{" "}
+                            {new Date(asset.uploaded_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </AssetContextMenu>
               ))}
             </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {assets.map((asset) => (
-                <Card
-                  key={asset.name}
-                  className="flex cursor-pointer flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md"
-                  onClick={() => handleAssetClick(asset)}
-                >
-                  <div className="flex aspect-video w-full items-center justify-center bg-muted">
-                    {asset.thumbnail_url ? (
-                      <img src={asset.thumbnail_url} alt="" className="h-full w-full object-contain" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
-                        <HugeiconsIcon icon={Film01Icon} size={32} strokeWidth={1.5} />
-                      </div>
-                    )}
-                  </div>
-                  <CardHeader>
-                    <div className="flex items-start gap-2">
-                      <div onClick={(e) => e.stopPropagation()} className="mt-0.5">
-                        <Checkbox
-                          checked={selected.has(asset.name)}
-                          onCheckedChange={() => toggleSelect(asset.name)}
-                        />
-                      </div>
-                      <CardTitle className="truncate text-sm">
-                        {asset.file_name}
-                      </CardTitle>
+                <AssetContextMenu key={asset.name} asset={asset} actions={menuActions}>
+                  <Card
+                    className="flex cursor-pointer flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md"
+                    onClick={() => handleAssetClick(asset)}
+                  >
+                    <div className="flex aspect-video w-full items-center justify-center bg-muted">
+                      {asset.thumbnail_url ? (
+                        <img src={asset.thumbnail_url} alt="" className="h-full w-full object-contain" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
+                          <HugeiconsIcon icon={Film01Icon} size={32} strokeWidth={1.5} />
+                        </div>
+                      )}
                     </div>
-                  </CardHeader>
-                  <CardContent className="mt-auto space-y-2">
-                    <div className="flex items-center justify-between">
+                    <CardHeader>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex min-w-0 items-start gap-2">
+                          <div onClick={(e) => e.stopPropagation()} className="mt-0.5">
+                            <Checkbox
+                              checked={selected.has(asset.name)}
+                              onCheckedChange={() => toggleSelect(asset.name)}
+                            />
+                          </div>
+                          <CardTitle className="truncate text-sm">
+                            {asset.file_name}
+                          </CardTitle>
+                        </div>
+                        <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                          <AssetDropdownMenu asset={asset} actions={menuActions} />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="mt-auto space-y-2">
                       <div className="flex flex-wrap gap-1.5">
                         <CategoryBadge
                           assetName={asset.name}
@@ -366,34 +400,22 @@ export function UncategorisedPage() {
                           {asset.status}
                         </Badge>
                       </div>
-                      {asset.status === "Ready" && (
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={(e: React.MouseEvent) => {
-                            e.stopPropagation()
-                            downloadOne(asset.name, asset.file_name)
-                          }}
-                        >
-                          <HugeiconsIcon icon={Download04Icon} strokeWidth={2} />
-                        </Button>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <UserAvatar name={asset.uploader_name} image={asset.uploader_image} />
-                      {asset.file_size && (
-                        <span>
-                          {formatBytes(asset.file_size)}
-                        </span>
-                      )}
-                      {asset.uploaded_at && (
-                        <span>
-                          {new Date(asset.uploaded_at).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <UserAvatar name={asset.uploader_name} image={asset.uploader_image} />
+                        {asset.file_size && (
+                          <span>
+                            {formatBytes(asset.file_size)}
+                          </span>
+                        )}
+                        {asset.uploaded_at && (
+                          <span>
+                            {new Date(asset.uploaded_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </AssetContextMenu>
               ))}
             </div>
           )}

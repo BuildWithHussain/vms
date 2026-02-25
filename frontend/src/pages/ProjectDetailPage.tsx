@@ -13,12 +13,10 @@ import {
   FolderAddIcon,
   FolderTransferIcon,
   GridViewIcon,
-  Link01Icon,
   ListViewIcon,
   Copy01Icon,
   PencilEdit01Icon,
   Share01Icon,
-  Exchange01Icon,
 } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
 import { formatBytes } from "@/lib/utils"
@@ -27,6 +25,8 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { AssetDropdownMenu, AssetContextMenu } from "@/components/AssetCardMenu"
+import type { AssetMenuActions } from "@/components/AssetCardMenu"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import {
   Card,
@@ -271,6 +271,58 @@ export function ProjectDetailPage() {
     [callMoveToFolder, mutateAssets],
   )
 
+  // Individual asset menu handlers (select one asset, open dialog)
+  const handleMenuRename = useCallback(
+    (asset: VMSAsset) => {
+      clearSelection()
+      toggleSelect(asset.name)
+      setRenameOpen(true)
+    },
+    [clearSelection, toggleSelect],
+  )
+
+  const handleMenuDelete = useCallback(
+    (asset: VMSAsset) => {
+      clearSelection()
+      toggleSelect(asset.name)
+      setDeleteOpen(true)
+    },
+    [clearSelection, toggleSelect],
+  )
+
+  const handleMenuMoveToFolder = useCallback(
+    (asset: VMSAsset) => {
+      clearSelection()
+      toggleSelect(asset.name)
+      setMoveToFolderOpen(true)
+    },
+    [clearSelection, toggleSelect],
+  )
+
+  const handleMenuCopyShareLink = useCallback(
+    async (asset: VMSAsset) => {
+      if (asset.is_public_review === 1 && asset.review_token) {
+        const url = `${window.location.origin}/vms/review/${asset.name}?token=${asset.review_token}`
+        try {
+          await navigator.clipboard.writeText(url)
+          toast.success("Link copied to clipboard")
+        } catch {
+          toast.error("Failed to copy link")
+        }
+      }
+    },
+    [],
+  )
+
+  const handleMenuToggleSharing = useCallback(
+    async (asset: VMSAsset) => {
+      const enable = asset.is_public_review !== 1
+      await handleTogglePublicReview(asset.name, enable)
+      toast.success(enable ? "Public link enabled" : "Public link disabled")
+    },
+    [handleTogglePublicReview],
+  )
+
   if (!project) {
     return (
       <div className="space-y-4 md:space-y-6">
@@ -488,9 +540,13 @@ export function ProjectDetailPage() {
             toggleSelectAll={() => toggleSelectAll(folderAssets)}
             downloadOne={downloadOne}
             onPlay={handleAssetClick}
-            onTogglePublicReview={handleTogglePublicReview}
             onCategoryChanged={() => mutateAssets()}
             onConvert={handleConvertToMp4}
+            onRename={handleMenuRename}
+            onDelete={handleMenuDelete}
+            onMoveToFolder={handleMenuMoveToFolder}
+            onCopyShareLink={handleMenuCopyShareLink}
+            onToggleSharing={handleMenuToggleSharing}
             folders={currentFolder ? undefined : folders ?? undefined}
             onFolderClick={handleFolderClick}
             onDropToFolder={currentFolder ? undefined : handleDropToFolder}
@@ -541,9 +597,13 @@ export function ProjectDetailPage() {
             toggleSelectAll={() => toggleSelectAll(forReviewItems)}
             downloadOne={downloadOne}
             onPlay={handleAssetClick}
-            onTogglePublicReview={handleTogglePublicReview}
             onCategoryChanged={() => mutateAssets()}
             onConvert={handleConvertToMp4}
+            onRename={handleMenuRename}
+            onDelete={handleMenuDelete}
+            onMoveToFolder={handleMenuMoveToFolder}
+            onCopyShareLink={handleMenuCopyShareLink}
+            onToggleSharing={handleMenuToggleSharing}
             isLoading={isLoadingForReview}
             emptyMessage={
               <Empty>
@@ -570,9 +630,13 @@ export function ProjectDetailPage() {
             toggleSelectAll={() => toggleSelectAll(deliverableItems)}
             downloadOne={downloadOne}
             onPlay={handleAssetClick}
-            onTogglePublicReview={handleTogglePublicReview}
             onCategoryChanged={() => mutateAssets()}
             onConvert={handleConvertToMp4}
+            onRename={handleMenuRename}
+            onDelete={handleMenuDelete}
+            onMoveToFolder={handleMenuMoveToFolder}
+            onCopyShareLink={handleMenuCopyShareLink}
+            onToggleSharing={handleMenuToggleSharing}
             isLoading={isLoadingDeliverables}
             emptyMessage={
               <Empty>
@@ -667,82 +731,6 @@ export function ProjectDetailPage() {
       />
     </div>
     </DropZoneOverlay>
-  )
-}
-
-function SharePopover({
-  asset,
-  onToggle,
-}: {
-  asset: VMSAsset
-  onToggle: (assetName: string, enable: boolean) => Promise<void>
-}) {
-  const [toggling, setToggling] = useState(false)
-  const isPublic = asset.is_public_review === 1
-
-  const shareUrl = asset.review_token
-    ? `${window.location.origin}/vms/review/${asset.name}?token=${asset.review_token}`
-    : ""
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl)
-      toast.success("Link copied to clipboard")
-    } catch {
-      toast.error("Failed to copy link")
-    }
-  }
-
-  const handleToggle = async (checked: boolean) => {
-    setToggling(true)
-    try {
-      await onToggle(asset.name, checked)
-    } finally {
-      setToggling(false)
-    }
-  }
-
-  return (
-    <Popover>
-      <PopoverTrigger
-        className={buttonVariants({ variant: "ghost", size: "icon-sm", className: isPublic ? "text-primary" : "" })}
-        onClick={(e: React.MouseEvent) => e.stopPropagation()}
-        title="Share"
-      >
-        <HugeiconsIcon icon={Link01Icon} strokeWidth={2} size={14} />
-      </PopoverTrigger>
-      <PopoverContent className="w-80" align="end" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label htmlFor={`share-toggle-${asset.name}`} className="text-sm font-medium">
-              Public review link
-            </Label>
-            <Switch
-              id={`share-toggle-${asset.name}`}
-              checked={isPublic}
-              onCheckedChange={handleToggle}
-              disabled={toggling}
-            />
-          </div>
-          {isPublic && shareUrl && (
-            <div className="flex items-center gap-2">
-              <Input
-                value={shareUrl}
-                readOnly
-                className="text-xs"
-                onClick={(e) => (e.target as HTMLInputElement).select()}
-              />
-              <Button variant="outline" size="icon-sm" onClick={handleCopy}>
-                <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} size={14} />
-              </Button>
-            </div>
-          )}
-          {isPublic && !shareUrl && (
-            <p className="text-xs text-muted-foreground">Generating link...</p>
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
   )
 }
 
@@ -1021,9 +1009,13 @@ function AssetList({
   toggleSelectAll,
   downloadOne,
   onPlay,
-  onTogglePublicReview,
   onCategoryChanged,
   onConvert,
+  onRename,
+  onDelete,
+  onMoveToFolder,
+  onCopyShareLink,
+  onToggleSharing,
   emptyMessage,
   folders,
   onFolderClick,
@@ -1039,9 +1031,13 @@ function AssetList({
   toggleSelectAll: () => void
   downloadOne: (assetName: string, fileName?: string) => void
   onPlay: (assetName: string) => void
-  onTogglePublicReview: (assetName: string, enable: boolean) => Promise<void>
   onCategoryChanged?: () => void
   onConvert?: (assetName: string) => void
+  onRename?: (asset: VMSAsset) => void
+  onDelete?: (asset: VMSAsset) => void
+  onMoveToFolder?: (asset: VMSAsset) => void
+  onCopyShareLink?: (asset: VMSAsset) => void
+  onToggleSharing?: (asset: VMSAsset) => void
   emptyMessage: React.ReactNode
   folders?: VMSFolder[]
   onFolderClick?: (folderName: string) => void
@@ -1051,6 +1047,17 @@ function AssetList({
 }) {
   const canDrag = canDragProp ?? false
 
+  const menuActions: AssetMenuActions = {
+    onOpen: (asset) => onPlay(asset.name),
+    onDownload: (asset) => downloadOne(asset.name, asset.file_name),
+    onConvert: onConvert ? (asset) => onConvert(asset.name) : undefined,
+    onRename,
+    onDelete,
+    onMoveToFolder,
+    onCopyShareLink,
+    onToggleSharing,
+  }
+
   const handleDragStart = (e: React.DragEvent, assetName: string) => {
     const dragNames = selected.has(assetName) && selected.size > 1
       ? Array.from(selected)
@@ -1058,8 +1065,6 @@ function AssetList({
     e.dataTransfer.setData("application/vms-assets", JSON.stringify(dragNames))
     e.dataTransfer.effectAllowed = "move"
 
-    // Create a small custom drag image so the browser doesn't capture
-    // the full card (which can include surrounding UI in the ghost)
     const label = dragNames.length === 1
       ? (items.find((a) => a.name === dragNames[0])?.file_name ?? "1 item")
       : `${dragNames.length} items`
@@ -1080,7 +1085,6 @@ function AssetList({
     })
     document.body.appendChild(ghost)
     e.dataTransfer.setDragImage(ghost, 0, 0)
-    // Delay removal so the browser captures the ghost for the drag layer
     setTimeout(() => ghost.remove(), 100)
   }
 
@@ -1161,99 +1165,79 @@ function AssetList({
             />
           ))}
           {items.map((asset) => (
-            <Card
-              key={asset.name}
-              size="sm"
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              draggable={canDrag}
-              onDragStart={canDrag ? (e: React.DragEvent<HTMLDivElement>) => handleDragStart(e, asset.name) : undefined}
-              onClick={() => {
-                if (asset.status === "Ready") onPlay(asset.name)
-              }}
-            >
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={selected.has(asset.name)}
-                      onCheckedChange={() => toggleSelect(asset.name)}
-                    />
-                  </div>
-                  <div className="h-10 w-16 shrink-0 overflow-hidden rounded bg-muted">
-                    {asset.thumbnail_url ? (
-                      <img src={asset.thumbnail_url} alt="" draggable={false} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
-                        <HugeiconsIcon icon={Film01Icon} size={18} strokeWidth={1.5} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-1 items-center justify-between gap-2 overflow-hidden">
-                    <CardTitle className="truncate text-sm">
-                      {asset.file_name}
-                    </CardTitle>
-                    <div className="flex shrink-0 items-center gap-2">
-                      {asset.status === "Ready" && (
-                        <>
-                          {isConvertibleToMp4(asset) && onConvert && (
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              title="Convert to MP4"
-                              onClick={(e: React.MouseEvent) => {
-                                e.stopPropagation()
-                                onConvert(asset.name)
-                              }}
-                            >
-                              <HugeiconsIcon icon={Exchange01Icon} strokeWidth={2} />
-                            </Button>
-                          )}
-                          <SharePopover asset={asset} onToggle={onTogglePublicReview} />
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={(e: React.MouseEvent) => {
-                              e.stopPropagation()
-                              downloadOne(asset.name, asset.file_name)
-                            }}
-                          >
-                            <HugeiconsIcon icon={Download04Icon} strokeWidth={2} />
-                          </Button>
-                        </>
-                      )}
-                      <CategoryBadge
-                        assetName={asset.name}
-                        category={asset.category}
-                        onChanged={onCategoryChanged}
+            <AssetContextMenu key={asset.name} asset={asset} actions={menuActions} isConvertible={isConvertibleToMp4(asset)}>
+              <Card
+                size="sm"
+                className="cursor-pointer transition-shadow hover:shadow-md"
+                draggable={canDrag}
+                onDragStart={canDrag ? (e: React.DragEvent<HTMLDivElement>) => handleDragStart(e, asset.name) : undefined}
+                onClick={() => {
+                  if (asset.status === "Ready") onPlay(asset.name)
+                }}
+              >
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selected.has(asset.name)}
+                        onCheckedChange={() => toggleSelect(asset.name)}
                       />
-                      <Badge
-                        variant={
-                          asset.status === "Ready" ? "secondary" : "outline"
-                        }
-                      >
-                        {asset.status}
-                      </Badge>
+                    </div>
+                    <div className="h-10 w-16 shrink-0 overflow-hidden rounded bg-muted">
+                      {asset.thumbnail_url ? (
+                        <img src={asset.thumbnail_url} alt="" draggable={false} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
+                          <HugeiconsIcon icon={Film01Icon} size={18} strokeWidth={1.5} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-1 items-center justify-between gap-2 overflow-hidden">
+                      <CardTitle className="truncate text-sm">
+                        {asset.file_name}
+                      </CardTitle>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <CategoryBadge
+                          assetName={asset.name}
+                          category={asset.category}
+                          onChanged={onCategoryChanged}
+                        />
+                        <Badge
+                          variant={
+                            asset.status === "Ready" ? "secondary" : "outline"
+                          }
+                        >
+                          {asset.status}
+                        </Badge>
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <AssetDropdownMenu
+                            asset={asset}
+                            actions={menuActions}
+                            isConvertible={isConvertibleToMp4(asset)}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pl-10">
-                <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                  <UserAvatar name={asset.uploader_name} image={asset.uploader_image} />
-                  {asset.file_size && (
-                    <span>
-                      {formatBytes(asset.file_size)}
-                    </span>
-                  )}
-                  {asset.uploaded_at && (
-                    <span>
-                      Uploaded{" "}
-                      {new Date(asset.uploaded_at).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent className="pl-10">
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <UserAvatar name={asset.uploader_name} image={asset.uploader_image} />
+                    {asset.file_size && (
+                      <span>
+                        {formatBytes(asset.file_size)}
+                      </span>
+                    )}
+                    {asset.uploaded_at && (
+                      <span>
+                        Uploaded{" "}
+                        {new Date(asset.uploaded_at).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </AssetContextMenu>
           ))}
         </div>
       ) : (
@@ -1268,39 +1252,47 @@ function AssetList({
             />
           ))}
           {items.map((asset) => (
-            <Card
-              key={asset.name}
-              className="flex cursor-pointer flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md"
-              draggable={canDrag}
-              onDragStart={canDrag ? (e: React.DragEvent<HTMLDivElement>) => handleDragStart(e, asset.name) : undefined}
-              onClick={() => {
-                if (asset.status === "Ready") onPlay(asset.name)
-              }}
-            >
-              <div className="flex aspect-video w-full items-center justify-center bg-muted">
-                {asset.thumbnail_url ? (
-                  <img src={asset.thumbnail_url} alt="" draggable={false} className="h-full w-full object-contain" />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
-                    <HugeiconsIcon icon={Film01Icon} size={32} strokeWidth={1.5} />
-                  </div>
-                )}
-              </div>
-              <CardHeader>
-                <div className="flex items-start gap-2">
-                  <div onClick={(e) => e.stopPropagation()} className="mt-0.5">
-                    <Checkbox
-                      checked={selected.has(asset.name)}
-                      onCheckedChange={() => toggleSelect(asset.name)}
-                    />
-                  </div>
-                  <CardTitle className="truncate text-sm">
-                    {asset.file_name}
-                  </CardTitle>
+            <AssetContextMenu key={asset.name} asset={asset} actions={menuActions} isConvertible={isConvertibleToMp4(asset)}>
+              <Card
+                className="flex cursor-pointer flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md"
+                draggable={canDrag}
+                onDragStart={canDrag ? (e: React.DragEvent<HTMLDivElement>) => handleDragStart(e, asset.name) : undefined}
+                onClick={() => {
+                  if (asset.status === "Ready") onPlay(asset.name)
+                }}
+              >
+                <div className="flex aspect-video w-full items-center justify-center bg-muted">
+                  {asset.thumbnail_url ? (
+                    <img src={asset.thumbnail_url} alt="" draggable={false} className="h-full w-full object-contain" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">
+                      <HugeiconsIcon icon={Film01Icon} size={32} strokeWidth={1.5} />
+                    </div>
+                  )}
                 </div>
-              </CardHeader>
-              <CardContent className="mt-auto space-y-2">
-                <div className="flex items-center justify-between">
+                <CardHeader>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-start gap-2">
+                      <div onClick={(e) => e.stopPropagation()} className="mt-0.5">
+                        <Checkbox
+                          checked={selected.has(asset.name)}
+                          onCheckedChange={() => toggleSelect(asset.name)}
+                        />
+                      </div>
+                      <CardTitle className="truncate text-sm">
+                        {asset.file_name}
+                      </CardTitle>
+                    </div>
+                    <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                      <AssetDropdownMenu
+                        asset={asset}
+                        actions={menuActions}
+                        isConvertible={isConvertibleToMp4(asset)}
+                      />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="mt-auto space-y-2">
                   <div className="flex flex-wrap gap-1.5">
                     <CategoryBadge
                       assetName={asset.name}
@@ -1315,52 +1307,22 @@ function AssetList({
                       {asset.status}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-1">
-                    {asset.status === "Ready" && (
-                      <>
-                        {isConvertibleToMp4(asset) && onConvert && (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            title="Convert to MP4"
-                            onClick={(e: React.MouseEvent) => {
-                              e.stopPropagation()
-                              onConvert(asset.name)
-                            }}
-                          >
-                            <HugeiconsIcon icon={Exchange01Icon} strokeWidth={2} />
-                          </Button>
-                        )}
-                        <SharePopover asset={asset} onToggle={onTogglePublicReview} />
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={(e: React.MouseEvent) => {
-                            e.stopPropagation()
-                            downloadOne(asset.name, asset.file_name)
-                          }}
-                        >
-                          <HugeiconsIcon icon={Download04Icon} strokeWidth={2} />
-                        </Button>
-                      </>
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    <UserAvatar name={asset.uploader_name} image={asset.uploader_image} />
+                    {asset.file_size && (
+                      <span>
+                        {formatBytes(asset.file_size)}
+                      </span>
+                    )}
+                    {asset.uploaded_at && (
+                      <span>
+                        {new Date(asset.uploaded_at).toLocaleDateString()}
+                      </span>
                     )}
                   </div>
-                </div>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                  <UserAvatar name={asset.uploader_name} image={asset.uploader_image} />
-                  {asset.file_size && (
-                    <span>
-                      {formatBytes(asset.file_size)}
-                    </span>
-                  )}
-                  {asset.uploaded_at && (
-                    <span>
-                      {new Date(asset.uploaded_at).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </AssetContextMenu>
           ))}
         </div>
       )}
