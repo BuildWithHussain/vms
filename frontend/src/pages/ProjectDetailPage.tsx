@@ -71,8 +71,9 @@ interface PaginatedAssets {
 }
 
 export function ProjectDetailPage() {
-  const { projectId } = useParams()
+  const { projectId, folderId } = useParams()
   const navigate = useNavigate()
+  const currentFolder = folderId ?? null
   const [uploadOpen, setUploadOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
@@ -84,7 +85,6 @@ export function ProjectDetailPage() {
   const [previewAsset, setPreviewAsset] = useState<VMSAsset | null>(null)
   const [view, setView] = useState<"list" | "grid">("grid")
   const { selected, toggleSelect, toggleSelectAll, clearSelection } = useSelection()
-  const [currentFolder, setCurrentFolder] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("all")
   const [page, setPage] = useState(1)
   const { downloadOne, downloadMany, isDownloading } = useDownload()
@@ -146,6 +146,9 @@ export function ProjectDetailPage() {
     () => (folders ?? []).find((f) => f.name === currentFolder) ?? null,
     [folders, currentFolder],
   )
+
+  // Folder in URL but doesn't exist (deleted or invalid)
+  const folderNotFound = !!currentFolder && !currentFolderDoc && !!folders
 
   // Listen for asset conversion completion to refresh the list
   useFrappeEventListener<{
@@ -214,13 +217,13 @@ export function ProjectDetailPage() {
   }
 
   const handleFolderClick = (folderName: string) => {
-    setCurrentFolder(folderName)
+    navigate(`/projects/${projectId}/folder/${folderName}`)
     setPage(1)
     clearSelection()
   }
 
   const handleNavigateToRoot = () => {
-    setCurrentFolder(null)
+    navigate(`/projects/${projectId}`)
     setPage(1)
     clearSelection()
   }
@@ -231,7 +234,7 @@ export function ProjectDetailPage() {
   }
 
   const handleDeleteFolderComplete = () => {
-    setCurrentFolder(null)
+    navigate(`/projects/${projectId}`, { replace: true })
     mutateFolders()
     mutateAssets()
   }
@@ -412,7 +415,31 @@ export function ProjectDetailPage() {
         />
       )}
 
-      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setPage(1); clearSelection() }}>
+      {/* Folder not found */}
+      {currentFolder && !currentFolderDoc && folders && (
+        <div className="space-y-4">
+          <BreadcrumbNav
+            projectName={project.project_name}
+            folderName="..."
+            onNavigateToRoot={handleNavigateToRoot}
+            onDropToRoot={() => {}}
+          />
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <HugeiconsIcon icon={Folder02Icon} strokeWidth={1.5} />
+              </EmptyMedia>
+              <EmptyTitle>Folder not found</EmptyTitle>
+              <EmptyDescription>This folder may have been deleted or moved.</EmptyDescription>
+            </EmptyHeader>
+            <Button size="sm" variant="outline" onClick={handleNavigateToRoot}>
+              Back to project
+            </Button>
+          </Empty>
+        </div>
+      )}
+
+      {!folderNotFound && <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); setPage(1); clearSelection() }}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <TabsList>
             <TabsTrigger value="all">
@@ -652,7 +679,7 @@ export function ProjectDetailPage() {
           />
           <PaginationControls page={page} totalPages={deliverableTotalPages} onPageChange={setPage} />
         </TabsContent>
-      </Tabs>
+      </Tabs>}
 
       <UploadDialog
         open={uploadOpen}

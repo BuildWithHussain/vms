@@ -103,6 +103,7 @@ export default function App() {
         <Route path="uncategorised" element={<Suspense fallback={<PageSpinner />}><UncategorisedPage /></Suspense>} />
         <Route path="projects" element={<Suspense fallback={<PageSpinner />}><ProjectsPage /></Suspense>} />
         <Route path="projects/:projectId" element={<Suspense fallback={<PageSpinner />}><ProjectDetailPage /></Suspense>} />
+        <Route path="projects/:projectId/folder/:folderId" element={<Suspense fallback={<PageSpinner />}><ProjectDetailPage /></Suspense>} />
         <Route path="audit-logs" element={<Suspense fallback={<PageSpinner />}><AuditLogPage /></Suspense>} />
         <Route path="trash" element={<Suspense fallback={<PageSpinner />}><TrashPage /></Suspense>} />
         <Route path="tools" element={<Suspense fallback={<PageSpinner />}><ToolsPage /></Suspense>} />
