@@ -230,7 +230,7 @@ export function UploadDialog() {
   return (
     <>
       <Dialog open={dialogOpen} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col">
+        <DialogContent className="sm:max-w-lg max-h-[85vh] flex flex-col" showCloseButton={!(isUploading || files.length > 0)}>
           <DialogHeader>
             <div className="flex items-center justify-between">
               <div>
