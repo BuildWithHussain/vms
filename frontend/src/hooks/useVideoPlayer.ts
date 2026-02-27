@@ -9,6 +9,7 @@ export interface VideoPlayerState {
   playbackRate: number
   isLooping: boolean
   isReady: boolean
+  isBuffering: boolean
 }
 
 export function useVideoPlayer(videoRef: React.RefObject<HTMLVideoElement | null>) {
@@ -21,6 +22,7 @@ export function useVideoPlayer(videoRef: React.RefObject<HTMLVideoElement | null
     playbackRate: 1,
     isLooping: false,
     isReady: false,
+    isBuffering: false,
   })
 
   const animationRef = useRef<number>(0)
@@ -72,6 +74,14 @@ export function useVideoPlayer(videoRef: React.RefObject<HTMLVideoElement | null
       setState((prev) => ({ ...prev, playbackRate: video.playbackRate }))
     }
 
+    const onWaiting = () => {
+      setState((prev) => ({ ...prev, isBuffering: true }))
+    }
+
+    const onCanPlay = () => {
+      setState((prev) => ({ ...prev, isBuffering: false }))
+    }
+
     video.addEventListener("loadedmetadata", onLoadedMetadata)
     video.addEventListener("loadeddata", onLoadedMetadata)
     video.addEventListener("durationchange", onLoadedMetadata)
@@ -80,6 +90,9 @@ export function useVideoPlayer(videoRef: React.RefObject<HTMLVideoElement | null
     video.addEventListener("ended", onEnded)
     video.addEventListener("volumechange", onVolumeChange)
     video.addEventListener("ratechange", onRateChange)
+    video.addEventListener("waiting", onWaiting)
+    video.addEventListener("playing", onCanPlay)
+    video.addEventListener("canplay", onCanPlay)
 
     // If metadata already loaded
     if (video.readyState >= 1 && video.duration > 0) {
@@ -95,6 +108,9 @@ export function useVideoPlayer(videoRef: React.RefObject<HTMLVideoElement | null
       video.removeEventListener("ended", onEnded)
       video.removeEventListener("volumechange", onVolumeChange)
       video.removeEventListener("ratechange", onRateChange)
+      video.removeEventListener("waiting", onWaiting)
+      video.removeEventListener("playing", onCanPlay)
+      video.removeEventListener("canplay", onCanPlay)
       cancelAnimationFrame(animationRef.current)
     }
   }, [videoRef, updateTime])

@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useCallback } from "react"
 import { useFrappePostCall } from "frappe-react-sdk"
 import { useVideoPlayer } from "@/hooks/useVideoPlayer"
 import { useReviewContext } from "@/hooks/useReviewContext"
+import { Spinner } from "@/components/ui/spinner"
 import { VideoControls } from "./VideoControls"
 import { VideoTimeline } from "./VideoTimeline"
 import { AnnotationCanvas } from "./AnnotationCanvas"
@@ -129,6 +130,11 @@ export function VideoPlayer({ assetName }: VideoPlayerProps) {
         {!videoUrl && (
           <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm">
             Loading video...
+          </div>
+        )}
+        {videoUrl && player.isBuffering && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <Spinner className="size-10 text-white/80" />
           </div>
         )}
         <AnnotationCanvas
