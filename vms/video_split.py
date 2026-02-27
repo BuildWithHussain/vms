@@ -130,8 +130,10 @@ def get_split_parts(asset_name: str):
 
 
 @frappe.whitelist(methods=["GET"])
-def get_split_status(asset_name: str):
+def get_split_status(asset_name: str | None = None):
 	"""Check if an asset is currently being split, with progress info."""
+	if not asset_name:
+		frappe.throw(_("asset_name is required"))
 	if not frappe.db.exists("VMS Asset", asset_name):
 		frappe.throw(_("Asset {0} does not exist").format(asset_name))
 
