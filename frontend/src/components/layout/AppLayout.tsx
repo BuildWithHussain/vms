@@ -5,13 +5,14 @@ import { Header } from "./Header"
 import { SettingsDialog } from "@/components/SettingsDialog"
 import { CommandPalette, useCommandPalette } from "@/components/CommandPalette"
 import { UploadDialog } from "@/components/UploadDialog"
+import { UploadProvider, useUploadContext } from "@/contexts/UploadContext"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
-export function AppLayout() {
+function AppLayoutInner() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState("profile")
-  const [uploadOpen, setUploadOpen] = useState(false)
   const commandPalette = useCommandPalette()
+  const { openUpload, dialogOpen } = useUploadContext()
 
   const openSettings = (tab = "profile") => {
     setSettingsTab(tab)
@@ -20,10 +21,10 @@ export function AppLayout() {
 
   // Refs for dialog state — read inside keydown handler without re-subscribing
   const settingsOpenRef = useRef(settingsOpen)
-  const uploadOpenRef = useRef(uploadOpen)
+  const uploadOpenRef = useRef(dialogOpen)
   const commandPaletteOpenRef = useRef(commandPalette.open)
   settingsOpenRef.current = settingsOpen
-  uploadOpenRef.current = uploadOpen
+  uploadOpenRef.current = dialogOpen
   commandPaletteOpenRef.current = commandPalette.open
 
   // Global keyboard shortcuts (single-key, no modifiers)
@@ -38,12 +39,12 @@ export function AppLayout() {
 
       if (e.key === "u" || e.key === "U") {
         e.preventDefault()
-        setUploadOpen(true)
+        openUpload()
       }
     }
     document.addEventListener("keydown", handleKeyDown)
     return () => document.removeEventListener("keydown", handleKeyDown)
-  }, [])
+  }, [openUpload])
 
   return (
     <SidebarProvider>
@@ -51,14 +52,12 @@ export function AppLayout() {
       <SidebarInset>
         <Header
           onOpenCommandPalette={() => commandPalette.setOpen(true)}
-          uploadOpen={uploadOpen}
-          onUploadOpenChange={setUploadOpen}
         />
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
           <Outlet />
         </div>
       </SidebarInset>
-      <UploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />
+      <UploadDialog />
       <SettingsDialog
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
@@ -69,8 +68,16 @@ export function AppLayout() {
         open={commandPalette.open}
         onOpenChange={commandPalette.setOpen}
         onOpenSettings={openSettings}
-        onOpenUpload={() => setUploadOpen(true)}
+        onOpenUpload={() => openUpload()}
       />
     </SidebarProvider>
+  )
+}
+
+export function AppLayout() {
+  return (
+    <UploadProvider>
+      <AppLayoutInner />
+    </UploadProvider>
   )
 }

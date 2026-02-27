@@ -11,6 +11,10 @@ export interface FileUploadItem {
   progress: number
   error?: string
   assetName?: string
+  // Per-file upload context (set at add time, used by uploadFile)
+  project?: string
+  category?: string
+  folder?: string
 }
 
 const MAX_CONCURRENT = 2
@@ -80,9 +84,6 @@ function uploadPart(
 }
 
 export function useUpload(options?: {
-  project?: string
-  category?: string
-  folder?: string
   onAllComplete?: () => void
 }) {
   const [files, setFiles] = useState<FileUploadItem[]>([])
@@ -287,9 +288,9 @@ export function useUpload(options?: {
           file_name: item.displayName,
           content_type: item.file.type || "application/octet-stream",
           file_size: item.file.size,
-          project: options?.project || undefined,
-          category: options?.category || "Footage",
-          folder: options?.folder || undefined,
+          project: item.project || undefined,
+          category: item.category || "Footage",
+          folder: item.folder || undefined,
         })
 
         const data = res.message as UploadUrlResponse
@@ -337,7 +338,7 @@ export function useUpload(options?: {
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [options?.project, options?.category, options?.folder]
+    []
   )
 
   // Keep ref in sync so processNext always uses the latest uploadFile
@@ -394,13 +395,21 @@ export function useUpload(options?: {
   )
 
   const addFiles = useCallback(
-    (newFiles: File[], nameOverrides?: Map<File, string>) => {
+    (newFiles: File[], opts?: {
+      nameOverrides?: Map<File, string>
+      project?: string
+      category?: string
+      folder?: string
+    }) => {
       const items: FileUploadItem[] = newFiles.map((file) => ({
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         file,
-        displayName: nameOverrides?.get(file) ?? file.name,
+        displayName: opts?.nameOverrides?.get(file) ?? file.name,
         status: "pending" as const,
         progress: 0,
+        project: opts?.project,
+        category: opts?.category,
+        folder: opts?.folder,
       }))
 
       setFiles((prev) => [...prev, ...items])

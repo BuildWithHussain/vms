@@ -2,14 +2,15 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { CloudUploadIcon, SearchIcon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { SidebarTrigger } from "@/components/ui/sidebar"
+import { useUploadContext } from "@/contexts/UploadContext"
 
 interface HeaderProps {
   onOpenCommandPalette: () => void
-  uploadOpen: boolean
-  onUploadOpenChange: (open: boolean) => void
 }
 
-export function Header({ onOpenCommandPalette, onUploadOpenChange }: HeaderProps) {
+export function Header({ onOpenCommandPalette }: HeaderProps) {
+  const { openUpload } = useUploadContext()
+
   return (
     <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-background px-4 md:px-6">
       <div className="flex items-center gap-2">
@@ -36,7 +37,7 @@ export function Header({ onOpenCommandPalette, onUploadOpenChange }: HeaderProps
         >
           <HugeiconsIcon icon={SearchIcon} strokeWidth={2} />
         </Button>
-        <Button variant="outline" size="sm" onClick={() => onUploadOpenChange(true)}>
+        <Button variant="outline" size="sm" onClick={() => openUpload()}>
           <HugeiconsIcon icon={CloudUploadIcon} strokeWidth={1.5} data-icon="inline-start" />
           <span className="hidden sm:inline">Upload</span>
         </Button>

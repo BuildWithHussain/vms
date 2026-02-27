@@ -51,7 +51,7 @@ import {
 } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { UploadDialog } from "@/components/UploadDialog"
+import { useUploadContext } from "@/contexts/UploadContext"
 import { DeleteAssetDialog } from "@/components/DeleteAssetDialog"
 import { RenameAssetDialog } from "@/components/RenameAssetDialog"
 import { MediaPlayerDialog } from "@/components/MediaPlayerDialog"
@@ -89,14 +89,13 @@ export function ProjectDetailPage() {
   const { projectId, folderId } = useParams()
   const navigate = useNavigate()
   const currentFolder = folderId ?? null
-  const [uploadOpen, setUploadOpen] = useState(false)
+  const { openUpload } = useUploadContext()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
   const [createFolderOpen, setCreateFolderOpen] = useState(false)
   const [renameFolderOpen, setRenameFolderOpen] = useState(false)
   const [moveToFolderOpen, setMoveToFolderOpen] = useState(false)
   const [deleteFolderOpen, setDeleteFolderOpen] = useState(false)
-  const [droppedFiles, setDroppedFiles] = useState<File[]>([])
   const [previewAsset, setPreviewAsset] = useState<VMSAsset | null>(null)
   const [folderToAction, setFolderToAction] = useState<VMSFolder | null>(null)
   const [cardRenameFolderOpen, setCardRenameFolderOpen] = useState(false)
@@ -263,9 +262,23 @@ export function ProjectDetailPage() {
   }
 
   const handlePageDrop = useCallback((files: File[]) => {
-    setDroppedFiles(files)
-    setUploadOpen(true)
-  }, [])
+    openUpload({
+      project: projectId,
+      folder: currentFolder ?? undefined,
+      existingFileNames: folderAssets.filter((a: VMSAsset) => a.status === "Ready").map((a: VMSAsset) => a.file_name),
+      initialFiles: files,
+      onComplete: () => mutateAssets(),
+    })
+  }, [openUpload, projectId, currentFolder, folderAssets, mutateAssets])
+
+  const openProjectUpload = useCallback(() => {
+    openUpload({
+      project: projectId,
+      folder: currentFolder ?? undefined,
+      existingFileNames: folderAssets.filter((a: VMSAsset) => a.status === "Ready").map((a: VMSAsset) => a.file_name),
+      onComplete: () => mutateAssets(),
+    })
+  }, [openUpload, projectId, currentFolder, folderAssets, mutateAssets])
 
   const handleFolderCreated = () => {
     mutateFolders()
@@ -586,7 +599,7 @@ export function ProjectDetailPage() {
                 </Button>
               </>
             )}
-            <Button size="sm" onClick={() => setUploadOpen(true)}>
+            <Button size="sm" onClick={() => openProjectUpload()}>
               <HugeiconsIcon
                 icon={CloudUploadIcon}
                 strokeWidth={1.5}
@@ -631,7 +644,7 @@ export function ProjectDetailPage() {
                     <EmptyTitle>Folder is empty</EmptyTitle>
                     <EmptyDescription>Upload files or move assets into this folder.</EmptyDescription>
                   </EmptyHeader>
-                  <Button size="sm" onClick={() => setUploadOpen(true)}>
+                  <Button size="sm" onClick={() => openProjectUpload()}>
                     <HugeiconsIcon icon={CloudUploadIcon} strokeWidth={1.5} data-icon="inline-start" />
                     Upload
                   </Button>
@@ -645,7 +658,7 @@ export function ProjectDetailPage() {
                     <EmptyTitle>No assets yet</EmptyTitle>
                     <EmptyDescription>Upload some files to get started.</EmptyDescription>
                   </EmptyHeader>
-                  <Button size="sm" onClick={() => setUploadOpen(true)}>
+                  <Button size="sm" onClick={() => openProjectUpload()}>
                     <HugeiconsIcon icon={CloudUploadIcon} strokeWidth={1.5} data-icon="inline-start" />
                     Upload
                   </Button>
@@ -723,18 +736,6 @@ export function ProjectDetailPage() {
         </TabsContent>
       </Tabs>}
 
-      <UploadDialog
-        open={uploadOpen}
-        onOpenChange={(open) => {
-          setUploadOpen(open)
-          if (!open) setDroppedFiles([])
-        }}
-        project={projectId}
-        folder={currentFolder ?? undefined}
-        existingFileNames={folderAssets.filter((a) => a.status === "Ready").map((a) => a.file_name)}
-        initialFiles={droppedFiles.length > 0 ? droppedFiles : undefined}
-        onComplete={() => mutateAssets()}
-      />
 
       <DeleteAssetDialog
         open={deleteOpen}

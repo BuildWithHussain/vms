@@ -26,7 +26,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { Checkbox } from "@/components/ui/checkbox"
-import { UploadDialog } from "@/components/UploadDialog"
+import { useUploadContext } from "@/contexts/UploadContext"
 import { MoveAssetDialog } from "@/components/MoveAssetDialog"
 import { DeleteAssetDialog } from "@/components/DeleteAssetDialog"
 import { RenameAssetDialog } from "@/components/RenameAssetDialog"
@@ -48,13 +48,12 @@ interface PaginatedInboxAssets {
 
 export function UncategorisedPage() {
   const navigate = useNavigate()
-  const [uploadOpen, setUploadOpen] = useState(false)
+  const { openUpload } = useUploadContext()
   const [moveOpen, setMoveOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
   const [previewAsset, setPreviewAsset] = useState<VMSAsset | null>(null)
   const { selected, toggleSelect, toggleSelectAll, clearSelection } = useSelection()
-  const [droppedFiles, setDroppedFiles] = useState<File[]>([])
   const [view, setView] = useState<"list" | "grid">("grid")
   const [page, setPage] = useState(1)
   const { downloadOne, downloadMany, isDownloading } = useDownload()
@@ -98,9 +97,19 @@ export function UncategorisedPage() {
   }
 
   const handlePageDrop = useCallback((files: File[]) => {
-    setDroppedFiles(files)
-    setUploadOpen(true)
-  }, [])
+    openUpload({
+      existingFileNames: (assets ?? []).filter((a: VMSAsset) => a.status === "Ready").map((a: VMSAsset) => a.file_name),
+      initialFiles: files,
+      onComplete: () => mutate(),
+    })
+  }, [openUpload, assets, mutate])
+
+  const openInboxUpload = useCallback(() => {
+    openUpload({
+      existingFileNames: (assets ?? []).filter((a: VMSAsset) => a.status === "Ready").map((a: VMSAsset) => a.file_name),
+      onComplete: () => mutate(),
+    })
+  }, [openUpload, assets, mutate])
 
   // Individual asset menu handlers
   const handleMenuRename = useCallback(
@@ -201,7 +210,7 @@ export function UncategorisedPage() {
               </Button>
             </>
           )}
-          <Button size="sm" onClick={() => setUploadOpen(true)}>
+          <Button size="sm" onClick={() => openInboxUpload()}>
             <HugeiconsIcon
               icon={CloudUploadIcon}
               strokeWidth={1.5}
@@ -245,7 +254,7 @@ export function UncategorisedPage() {
               Upload files here to sort them into projects later.
             </EmptyDescription>
           </EmptyHeader>
-          <Button size="sm" onClick={() => setUploadOpen(true)}>
+          <Button size="sm" onClick={() => openInboxUpload()}>
             <HugeiconsIcon icon={CloudUploadIcon} strokeWidth={1.5} data-icon="inline-start" />
             Upload
           </Button>
@@ -446,16 +455,6 @@ export function UncategorisedPage() {
         </div>
       )}
 
-      <UploadDialog
-        open={uploadOpen}
-        onOpenChange={(open) => {
-          setUploadOpen(open)
-          if (!open) setDroppedFiles([])
-        }}
-        existingFileNames={(assets ?? []).filter((a) => a.status === "Ready").map((a) => a.file_name)}
-        initialFiles={droppedFiles.length > 0 ? droppedFiles : undefined}
-        onComplete={() => mutate()}
-      />
 
       <MoveAssetDialog
         open={moveOpen}
