@@ -147,7 +147,7 @@ def _send_comment_email(comment, asset, commenter_name, recipients):
 	message = f"""
 <p><strong>{commenter_name}</strong> {action_text} on <strong>{asset.file_name}</strong>{timestamp_str}:</p>
 <blockquote style="border-left: 3px solid #ccc; padding-left: 12px; margin: 12px 0; color: #555;">
-{frappe.utils.escape_html(comment.comment_text)}
+{frappe.utils.sanitize_html(comment.comment_text)}
 </blockquote>
 <p><a href="{asset_url}">View in Review</a></p>
 """
