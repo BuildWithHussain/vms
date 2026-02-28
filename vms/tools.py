@@ -31,7 +31,7 @@ def run_compression(compress_job_name: str):
 			ext = _get_extension(job.original_file_name)
 			input_path = os.path.join(tmpdir, f"input{ext}")
 
-			frappe.logger("vms").info(f"Downloading source file for compression: {job_name}")
+			frappe.logger("vms").info(f"Downloading source file for compression: {compress_job_name}")
 			download_url = generate_presigned_download_url(job.original_r2_key, job.original_file_name)
 			urlretrieve(download_url, input_path)
 
@@ -44,7 +44,7 @@ def run_compression(compress_job_name: str):
 			output_name = _make_output_filename(job.original_file_name)
 			output_path = os.path.join(tmpdir, output_name)
 
-			frappe.logger("vms").info(f"Starting ffmpeg compression: {job_name}")
+			frappe.logger("vms").info(f"Starting ffmpeg compression: {compress_job_name}")
 			_ffmpeg_compress(input_path, output_path)
 
 			job.progress = 80
@@ -56,7 +56,7 @@ def run_compression(compress_job_name: str):
 			compressed_size = os.path.getsize(output_path)
 			r2_key = f"tools/{uuid.uuid4().hex}.mp4"
 
-			frappe.logger("vms").info(f"Uploading compressed file to R2: {job_name}")
+			frappe.logger("vms").info(f"Uploading compressed file to R2: {compress_job_name}")
 			upload_r2_object(r2_key, output_path, "video/mp4")
 
 		# Update job record
@@ -70,10 +70,10 @@ def run_compression(compress_job_name: str):
 		frappe.db.commit()
 
 		_publish_progress(job)
-		frappe.logger("vms").info(f"Compression complete: {job_name}")
+		frappe.logger("vms").info(f"Compression complete: {compress_job_name}")
 
 	except Exception as e:
-		frappe.logger("vms").error(f"Compression failed for {job_name}: {e}")
+		frappe.logger("vms").error(f"Compression failed for {compress_job_name}: {e}")
 		job.reload()
 		job.status = "Error"
 		job.error_message = str(e)[:500]
