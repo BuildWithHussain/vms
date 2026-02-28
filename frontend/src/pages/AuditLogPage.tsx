@@ -10,6 +10,7 @@ import {
   ArrowDown01Icon,
   Calendar01Icon,
   Cancel01Icon,
+  Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import {
   flexRender,
@@ -36,6 +37,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import {
   Table,
   TableBody,
@@ -187,6 +196,7 @@ export function AuditLogPage() {
   const [action, setAction] = useState<string>("")
   const [user, setUser] = useState<string>("")
   const [project, setProject] = useState<string>("")
+  const [projectOpen, setProjectOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
   const [page, setPage] = useState(1)
@@ -316,25 +326,52 @@ export function AuditLogPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select
-          value={project}
-          onValueChange={(v) => {
-            setProject(v)
-            setPage(1)
-          }}
-        >
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="All projects" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All projects</SelectItem>
-            {projects.map((p) => (
-              <SelectItem key={p.value} value={p.value}>
-                {p.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover open={projectOpen} onOpenChange={setProjectOpen}>
+          <PopoverTrigger
+            render={<Button variant="outline" role="combobox" aria-expanded={projectOpen} />}
+            className="w-44 justify-between font-normal"
+          >
+            <span className="truncate">
+              {project && project !== "all"
+                ? projects.find((p) => p.value === project)?.label ?? project
+                : "All projects"}
+            </span>
+            <HugeiconsIcon
+              icon={ArrowDown01Icon}
+              strokeWidth={2}
+              className="ml-auto size-4 shrink-0 opacity-50"
+            />
+          </PopoverTrigger>
+          <PopoverContent className="w-44 p-0" align="start">
+            <Command>
+              <CommandInput placeholder="Search project..." />
+              <CommandList>
+                <CommandEmpty>No project found.</CommandEmpty>
+                <CommandGroup>
+                  {projects.map((p) => (
+                    <CommandItem
+                      key={p.value}
+                      value={p.label}
+                      onSelect={() => {
+                        setProject(project === p.value ? "" : p.value)
+                        setProjectOpen(false)
+                        setPage(1)
+                      }}
+                      data-checked={project === p.value}
+                    >
+                      <HugeiconsIcon
+                        icon={Tick02Icon}
+                        strokeWidth={2}
+                        className={`size-4 ${project === p.value ? "opacity-100" : "opacity-0"}`}
+                      />
+                      {p.label}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
         <DateRangePicker value={dateRange} onChange={(range) => { setDateRange(range); setPage(1) }} />
         {hasActiveFilters && (
           <Button variant="ghost" size="sm" onClick={clearFilters}>
