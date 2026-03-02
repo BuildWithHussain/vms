@@ -65,8 +65,6 @@ def _get_or_create_connected_app(client_id: str, client_secret: str):
 
 def _fetch_channel_name(token_cache):
 	"""Fetch the YouTube channel name using the stored access token."""
-	import requests
-
 	access_token = token_cache.get_password("access_token")
 	resp = requests.get(
 		"https://www.googleapis.com/youtube/v3/channels",
@@ -225,7 +223,7 @@ def upload_to_youtube(
 		title=title,
 		description=description,
 		privacy_status=privacy_status,
-		queue="long",
+		queue="default",
 		enqueue_after_commit=True,
 		timeout=3600,
 	)
@@ -292,8 +290,6 @@ def process_youtube_upload(
 		frappe.publish_realtime(
 			"youtube_upload_progress",
 			{"asset_name": asset_name, "stage": "downloading", "percent": 0},
-			doctype="VMS Asset",
-			docname=asset_name,
 		)
 
 		settings = frappe.get_single("VMS Settings")
@@ -341,15 +337,11 @@ def process_youtube_upload(
 						frappe.publish_realtime(
 							"youtube_upload_progress",
 							{"asset_name": asset_name, "stage": "downloading", "percent": percent},
-							doctype="VMS Asset",
-							docname=asset_name,
 						)
 
 			frappe.publish_realtime(
 				"youtube_upload_progress",
 				{"asset_name": asset_name, "stage": "uploading", "percent": 40},
-				doctype="VMS Asset",
-				docname=asset_name,
 			)
 
 			# Upload to YouTube
@@ -385,8 +377,6 @@ def process_youtube_upload(
 					frappe.publish_realtime(
 						"youtube_upload_progress",
 						{"asset_name": asset_name, "stage": "uploading", "percent": percent},
-						doctype="VMS Asset",
-						docname=asset_name,
 					)
 
 			video_id = response["id"]
@@ -412,8 +402,6 @@ def process_youtube_upload(
 					"video_id": video_id,
 					"video_url": video_url,
 				},
-				doctype="VMS Asset",
-				docname=asset_name,
 			)
 
 			frappe.logger().info(f"YouTube upload complete: {video_url}")
@@ -439,6 +427,4 @@ def process_youtube_upload(
 		frappe.publish_realtime(
 			"youtube_upload_progress",
 			{"asset_name": asset_name, "stage": "error", "percent": 0, "error": error_message},
-			doctype="VMS Asset",
-			docname=asset_name,
 		)

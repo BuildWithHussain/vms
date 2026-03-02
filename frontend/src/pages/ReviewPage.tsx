@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { useParams, useSearchParams } from "react-router"
-import { useFrappeGetCall, useFrappePostCall, useFrappeAuth } from "frappe-react-sdk"
+import { useFrappeGetCall, useFrappePostCall, useFrappeAuth, useFrappeEventListener } from "frappe-react-sdk"
 import { Spinner } from "@/components/ui/spinner"
 import { ReviewProvider } from "@/contexts/ReviewContext"
 import { useReviewContext } from "@/hooks/useReviewContext"
@@ -165,25 +165,76 @@ function ReviewPageInner({
 
   const proxyStatus = proxyStatusData?.message?.proxy_status || asset.proxy_status || ""
 
-  // YouTube upload polling
-  const [isYouTubePolling, setIsYouTubePolling] = useState(
-    asset.youtube_upload_status === "Queued" || asset.youtube_upload_status === "Uploading"
-  )
+  // YouTube upload — realtime + fallback polling
+  const [youtubeProgress, setYoutubeProgress] = useState<{
+    status: string
+    videoUrl: string
+    percent: number
+    stage: string
+    error: string
+  }>({
+    status: asset.youtube_upload_status || "",
+    videoUrl: asset.youtube_video_url || "",
+    percent: 0,
+    stage: "",
+    error: "",
+  })
 
-  const { data: youtubeStatusData } = useFrappeGetCall<{
+  const isYouTubeActive = youtubeProgress.status === "Queued" || youtubeProgress.status === "Uploading"
+
+  // Realtime listener for instant progress
+  useFrappeEventListener<{
+    asset_name: string
+    stage: string
+    percent: number
+    video_url?: string
+    error?: string
+  }>("youtube_upload_progress", useCallback((data) => {
+    if (data.asset_name !== asset.name) return
+    if (data.stage === "complete") {
+      setYoutubeProgress({ status: "Complete", videoUrl: data.video_url || "", percent: 100, stage: "complete", error: "" })
+      mutateReviewData()
+    } else if (data.stage === "error") {
+      setYoutubeProgress((prev) => ({ ...prev, status: "Error", stage: "error", error: data.error || "Upload failed" }))
+      mutateReviewData()
+    } else {
+      setYoutubeProgress((prev) => ({
+        ...prev,
+        status: "Uploading",
+        stage: data.stage,
+        percent: data.percent,
+      }))
+    }
+  }, [asset.name, mutateReviewData]))
+
+  // Fallback polling in case realtime events don't arrive
+  const { data: youtubeStatusPoll } = useFrappeGetCall<{
     message: { youtube_upload_status: string; youtube_video_id: string; youtube_video_url: string }
   }>(
     "vms.youtube.get_youtube_upload_status",
-    isYouTubePolling ? { asset_name: asset.name } : undefined,
-    isYouTubePolling ? `youtube-status-${asset.name}` : undefined,
-    {
-      revalidateOnFocus: false,
-      refreshInterval: isYouTubePolling ? 5000 : 0,
-    },
+    isYouTubeActive ? { asset_name: asset.name } : undefined,
+    isYouTubeActive ? `youtube-poll-${asset.name}` : undefined,
+    { revalidateOnFocus: false, refreshInterval: isYouTubeActive ? 5000 : 0 },
   )
 
-  const youtubeUploadStatus = youtubeStatusData?.message?.youtube_upload_status || asset.youtube_upload_status || ""
-  const youtubeVideoUrl = youtubeStatusData?.message?.youtube_video_url || asset.youtube_video_url || ""
+  // Sync poll results into state (only if realtime hasn't already updated)
+  useEffect(() => {
+    const polled = youtubeStatusPoll?.message
+    if (!polled) return
+    const pollStatus = polled.youtube_upload_status
+    if (pollStatus === "Complete" && youtubeProgress.status !== "Complete") {
+      setYoutubeProgress({ status: "Complete", videoUrl: polled.youtube_video_url || "", percent: 100, stage: "complete", error: "" })
+      mutateReviewData()
+    } else if (pollStatus === "Error" && youtubeProgress.status !== "Error") {
+      setYoutubeProgress((prev) => ({ ...prev, status: "Error", stage: "error", error: "Upload failed" }))
+      mutateReviewData()
+    } else if (pollStatus === "Uploading" && youtubeProgress.status === "Queued") {
+      setYoutubeProgress((prev) => ({ ...prev, status: "Uploading", stage: "uploading" }))
+    }
+  }, [youtubeStatusPoll?.message]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const youtubeUploadStatus = youtubeProgress.status
+  const youtubeVideoUrl = youtubeProgress.videoUrl
 
   // Stop proxy polling when done
   useEffect(() => {
@@ -195,18 +246,7 @@ function ReviewPageInner({
     }
   }, [proxyStatus])
 
-  // Stop YouTube polling when done
-  useEffect(() => {
-    if (youtubeUploadStatus === "Complete" || youtubeUploadStatus === "Error") {
-      setIsYouTubePolling(false)
-      mutateReviewData()
-      if (youtubeUploadStatus === "Complete") {
-        toast.success("Video uploaded to YouTube!")
-      } else if (youtubeUploadStatus === "Error") {
-        toast.error("YouTube upload failed. You can retry.")
-      }
-    }
-  }, [youtubeUploadStatus, mutateReviewData])
+
 
   const handleGenerateProxy = useCallback(async () => {
     await callGenerateProxy({ asset_name: asset.name })
@@ -274,6 +314,7 @@ function ReviewPageInner({
 
   const handleResetYouTubeUpload = useCallback(async () => {
     await callResetYouTubeUpload({ asset_name: asset.name })
+    setYoutubeProgress({ status: "", videoUrl: "", percent: 0, stage: "", error: "" })
     mutateReviewData()
     setYoutubeDialogOpen(true)
   }, [asset.name, callResetYouTubeUpload, mutateReviewData])
@@ -366,8 +407,13 @@ function ReviewPageInner({
           onOpenChange={setYoutubeDialogOpen}
           assetName={asset.name}
           fileName={asset.file_name}
+          uploadStatus={youtubeUploadStatus}
+          uploadStage={youtubeProgress.stage}
+          uploadPercent={youtubeProgress.percent}
+          uploadError={youtubeProgress.error}
+          uploadVideoUrl={youtubeVideoUrl}
           onUploadStarted={() => {
-            setIsYouTubePolling(true)
+            setYoutubeProgress({ status: "Queued", videoUrl: "", percent: 0, stage: "queued", error: "" })
             mutateReviewData()
           }}
         />
