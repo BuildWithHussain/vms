@@ -17,6 +17,8 @@ export function YouTubeSection() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [clientId, setClientId] = useState("")
   const [clientSecret, setClientSecret] = useState("")
+  const [redirectUri, setRedirectUri] = useState("")
+  const [authUrl, setAuthUrl] = useState("")
 
   const {
     data: statusData,
@@ -38,12 +40,10 @@ export function YouTubeSection() {
   // Handle OAuth redirect callback
   useEffect(() => {
     if (searchParams.get("youtube_connected") === "1") {
-      // Clean up URL params
       searchParams.delete("youtube_connected")
       searchParams.delete("settings")
       setSearchParams(searchParams, { replace: true })
 
-      // Finalize the connection
       callFinalize({})
         .then(() => {
           toast.success("YouTube connected successfully")
@@ -63,13 +63,19 @@ export function YouTubeSection() {
 
     try {
       const res = await callConnect({ client_id: clientId.trim(), client_secret: clientSecret.trim() })
-      const authUrl = (res as { message: { auth_url: string } }).message.auth_url
-      if (authUrl) {
-        window.location.href = authUrl
-      }
+      const data = (res as { message: { auth_url: string; redirect_uri: string } }).message
+      // Show redirect URI so user can verify it's registered, then redirect
+      setRedirectUri(data.redirect_uri)
+      setAuthUrl(data.auth_url)
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Failed to connect YouTube"
       toast.error(message)
+    }
+  }
+
+  const handleProceedToGoogle = () => {
+    if (authUrl) {
+      window.location.href = authUrl
     }
   }
 
@@ -78,6 +84,8 @@ export function YouTubeSection() {
       await callDisconnect({})
       setClientId("")
       setClientSecret("")
+      setRedirectUri("")
+      setAuthUrl("")
       toast.success("YouTube disconnected")
       mutate()
     } catch (e: unknown) {
@@ -127,6 +135,20 @@ export function YouTubeSection() {
                   </div>
                 </div>
               </div>
+            ) : redirectUri ? (
+              <div className="space-y-3">
+                <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3 space-y-2">
+                  <p className="text-xs font-medium">
+                    Add this redirect URI in your Google Cloud Console before continuing:
+                  </p>
+                  <code className="block text-xs bg-background rounded px-2 py-1.5 break-all select-all border">
+                    {redirectUri}
+                  </code>
+                  <p className="text-xs text-muted-foreground">
+                    Go to Credentials &rarr; your OAuth Client &rarr; Authorized redirect URIs &rarr; paste &rarr; Save.
+                  </p>
+                </div>
+              </div>
             ) : (
               <div className="space-y-3">
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -164,7 +186,7 @@ export function YouTubeSection() {
                   >
                     Google Cloud Console
                   </a>
-                  . Enable the YouTube Data API v3 and add your site's redirect URI.
+                  . Enable the YouTube Data API v3.
                 </p>
               </div>
             )}
@@ -173,14 +195,26 @@ export function YouTubeSection() {
       </div>
 
       {/* Sticky footer */}
-      <div className="flex items-center justify-end border-t border-border px-4 py-3 md:px-6">
+      <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-3 md:px-6">
         {status?.connected ? (
           <Button variant="destructive" onClick={handleDisconnect} disabled={disconnecting}>
             {disconnecting ? "Disconnecting..." : "Disconnect YouTube"}
           </Button>
+        ) : redirectUri ? (
+          <>
+            <Button
+              variant="outline"
+              onClick={() => { setRedirectUri(""); setAuthUrl("") }}
+            >
+              Back
+            </Button>
+            <Button onClick={handleProceedToGoogle}>
+              Continue to Google
+            </Button>
+          </>
         ) : (
           <Button onClick={handleConnect} disabled={connecting || finalizing}>
-            {connecting ? "Redirecting..." : finalizing ? "Finalizing..." : "Connect YouTube"}
+            {connecting ? "Setting up..." : finalizing ? "Finalizing..." : "Connect YouTube"}
           </Button>
         )}
       </div>

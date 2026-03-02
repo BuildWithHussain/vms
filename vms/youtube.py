@@ -7,7 +7,6 @@ from frappe import _
 
 from vms.r2 import generate_presigned_download_url
 
-CONNECTED_APP_NAME = "VMS-YouTube"
 SCOPES = [
 	"https://www.googleapis.com/auth/youtube.upload",
 	"https://www.googleapis.com/auth/youtube.readonly",
@@ -17,10 +16,17 @@ TOKEN_URI = "https://oauth2.googleapis.com/token"
 REVOCATION_URI = "https://oauth2.googleapis.com/revoke"
 
 
+def _get_connected_app_name():
+	"""Get the stored Connected App name from VMS Settings."""
+	return frappe.db.get_single_value("VMS Settings", "youtube_connected_app")
+
+
 def _get_or_create_connected_app(client_id: str, client_secret: str):
 	"""Create or update the VMS YouTube Connected App."""
-	if frappe.db.exists("Connected App", CONNECTED_APP_NAME):
-		app = frappe.get_doc("Connected App", CONNECTED_APP_NAME)
+	existing_name = _get_connected_app_name()
+
+	if existing_name and frappe.db.exists("Connected App", existing_name):
+		app = frappe.get_doc("Connected App", existing_name)
 		app.client_id = client_id
 		app.client_secret = client_secret
 		app.authorization_uri = AUTHORIZATION_URI
@@ -43,7 +49,6 @@ def _get_or_create_connected_app(client_id: str, client_secret: str):
 	app = frappe.get_doc(
 		{
 			"doctype": "Connected App",
-			"name": CONNECTED_APP_NAME,
 			"provider_name": "YouTube",
 			"client_id": client_id,
 			"client_secret": client_secret,
@@ -60,6 +65,10 @@ def _get_or_create_connected_app(client_id: str, client_secret: str):
 	app.append("query_parameters", {"key": "prompt", "value": "consent"})
 
 	app.insert(ignore_permissions=True)
+
+	# Store the auto-generated name
+	frappe.db.set_single_value("VMS Settings", "youtube_connected_app", app.name)
+
 	return app
 
 
@@ -105,7 +114,7 @@ def connect_youtube(client_id: str, client_secret: str):
 		success_uri="/vms?settings=youtube&youtube_connected=1"
 	)
 
-	return {"auth_url": auth_url}
+	return {"auth_url": auth_url, "redirect_uri": connected_app.redirect_uri}
 
 
 @frappe.whitelist()
@@ -113,10 +122,11 @@ def finalize_youtube_connection():
 	"""Called after OAuth redirect — verify token exists and fetch channel info."""
 	frappe.only_for("System Manager")
 
-	if not frappe.db.exists("Connected App", CONNECTED_APP_NAME):
+	app_name = _get_connected_app_name()
+	if not app_name or not frappe.db.exists("Connected App", app_name):
 		frappe.throw(_("YouTube Connected App not found. Please connect again."))
 
-	connected_app = frappe.get_doc("Connected App", CONNECTED_APP_NAME)
+	connected_app = frappe.get_doc("Connected App", app_name)
 
 	try:
 		token_cache = connected_app.get_active_token(frappe.session.user)
@@ -150,17 +160,23 @@ def disconnect_youtube():
 
 	settings = frappe.get_single("VMS Settings")
 	user = settings.youtube_connected_user
+	app_name = settings.youtube_connected_app
 
-	# Delete Token Cache if it exists
-	if user:
-		token_cache_name = f"{CONNECTED_APP_NAME}-{user}"
+	# Delete Token Cache first (linked to Connected App)
+	if user and app_name:
+		token_cache_name = f"{app_name}-{user}"
 		if frappe.db.exists("Token Cache", token_cache_name):
-			frappe.delete_doc("Token Cache", token_cache_name, ignore_permissions=True)
+			frappe.delete_doc("Token Cache", token_cache_name, ignore_permissions=True, force=True)
+
+	# Then delete Connected App
+	if app_name and frappe.db.exists("Connected App", app_name):
+		frappe.delete_doc("Connected App", app_name, ignore_permissions=True, force=True)
 
 	# Clear settings
 	settings.youtube_connected = 0
 	settings.youtube_connected_user = None
 	settings.youtube_channel_name = None
+	settings.youtube_connected_app = None
 	settings.save(ignore_permissions=True)
 
 	return {"connected": False}
@@ -287,7 +303,10 @@ def process_youtube_upload(
 		settings = frappe.get_single("VMS Settings")
 
 		# Get OAuth token
-		connected_app = frappe.get_doc("Connected App", CONNECTED_APP_NAME)
+		app_name = settings.youtube_connected_app
+		if not app_name:
+			raise Exception("YouTube Connected App not configured. Please reconnect.")
+		connected_app = frappe.get_doc("Connected App", app_name)
 		token_cache = connected_app.get_active_token(settings.youtube_connected_user)
 
 		if not token_cache:
