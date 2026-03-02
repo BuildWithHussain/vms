@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Spinner } from "@/components/ui/spinner"
 
 interface YouTubeStatus {
   connected: boolean
@@ -17,6 +18,7 @@ export function YouTubeSection() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [clientId, setClientId] = useState("")
   const [clientSecret, setClientSecret] = useState("")
+  const [isFinalizing, setIsFinalizing] = useState(false)
 
   const {
     data: statusData,
@@ -39,7 +41,7 @@ export function YouTubeSection() {
   )
 
   const { call: callConnect, loading: connecting } = useFrappePostCall("vms.youtube.connect_youtube")
-  const { call: callFinalize, loading: finalizing } = useFrappePostCall("vms.youtube.finalize_youtube_connection")
+  const { call: callFinalize } = useFrappePostCall("vms.youtube.finalize_youtube_connection")
   const { call: callDisconnect, loading: disconnecting } = useFrappePostCall("vms.youtube.disconnect_youtube")
 
   const status = statusData?.message
@@ -49,9 +51,9 @@ export function YouTubeSection() {
   useEffect(() => {
     if (searchParams.get("youtube_connected") === "1") {
       searchParams.delete("youtube_connected")
-      searchParams.delete("settings")
       setSearchParams(searchParams, { replace: true })
 
+      setIsFinalizing(true)
       callFinalize({})
         .then(() => {
           toast.success("YouTube connected successfully")
@@ -59,6 +61,9 @@ export function YouTubeSection() {
         })
         .catch(() => {
           toast.error("Failed to finalize YouTube connection")
+        })
+        .finally(() => {
+          setIsFinalizing(false)
         })
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -94,19 +99,13 @@ export function YouTubeSection() {
     }
   }
 
-  if (statusLoading || redirectLoading) {
+  if (isFinalizing || statusLoading || redirectLoading) {
     return (
-      <div className="p-4 md:p-6 space-y-6">
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-3 w-48" />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Skeleton className="h-9 w-full rounded-md" />
-            <Skeleton className="h-9 w-full rounded-md" />
-          </div>
-        </div>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8">
+        <Spinner className="size-5" />
+        <p className="text-sm text-muted-foreground">
+          {isFinalizing ? "Connecting YouTube..." : "Loading..."}
+        </p>
       </div>
     )
   }
@@ -211,8 +210,8 @@ export function YouTubeSection() {
             {disconnecting ? "Disconnecting..." : "Disconnect YouTube"}
           </Button>
         ) : (
-          <Button onClick={handleConnect} disabled={connecting || finalizing}>
-            {connecting ? "Redirecting..." : finalizing ? "Finalizing..." : "Connect YouTube"}
+          <Button onClick={handleConnect} disabled={connecting}>
+            {connecting ? "Redirecting..." : "Connect YouTube"}
           </Button>
         )}
       </div>
