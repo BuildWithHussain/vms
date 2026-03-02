@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowLeft01Icon, Download04Icon, Link01Icon, Copy01Icon, SubtitleIcon, Scissor01Icon, GitForkIcon, Video01Icon } from "@hugeicons/core-free-icons"
+import { ArrowLeft01Icon, Download04Icon, Link01Icon, Copy01Icon, SubtitleIcon, Scissor01Icon, GitForkIcon, Video01Icon, YoutubeIcon } from "@hugeicons/core-free-icons"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
@@ -34,6 +34,10 @@ interface ReviewHeaderProps {
   proxyStatus?: string
   onGenerateProxy?: () => Promise<void>
   isGeneratingProxy?: boolean
+  youtubeUploadStatus?: string
+  youtubeVideoUrl?: string
+  onOpenYouTubeUpload?: () => void
+  onResetYouTubeUpload?: () => void
 }
 
 export function ReviewHeader({
@@ -57,6 +61,10 @@ export function ReviewHeader({
   proxyStatus,
   onGenerateProxy,
   isGeneratingProxy,
+  youtubeUploadStatus,
+  youtubeVideoUrl,
+  onOpenYouTubeUpload,
+  onResetYouTubeUpload,
 }: ReviewHeaderProps) {
   const navigate = useNavigate()
   const { isGuest, token } = useReviewContext()
@@ -179,6 +187,71 @@ export function ReviewHeader({
       {!isGuest && isVideo && proxyStatus === "Ready" && (
         <Badge variant="secondary" className="text-[10px] shrink-0">Proxy</Badge>
       )}
+
+      {/* YouTube button — auth users only, video only */}
+      {!isGuest && isVideo && (() => {
+        if (youtubeUploadStatus === "Queued" || youtubeUploadStatus === "Uploading") {
+          return (
+            <Button variant="outline" size="sm" disabled>
+              <Spinner className="size-3.5" />
+              <span className="hidden md:inline ml-1">
+                {youtubeUploadStatus === "Queued" ? "Queued..." : "Uploading..."}
+              </span>
+            </Button>
+          )
+        }
+        if (youtubeUploadStatus === "Complete" && youtubeVideoUrl) {
+          return (
+            <div className="flex items-center gap-1">
+              <a href={youtubeVideoUrl} target="_blank" rel="noopener noreferrer">
+                <Badge variant="secondary" className="cursor-pointer text-[10px] gap-1 shrink-0">
+                  <HugeiconsIcon icon={YoutubeIcon} size={12} />
+                  YouTube
+                </Badge>
+              </a>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={onResetYouTubeUpload}
+                title="Re-upload to YouTube"
+                className="size-6"
+              >
+                <HugeiconsIcon icon={YoutubeIcon} size={12} />
+              </Button>
+            </div>
+          )
+        }
+        if (youtubeUploadStatus === "Error") {
+          return (
+            <Button variant="outline" size="sm" onClick={onOpenYouTubeUpload}>
+              <HugeiconsIcon icon={YoutubeIcon} strokeWidth={2} data-icon="inline-start" size={16} />
+              <span className="hidden md:inline">Retry</span>
+            </Button>
+          )
+        }
+        return (
+          <>
+            <Button
+              variant="outline"
+              size="icon-sm"
+              className="md:hidden"
+              onClick={onOpenYouTubeUpload}
+              title="Upload to YouTube"
+            >
+              <HugeiconsIcon icon={YoutubeIcon} strokeWidth={2} size={16} />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="hidden md:inline-flex"
+              onClick={onOpenYouTubeUpload}
+            >
+              <HugeiconsIcon icon={YoutubeIcon} strokeWidth={2} data-icon="inline-start" size={16} />
+              YouTube
+            </Button>
+          </>
+        )
+      })()}
 
       {/* Share button — auth users only */}
       {!isGuest && (

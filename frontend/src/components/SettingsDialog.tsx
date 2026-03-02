@@ -1,5 +1,5 @@
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Settings01Icon, UserGroupIcon, UserCircleIcon, SubtitleIcon } from "@hugeicons/core-free-icons"
+import { Settings01Icon, UserGroupIcon, UserCircleIcon, SubtitleIcon, YoutubeIcon } from "@hugeicons/core-free-icons"
 import {
   Dialog,
   DialogContent,
@@ -20,11 +20,13 @@ import { ProfileSection } from "@/components/settings/ProfileSection"
 import { GeneralSection } from "@/components/settings/GeneralSection"
 import { UsersSection } from "@/components/settings/UsersSection"
 import { TranscriptionSection } from "@/components/settings/TranscriptionSection"
+import { YouTubeSection } from "@/components/settings/YouTubeSection"
 
 const sections = [
   { id: "profile", label: "Profile", icon: UserCircleIcon },
   { id: "general", label: "General", icon: Settings01Icon },
   { id: "transcription", label: "Transcription", icon: SubtitleIcon },
+  { id: "youtube", label: "YouTube", icon: YoutubeIcon },
   { id: "users", label: "Users", icon: UserGroupIcon },
 ] as const
 
@@ -111,6 +113,9 @@ function SettingsContent({
           <TabsContent value="transcription" className="flex flex-col m-0">
             <TranscriptionSection />
           </TabsContent>
+          <TabsContent value="youtube" className="flex flex-col m-0">
+            <YouTubeSection />
+          </TabsContent>
           <TabsContent value="users" className="flex flex-col m-0">
             <UsersSection />
           </TabsContent>
@@ -125,6 +130,9 @@ function SettingsContent({
           </TabsContent>
           <TabsContent value="transcription" className="flex flex-1 flex-col overflow-hidden m-0">
             <TranscriptionSection />
+          </TabsContent>
+          <TabsContent value="youtube" className="flex flex-1 flex-col overflow-hidden m-0">
+            <YouTubeSection />
           </TabsContent>
           <TabsContent value="users" className="flex flex-1 flex-col overflow-hidden m-0">
             <UsersSection />

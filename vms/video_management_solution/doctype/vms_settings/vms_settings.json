@@ -26,7 +26,14 @@
   "transcription_provider",
   "whisper_model",
   "openai_api_key",
-  "deepgram_api_key"
+  "deepgram_api_key",
+  "youtube_section",
+  "youtube_client_id",
+  "youtube_client_secret",
+  "column_break_youtube",
+  "youtube_connected",
+  "youtube_connected_user",
+  "youtube_channel_name"
  ],
  "fields": [
   {
@@ -176,6 +183,48 @@
    "label": "Deepgram API Key",
    "description": "API key for Deepgram transcription with speaker diarization. Get one at console.deepgram.com",
    "depends_on": "eval:doc.transcription_provider=='Deepgram'"
+  },
+  {
+   "fieldname": "youtube_section",
+   "fieldtype": "Section Break",
+   "label": "YouTube"
+  },
+  {
+   "fieldname": "youtube_client_id",
+   "fieldtype": "Data",
+   "label": "YouTube Client ID",
+   "description": "OAuth Client ID from Google Cloud Console"
+  },
+  {
+   "fieldname": "youtube_client_secret",
+   "fieldtype": "Password",
+   "label": "YouTube Client Secret",
+   "description": "OAuth Client Secret from Google Cloud Console"
+  },
+  {
+   "fieldname": "column_break_youtube",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "youtube_connected",
+   "fieldtype": "Check",
+   "label": "YouTube Connected",
+   "read_only": 1
+  },
+  {
+   "fieldname": "youtube_connected_user",
+   "fieldtype": "Link",
+   "label": "YouTube Connected User",
+   "options": "User",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "youtube_channel_name",
+   "fieldtype": "Data",
+   "label": "YouTube Channel Name",
+   "read_only": 1
   }
  ],
  "issingle": 1,

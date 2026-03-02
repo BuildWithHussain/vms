@@ -49,6 +49,9 @@ def get_review_data(asset_name: str, token: str | None = None):
 		"is_public_review": asset.is_public_review,
 		"transcription_status": asset.transcription_status or "",
 		"proxy_status": asset.proxy_status or "",
+		"youtube_upload_status": asset.youtube_upload_status or "",
+		"youtube_video_id": asset.youtube_video_id or "",
+		"youtube_video_url": asset.youtube_video_url or "",
 	}
 
 	# Only expose review_token to authenticated users
