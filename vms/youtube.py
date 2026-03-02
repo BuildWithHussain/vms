@@ -7,7 +7,7 @@ from frappe import _
 
 from vms.r2 import generate_presigned_download_url
 
-CONNECTED_APP_NAME = "VMS YouTube"
+CONNECTED_APP_NAME = "VMS-YouTube"
 SCOPES = [
 	"https://www.googleapis.com/auth/youtube.upload",
 	"https://www.googleapis.com/auth/youtube.readonly",
