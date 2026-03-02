@@ -141,12 +141,14 @@ def parse_deepgram_response(data: dict) -> list[dict]:
 		for utt in utterances:
 			text = utt.get("transcript", "").strip()
 			if text:
-				segments.append({
-					"start": float(utt.get("start", 0)),
-					"end": float(utt.get("end", 0)),
-					"text": text,
-					"speaker": utt.get("speaker", 0),
-				})
+				segments.append(
+					{
+						"start": float(utt.get("start", 0)),
+						"end": float(utt.get("end", 0)),
+						"text": text,
+						"speaker": utt.get("speaker", 0),
+					}
+				)
 		return segments
 
 	# Fallback: group words by speaker from channels
@@ -166,12 +168,14 @@ def parse_deepgram_response(data: dict) -> list[dict]:
 	for w in words[1:]:
 		speaker = w.get("speaker", 0)
 		if speaker != current_speaker:
-			segments.append({
-				"start": float(current_start),
-				"end": float(words[len(current_words) - 1].get("end", 0)),
-				"text": " ".join(current_words),
-				"speaker": current_speaker,
-			})
+			segments.append(
+				{
+					"start": float(current_start),
+					"end": float(words[len(current_words) - 1].get("end", 0)),
+					"text": " ".join(current_words),
+					"speaker": current_speaker,
+				}
+			)
 			current_speaker = speaker
 			current_start = w.get("start", 0)
 			current_words = [w.get("word", "")]
@@ -180,12 +184,14 @@ def parse_deepgram_response(data: dict) -> list[dict]:
 
 	# Don't forget the last group
 	if current_words:
-		segments.append({
-			"start": float(current_start),
-			"end": float(words[-1].get("end", 0)),
-			"text": " ".join(current_words),
-			"speaker": current_speaker,
-		})
+		segments.append(
+			{
+				"start": float(current_start),
+				"end": float(words[-1].get("end", 0)),
+				"text": " ".join(current_words),
+				"speaker": current_speaker,
+			}
+		)
 
 	return segments
 
@@ -232,8 +238,14 @@ def run_openai_whisper(audio_path: str, api_key: str) -> dict:
 def _get_audio_duration(audio_path: str) -> float:
 	"""Get audio duration in seconds using ffprobe."""
 	cmd = [
-		"ffprobe", "-v", "error", "-show_entries", "format=duration",
-		"-of", "default=noprint_wrappers=1:nokey=1", audio_path,
+		"ffprobe",
+		"-v",
+		"error",
+		"-show_entries",
+		"format=duration",
+		"-of",
+		"default=noprint_wrappers=1:nokey=1",
+		audio_path,
 	]
 	result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
 	if result.returncode != 0:
@@ -241,7 +253,9 @@ def _get_audio_duration(audio_path: str) -> float:
 	return float(result.stdout.strip())
 
 
-def _split_audio_into_chunks(mp3_path: str, tmpdir: str, chunk_duration: int = CHUNK_DURATION_SECS) -> list[tuple[str, int]]:
+def _split_audio_into_chunks(
+	mp3_path: str, tmpdir: str, chunk_duration: int = CHUNK_DURATION_SECS
+) -> list[tuple[str, int]]:
 	"""Split an mp3 file into chunks of chunk_duration seconds each."""
 	total_duration = _get_audio_duration(mp3_path)
 	chunks = []
@@ -251,11 +265,17 @@ def _split_audio_into_chunks(mp3_path: str, tmpdir: str, chunk_duration: int = C
 	while start < total_duration:
 		chunk_path = os.path.join(tmpdir, f"chunk_{idx:03d}.mp3")
 		cmd = [
-			"ffmpeg", "-hide_banner", "-y",
-			"-i", mp3_path,
-			"-ss", str(start),
-			"-t", str(chunk_duration),
-			"-c", "copy",
+			"ffmpeg",
+			"-hide_banner",
+			"-y",
+			"-i",
+			mp3_path,
+			"-ss",
+			str(start),
+			"-t",
+			str(chunk_duration),
+			"-c",
+			"copy",
 			chunk_path,
 		]
 		result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
@@ -277,9 +297,7 @@ def _transcribe_with_openai(mp3_path: str, api_key: str, tmpdir: str) -> list[di
 		return parse_segments(whisper_output)
 
 	# File too large — split into chunks and transcribe each
-	frappe.logger().info(
-		f"Audio file {file_size / 1024 / 1024:.1f}MB exceeds limit, splitting into chunks"
-	)
+	frappe.logger().info(f"Audio file {file_size / 1024 / 1024:.1f}MB exceeds limit, splitting into chunks")
 	chunks = _split_audio_into_chunks(mp3_path, tmpdir)
 	all_segments = []
 
@@ -380,9 +398,7 @@ def start_transcription(asset_name: str):
 			frappe.throw(_("Deepgram API key is not configured. Go to Settings > Transcription to add it."))
 	elif provider == "whisper.cpp":
 		if not ensure_whisper_installed():
-			frappe.throw(
-				_("whisper-cli is not installed. Install it with: brew install whisper-cpp")
-			)
+			frappe.throw(_("whisper-cli is not installed. Install it with: brew install whisper-cpp"))
 
 	# Mark as processing
 	asset.transcription_status = "Processing"
@@ -445,12 +461,8 @@ def process_transcription(asset_name: str):
 		with tempfile.TemporaryDirectory() as tmpdir:
 			# Download video from R2
 			video_path = os.path.join(tmpdir, "video" + _get_extension(asset.file_name))
-			download_url = generate_presigned_download_url(
-				asset.r2_key, asset.file_name
-			)
-			frappe.logger().info(
-				f"Downloading video for transcription: {asset_name}"
-			)
+			download_url = generate_presigned_download_url(asset.r2_key, asset.file_name)
+			frappe.logger().info(f"Downloading video for transcription: {asset_name}")
 			urlretrieve(download_url, video_path)
 
 			# Extract audio
@@ -477,9 +489,7 @@ def process_transcription(asset_name: str):
 				model_path = ensure_model_downloaded(model_name)
 				output_base = os.path.join(tmpdir, "transcript")
 				frappe.logger().info(f"Running whisper-cli: {asset_name}")
-				whisper_output = run_whisper(
-					audio_path, str(model_path), output_base
-				)
+				whisper_output = run_whisper(audio_path, str(model_path), output_base)
 				segments = parse_segments(whisper_output)
 				markdown = segments_to_markdown(segments)
 

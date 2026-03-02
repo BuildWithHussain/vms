@@ -40,6 +40,7 @@ repos:
         exclude: |
             (?x)^(
                 vms/public/dist/.*|
+                vms/public/frontend/.*|
                 .*node_modules.*|
                 .*boilerplate.*|
                 vms/templates/includes/.*|
@@ -57,6 +58,7 @@ repos:
         exclude: |
             (?x)^(
                 vms/public/dist/.*|
+                vms/public/frontend/.*|
                 cypress/.*|
                 .*node_modules.*|
                 .*boilerplate.*|

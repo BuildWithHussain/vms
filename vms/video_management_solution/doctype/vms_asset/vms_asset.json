@@ -35,6 +35,11 @@
   "proxy_r2_key",
   "section_break_split",
   "split_from",
+  "section_break_youtube",
+  "youtube_upload_status",
+  "youtube_video_id",
+  "column_break_youtube",
+  "youtube_video_url",
   "section_break_trash",
   "deleted_at",
   "column_break_trash",
@@ -215,6 +220,34 @@
    "fieldtype": "Link",
    "label": "Split From",
    "options": "VMS Asset",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_youtube",
+   "fieldtype": "Section Break",
+   "label": "YouTube"
+  },
+  {
+   "fieldname": "youtube_upload_status",
+   "fieldtype": "Select",
+   "label": "YouTube Upload Status",
+   "options": "\nQueued\nUploading\nComplete\nError",
+   "read_only": 1
+  },
+  {
+   "fieldname": "youtube_video_id",
+   "fieldtype": "Data",
+   "label": "YouTube Video ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_youtube",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "youtube_video_url",
+   "fieldtype": "Data",
+   "label": "YouTube Video URL",
    "read_only": 1
   },
   {

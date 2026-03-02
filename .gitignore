@@ -54,6 +54,11 @@ jspm_packages/
 # Aider AI Chat
 .aider*
 vms/public/frontend/assets
+vms/public/frontend/index.html
+vms/public/frontend/sw.js
+vms/public/frontend/workbox-*.js
+vms/public/frontend/manifest.webmanifest
+vms/www/vms.html
 
 # Playwright
 e2e/.auth/

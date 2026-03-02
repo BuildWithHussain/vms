@@ -256,10 +256,10 @@ def _send_split_complete_email(asset, created_assets, recipient):
 
 	message = f"""
 <p>Your video <strong>{asset.file_name}</strong> has been split into {len(created_assets)} parts successfully.</p>
-{f'<p>Project: <strong>{project_name}</strong></p>' if project_name else ''}
+{f"<p>Project: <strong>{project_name}</strong></p>" if project_name else ""}
 <p><strong>Created parts:</strong></p>
 <ul>{parts_html}</ul>
-<p><a href="{site_url}/vms{f'/projects/{asset.project}' if asset.project else '/media-pool'}">View in VMS</a></p>
+<p><a href="{site_url}/vms{f"/projects/{asset.project}" if asset.project else "/media-pool"}">View in VMS</a></p>
 """
 
 	try:
