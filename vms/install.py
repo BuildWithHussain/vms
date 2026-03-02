@@ -147,9 +147,7 @@ def _build_whisper_from_source():
 		src_dir = Path(tmpdir) / "whisper.cpp"
 		build_dir = src_dir / "build"
 
-		_run(
-			["git", "clone", "--depth=1", f"--branch={WHISPER_CPP_VERSION}", WHISPER_CPP_REPO, str(src_dir)]
-		)
+		_run(["git", "clone", "--depth=1", f"--branch={WHISPER_CPP_VERSION}", WHISPER_CPP_REPO, str(src_dir)])
 		build_dir.mkdir(exist_ok=True)
 		_run(["cmake", "-B", str(build_dir), "-S", str(src_dir)])
 		_run(["cmake", "--build", str(build_dir), "--config", "Release", "-j"])
@@ -162,9 +160,7 @@ def _build_whisper_from_source():
 		if binary.exists():
 			_run(["sudo", "install", "-m", "0755", str(binary), "/usr/local/bin/whisper-cli"])
 		else:
-			raise FileNotFoundError(
-				f"whisper-cli binary not found in build output at {build_dir}"
-			)
+			raise FileNotFoundError(f"whisper-cli binary not found in build output at {build_dir}")
 
 
 def _run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:

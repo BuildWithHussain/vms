@@ -78,9 +78,7 @@ def _process_comment_notifications(comment_name):
 		if alert_emails:
 			is_reply = bool(comment.parent_comment)
 			action = _("replied to your comment") if is_reply else _("commented")
-			alert_subject = _("<b>{0}</b> {1} on <b>{2}</b>").format(
-				commenter_name, action, asset.file_name
-			)
+			alert_subject = _("<b>{0}</b> {1} on <b>{2}</b>").format(commenter_name, action, asset.file_name)
 			enqueue_create_notification(
 				alert_emails,
 				{

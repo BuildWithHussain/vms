@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 import frappe
 from frappe.search.sqlite_search import SQLiteSearch
 
@@ -5,13 +7,13 @@ from frappe.search.sqlite_search import SQLiteSearch
 class VMSSearch(SQLiteSearch):
 	INDEX_NAME = "vms_search.db"
 
-	INDEX_SCHEMA = {
+	INDEX_SCHEMA: ClassVar[dict] = {
 		"text_fields": ["title", "content"],
 		"metadata_fields": ["doctype", "name", "project", "category", "file_type"],
 		"tokenizer": "unicode61 remove_diacritics 2 tokenchars '-_.'",
 	}
 
-	INDEXABLE_DOCTYPES = {
+	INDEXABLE_DOCTYPES: ClassVar[dict] = {
 		"VMS Asset": {
 			"fields": [
 				"name",

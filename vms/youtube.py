@@ -277,9 +277,9 @@ def process_youtube_upload(
 	privacy_status: str,
 ):
 	"""Background job: download from R2 and upload to YouTube."""
+	from google.oauth2.credentials import Credentials
 	from googleapiclient.discovery import build
 	from googleapiclient.http import MediaFileUpload
-	from google.oauth2.credentials import Credentials
 
 	asset = frappe.get_doc("VMS Asset", asset_name)
 
@@ -419,6 +419,7 @@ def process_youtube_upload(
 
 			if isinstance(e, HttpError):
 				import json
+
 				error_detail = json.loads(e.content.decode())
 				error_message = error_detail.get("error", {}).get("message", str(e))
 		except Exception:

@@ -104,9 +104,7 @@ class TestPurgeRegression(IntegrationTestCase):
 		a1 = _make_asset(self.project, "purge_zero.mp4")
 
 		# Simulate the migration bug: set deleted_at to zero datetime via SQL
-		frappe.db.sql(
-			"UPDATE `tabVMS Asset` SET deleted_at = '0000-00-00 00:00:00' WHERE name = %s", a1
-		)
+		frappe.db.sql("UPDATE `tabVMS Asset` SET deleted_at = '0000-00-00 00:00:00' WHERE name = %s", a1)
 		frappe.db.commit()
 
 		from vms.deletion import purge_expired_trash
@@ -127,17 +125,25 @@ class TestPurgeRegression(IntegrationTestCase):
 
 		# Trash old asset 10 days ago
 		old_time = add_days(now_datetime(), -10)
-		frappe.db.set_value("VMS Asset", old_asset, {
-			"deleted_at": old_time,
-			"deleted_by": "Administrator",
-		})
+		frappe.db.set_value(
+			"VMS Asset",
+			old_asset,
+			{
+				"deleted_at": old_time,
+				"deleted_by": "Administrator",
+			},
+		)
 
 		# Trash recent asset 1 day ago
 		recent_time = add_days(now_datetime(), -1)
-		frappe.db.set_value("VMS Asset", recent_asset, {
-			"deleted_at": recent_time,
-			"deleted_by": "Administrator",
-		})
+		frappe.db.set_value(
+			"VMS Asset",
+			recent_asset,
+			{
+				"deleted_at": recent_time,
+				"deleted_by": "Administrator",
+			},
+		)
 		frappe.db.commit()
 
 		from vms.deletion import purge_expired_trash
@@ -157,10 +163,14 @@ class TestPurgeRegression(IntegrationTestCase):
 
 		# Trash it 100 days ago
 		old_time = add_days(now_datetime(), -100)
-		frappe.db.set_value("VMS Asset", asset, {
-			"deleted_at": old_time,
-			"deleted_by": "Administrator",
-		})
+		frappe.db.set_value(
+			"VMS Asset",
+			asset,
+			{
+				"deleted_at": old_time,
+				"deleted_by": "Administrator",
+			},
+		)
 		frappe.db.commit()
 
 		from vms.deletion import purge_expired_trash

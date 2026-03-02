@@ -86,10 +86,15 @@ def _ffmpeg_compress(input_path: str, output_path: str):
 	"""Run ffmpeg to compress video. Tries smart remux for non-MP4 files with compatible codecs."""
 	if _can_remux_to_mp4(input_path):
 		copy_cmd = [
-			"ffmpeg", "-hide_banner", "-y",
-			"-i", input_path,
-			"-c", "copy",
-			"-movflags", "+faststart",
+			"ffmpeg",
+			"-hide_banner",
+			"-y",
+			"-i",
+			input_path,
+			"-c",
+			"copy",
+			"-movflags",
+			"+faststart",
 			output_path,
 		]
 		result = subprocess.run(copy_cmd, capture_output=True, text=True, timeout=3600)
@@ -102,15 +107,24 @@ def _ffmpeg_compress(input_path: str, output_path: str):
 		"ffmpeg",
 		"-hide_banner",
 		"-y",
-		"-i", input_path,
-		"-c:v", "libx264",
-		"-preset", "medium",
-		"-crf", "23",
-		"-pix_fmt", "yuv420p",
-		"-vf", "scale='min(1920,iw)':-2",
-		"-c:a", "aac",
-		"-b:a", "160k",
-		"-movflags", "+faststart",
+		"-i",
+		input_path,
+		"-c:v",
+		"libx264",
+		"-preset",
+		"medium",
+		"-crf",
+		"23",
+		"-pix_fmt",
+		"yuv420p",
+		"-vf",
+		"scale='min(1920,iw)':-2",
+		"-c:a",
+		"aac",
+		"-b:a",
+		"160k",
+		"-movflags",
+		"+faststart",
 		output_path,
 	]
 
@@ -135,8 +149,14 @@ def _get_extension(filename: str) -> str:
 def _probe_codecs(input_path: str) -> dict:
 	"""Use ffprobe to detect video/audio codecs and container format."""
 	cmd = [
-		"ffprobe", "-v", "quiet", "-print_format", "json",
-		"-show_format", "-show_streams", input_path,
+		"ffprobe",
+		"-v",
+		"quiet",
+		"-print_format",
+		"json",
+		"-show_format",
+		"-show_streams",
+		input_path,
 	]
 	try:
 		result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
@@ -272,10 +292,15 @@ def _ffmpeg_convert(input_path: str, output_path: str):
 	"""Convert video to MP4. Tries fast copy-remux first, falls back to transcode."""
 	# Try copy-remux first (instant if codecs are MP4-compatible)
 	copy_cmd = [
-		"ffmpeg", "-hide_banner", "-y",
-		"-i", input_path,
-		"-c", "copy",
-		"-movflags", "+faststart",
+		"ffmpeg",
+		"-hide_banner",
+		"-y",
+		"-i",
+		input_path,
+		"-c",
+		"copy",
+		"-movflags",
+		"+faststart",
 		output_path,
 	]
 	result = subprocess.run(copy_cmd, capture_output=True, text=True, timeout=3600)
@@ -284,12 +309,27 @@ def _ffmpeg_convert(input_path: str, output_path: str):
 
 	# Fall back to full transcode
 	transcode_cmd = [
-		"ffmpeg", "-hide_banner", "-y",
-		"-i", input_path,
-		"-c:v", "libx264", "-preset", "medium", "-crf", "23", "-pix_fmt", "yuv420p",
-		"-vf", "scale='min(1920,iw)':-2",
-		"-c:a", "aac", "-b:a", "160k",
-		"-movflags", "+faststart",
+		"ffmpeg",
+		"-hide_banner",
+		"-y",
+		"-i",
+		input_path,
+		"-c:v",
+		"libx264",
+		"-preset",
+		"medium",
+		"-crf",
+		"23",
+		"-pix_fmt",
+		"yuv420p",
+		"-vf",
+		"scale='min(1920,iw)':-2",
+		"-c:a",
+		"aac",
+		"-b:a",
+		"160k",
+		"-movflags",
+		"+faststart",
 		output_path,
 	]
 	result = subprocess.run(transcode_cmd, capture_output=True, text=True, timeout=3600)

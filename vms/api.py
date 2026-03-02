@@ -422,7 +422,12 @@ def rename_folder(folder_name_id: str, new_name: str):
 	# Check for duplicate name in same project (exclude trashed)
 	existing = frappe.db.exists(
 		"VMS Folder",
-		{"folder_name": new_name, "project": folder.project, "name": ["!=", folder.name], "deleted_at": ["is", "not set"]},
+		{
+			"folder_name": new_name,
+			"project": folder.project,
+			"name": ["!=", folder.name],
+			"deleted_at": ["is", "not set"],
+		},
 	)
 	if existing:
 		frappe.throw(_("A folder named '{0}' already exists in this project").format(new_name))
@@ -744,8 +749,7 @@ def get_trash_assets(page=1, page_size=20):
 
 	# Enrich with user info (uploader + deleter)
 	user_emails = list(
-		{a.uploaded_by for a in assets if a.uploaded_by}
-		| {a.deleted_by for a in assets if a.deleted_by}
+		{a.uploaded_by for a in assets if a.uploaded_by} | {a.deleted_by for a in assets if a.deleted_by}
 	)
 	user_map = {}
 	if user_emails:
@@ -1026,7 +1030,11 @@ def search_assets(query: str, project: str | None = None, limit: int = 10):
 			)
 	except Exception:
 		# Fallback to SQL LIKE search if index doesn't exist
-		like_filters = {"file_name": ["like", f"%{query}%"], "status": ["!=", "Uploading"], "deleted_at": ["is", "not set"]}
+		like_filters = {
+			"file_name": ["like", f"%{query}%"],
+			"status": ["!=", "Uploading"],
+			"deleted_at": ["is", "not set"],
+		}
 		if project:
 			like_filters["project"] = project
 
