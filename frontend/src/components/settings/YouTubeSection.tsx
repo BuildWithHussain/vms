@@ -17,12 +17,10 @@ export function YouTubeSection() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [clientId, setClientId] = useState("")
   const [clientSecret, setClientSecret] = useState("")
-  const [redirectUri, setRedirectUri] = useState("")
-  const [authUrl, setAuthUrl] = useState("")
 
   const {
     data: statusData,
-    isLoading,
+    isLoading: statusLoading,
     mutate,
   } = useFrappeGetCall<{ message: YouTubeStatus }>(
     "vms.youtube.get_youtube_status",
@@ -31,11 +29,21 @@ export function YouTubeSection() {
     { revalidateOnFocus: false }
   )
 
+  const { data: redirectData, isLoading: redirectLoading } = useFrappeGetCall<{
+    message: { redirect_uri: string }
+  }>(
+    "vms.youtube.get_youtube_redirect_uri",
+    undefined,
+    "youtube-redirect-uri",
+    { revalidateOnFocus: false }
+  )
+
   const { call: callConnect, loading: connecting } = useFrappePostCall("vms.youtube.connect_youtube")
   const { call: callFinalize, loading: finalizing } = useFrappePostCall("vms.youtube.finalize_youtube_connection")
   const { call: callDisconnect, loading: disconnecting } = useFrappePostCall("vms.youtube.disconnect_youtube")
 
   const status = statusData?.message
+  const redirectUri = redirectData?.message?.redirect_uri || ""
 
   // Handle OAuth redirect callback
   useEffect(() => {
@@ -63,19 +71,13 @@ export function YouTubeSection() {
 
     try {
       const res = await callConnect({ client_id: clientId.trim(), client_secret: clientSecret.trim() })
-      const data = (res as { message: { auth_url: string; redirect_uri: string } }).message
-      // Show redirect URI so user can verify it's registered, then redirect
-      setRedirectUri(data.redirect_uri)
-      setAuthUrl(data.auth_url)
+      const authUrl = (res as { message: { auth_url: string } }).message.auth_url
+      if (authUrl) {
+        window.location.href = authUrl
+      }
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Failed to connect YouTube"
       toast.error(message)
-    }
-  }
-
-  const handleProceedToGoogle = () => {
-    if (authUrl) {
-      window.location.href = authUrl
     }
   }
 
@@ -84,8 +86,6 @@ export function YouTubeSection() {
       await callDisconnect({})
       setClientId("")
       setClientSecret("")
-      setRedirectUri("")
-      setAuthUrl("")
       toast.success("YouTube disconnected")
       mutate()
     } catch (e: unknown) {
@@ -94,7 +94,7 @@ export function YouTubeSection() {
     }
   }
 
-  if (isLoading) {
+  if (statusLoading || redirectLoading) {
     return (
       <div className="p-4 md:p-6 space-y-6">
         <div className="space-y-4">
@@ -135,59 +135,58 @@ export function YouTubeSection() {
                   </div>
                 </div>
               </div>
-            ) : redirectUri ? (
-              <div className="space-y-3">
-                <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3 space-y-2">
+            ) : (
+              <div className="space-y-4">
+                {/* Step 1: Show redirect URI */}
+                <div className="space-y-2">
                   <p className="text-xs font-medium">
-                    Add this redirect URI in your Google Cloud Console before continuing:
+                    1. Create an OAuth Client in the{" "}
+                    <a
+                      href="https://console.cloud.google.com/apis/credentials"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline"
+                    >
+                      Google Cloud Console
+                    </a>{" "}
+                    with this redirect URI:
                   </p>
-                  <code className="block text-xs bg-background rounded px-2 py-1.5 break-all select-all border">
+                  <code className="block text-xs bg-muted rounded px-2.5 py-2 break-all select-all border">
                     {redirectUri}
                   </code>
-                  <p className="text-xs text-muted-foreground">
-                    Go to Credentials &rarr; your OAuth Client &rarr; Authorized redirect URIs &rarr; paste &rarr; Save.
+                </div>
+
+                {/* Step 2: Enter credentials */}
+                <div className="space-y-2">
+                  <p className="text-xs font-medium">
+                    2. Paste the Client ID and Client Secret below:
                   </p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="youtube_client_id" className="text-xs">
-                      Client ID
-                    </Label>
-                    <Input
-                      id="youtube_client_id"
-                      placeholder="Enter OAuth Client ID"
-                      value={clientId}
-                      onChange={(e) => setClientId(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="youtube_client_secret" className="text-xs">
-                      Client Secret
-                    </Label>
-                    <Input
-                      id="youtube_client_secret"
-                      type="password"
-                      placeholder="Enter OAuth Client Secret"
-                      value={clientSecret}
-                      onChange={(e) => setClientSecret(e.target.value)}
-                    />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="youtube_client_id" className="text-xs">
+                        Client ID
+                      </Label>
+                      <Input
+                        id="youtube_client_id"
+                        placeholder="Enter OAuth Client ID"
+                        value={clientId}
+                        onChange={(e) => setClientId(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="youtube_client_secret" className="text-xs">
+                        Client Secret
+                      </Label>
+                      <Input
+                        id="youtube_client_secret"
+                        type="password"
+                        placeholder="Enter OAuth Client Secret"
+                        value={clientSecret}
+                        onChange={(e) => setClientSecret(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Create OAuth credentials in the{" "}
-                  <a
-                    href="https://console.cloud.google.com/apis/credentials"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline"
-                  >
-                    Google Cloud Console
-                  </a>
-                  . Enable the YouTube Data API v3.
-                </p>
               </div>
             )}
           </div>
@@ -195,26 +194,14 @@ export function YouTubeSection() {
       </div>
 
       {/* Sticky footer */}
-      <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-3 md:px-6">
+      <div className="flex items-center justify-end border-t border-border px-4 py-3 md:px-6">
         {status?.connected ? (
           <Button variant="destructive" onClick={handleDisconnect} disabled={disconnecting}>
             {disconnecting ? "Disconnecting..." : "Disconnect YouTube"}
           </Button>
-        ) : redirectUri ? (
-          <>
-            <Button
-              variant="outline"
-              onClick={() => { setRedirectUri(""); setAuthUrl("") }}
-            >
-              Back
-            </Button>
-            <Button onClick={handleProceedToGoogle}>
-              Continue to Google
-            </Button>
-          </>
         ) : (
           <Button onClick={handleConnect} disabled={connecting || finalizing}>
-            {connecting ? "Setting up..." : finalizing ? "Finalizing..." : "Connect YouTube"}
+            {connecting ? "Redirecting..." : finalizing ? "Finalizing..." : "Connect YouTube"}
           </Button>
         )}
       </div>

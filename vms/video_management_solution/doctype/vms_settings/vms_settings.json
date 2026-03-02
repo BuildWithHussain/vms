@@ -33,8 +33,7 @@
   "column_break_youtube",
   "youtube_connected",
   "youtube_connected_user",
-  "youtube_channel_name",
-  "youtube_connected_app"
+  "youtube_channel_name"
  ],
  "fields": [
   {
@@ -226,14 +225,6 @@
    "fieldtype": "Data",
    "label": "YouTube Channel Name",
    "read_only": 1
-  },
-  {
-   "fieldname": "youtube_connected_app",
-   "fieldtype": "Link",
-   "label": "YouTube Connected App",
-   "options": "Connected App",
-   "read_only": 1,
-   "hidden": 1
   }
  ],
  "issingle": 1,
