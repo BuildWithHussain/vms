@@ -151,7 +151,18 @@ export function YouTubeSection() {
                     </a>{" "}
                     with this redirect URI:
                   </p>
-                  <code className="block text-xs bg-muted rounded px-2.5 py-2 break-all select-all border">
+                  <code
+                    className="block text-xs bg-muted rounded px-2.5 py-2 break-all border cursor-pointer hover:bg-muted/70 transition-colors"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(redirectUri)
+                        toast.success("Redirect URI copied to clipboard")
+                      } catch {
+                        toast.error("Failed to copy")
+                      }
+                    }}
+                    title="Click to copy"
+                  >
                     {redirectUri}
                   </code>
                 </div>
