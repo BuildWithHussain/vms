@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react"
-import { Outlet } from "react-router"
+import { useEffect, useRef, useState, useCallback } from "react"
+import { Outlet, useSearchParams } from "react-router"
 import { AppSidebar } from "./Sidebar"
 import { Header } from "./Header"
 import { SettingsDialog } from "@/components/SettingsDialog"
@@ -11,13 +11,34 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 function AppLayoutInner() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState("profile")
+  const [searchParams, setSearchParams] = useSearchParams()
   const commandPalette = useCommandPalette()
   const { openUpload, dialogOpen } = useUploadContext()
 
-  const openSettings = (tab = "profile") => {
+  const openSettings = useCallback((tab = "profile") => {
     setSettingsTab(tab)
     setSettingsOpen(true)
-  }
+  }, [])
+
+  // Auto-open settings from URL params (e.g. OAuth redirect)
+  useEffect(() => {
+    const tab = searchParams.get("settings")
+    if (tab) {
+      openSettings(tab)
+      searchParams.delete("settings")
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Listen for open-settings events from other components
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      openSettings(detail?.tab || "profile")
+    }
+    window.addEventListener("open-settings", handler)
+    return () => window.removeEventListener("open-settings", handler)
+  }, [openSettings])
 
   // Refs for dialog state — read inside keydown handler without re-subscribing
   const settingsOpenRef = useRef(settingsOpen)
