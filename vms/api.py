@@ -1479,6 +1479,58 @@ def get_asset_versions(asset_name: str):
 	}
 
 
+@frappe.whitelist()
+def get_version_download_url(asset_name: str, version_number: int):
+	"""Get a presigned download URL for a specific version of an asset."""
+	version_number = int(version_number)
+
+	asset = frappe.db.get_value(
+		"VMS Asset",
+		asset_name,
+		["name", "version", "r2_key", "file_name", "file_type", "project", "file_size"],
+		as_dict=True,
+	)
+	if not asset:
+		frappe.throw(_("Asset not found"), frappe.DoesNotExistError)
+
+	# Current version — use asset's r2_key directly
+	if version_number == (asset.version or 1):
+		r2_key = asset.r2_key
+		file_name = asset.file_name
+		file_size = asset.file_size
+		file_type = asset.file_type
+	else:
+		# Historical version
+		ver = frappe.db.get_value(
+			"VMS Asset Version",
+			{"asset": asset_name, "version_number": version_number},
+			["r2_key", "file_name", "file_size", "file_type"],
+			as_dict=True,
+		)
+		if not ver:
+			frappe.throw(_("Version not found"), frappe.DoesNotExistError)
+		r2_key = ver.r2_key
+		file_name = ver.file_name
+		file_size = ver.file_size
+		file_type = ver.file_type
+
+	if not r2_key:
+		frappe.throw(_("Version has no R2 key"))
+
+	url = generate_presigned_download_url(r2_key, file_name)
+
+	_create_audit_log(
+		action="Download",
+		asset_name=asset.name,
+		file_name=file_name,
+		file_type=file_type,
+		project=asset.project,
+		file_size=file_size,
+	)
+
+	return {"url": url}
+
+
 @frappe.whitelist(allow_guest=True)
 def get_shared_asset_download_url(asset_name: str, project: str, token: str | None = None):
 	"""Get a presigned download URL for an asset in a shared project (guest-accessible)."""

@@ -1,6 +1,8 @@
-import { useFrappeGetCall } from "frappe-react-sdk"
+import { useState, useCallback } from "react"
+import { useFrappeGetCall, useFrappePostCall } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Upload04Icon, CheckmarkCircle02Icon } from "@hugeicons/core-free-icons"
+import { Upload04Icon, CheckmarkCircle02Icon, Download04Icon } from "@hugeicons/core-free-icons"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
   Sheet,
@@ -54,6 +56,33 @@ export function VersionSheet({ open, onOpenChange, asset, onVersionUploaded }: V
       onVersionUploaded?.()
     },
   })
+
+  const { call: getVersionDownloadUrl } = useFrappePostCall("vms.api.get_version_download_url")
+  const [downloadingVersion, setDownloadingVersion] = useState<number | null>(null)
+
+  const downloadVersion = useCallback(
+    async (versionNumber: number, fileName: string) => {
+      try {
+        setDownloadingVersion(versionNumber)
+        const res = await getVersionDownloadUrl({
+          asset_name: asset.name,
+          version_number: versionNumber,
+        })
+        const { url } = res.message as { url: string }
+        const a = document.createElement("a")
+        a.href = url
+        a.download = fileName
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      } catch {
+        toast.error("Failed to download version")
+      } finally {
+        setDownloadingVersion(null)
+      }
+    },
+    [asset.name, getVersionDownloadUrl],
+  )
 
   const versionData = data?.message
   const allVersions = versionData
@@ -133,6 +162,16 @@ export function VersionSheet({ open, onOpenChange, asset, onVersionUploaded }: V
                       </p>
                     )}
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0 size-8"
+                    disabled={downloadingVersion === v.version_number}
+                    onClick={() => downloadVersion(v.version_number, v.file_name)}
+                    title={`Download v${v.version_number}`}
+                  >
+                    <HugeiconsIcon icon={Download04Icon} size={14} />
+                  </Button>
                 </div>
               ))}
             </div>
