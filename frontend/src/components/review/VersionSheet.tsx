@@ -24,7 +24,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Spinner } from "@/components/ui/spinner"
 import { formatBytes } from "@/lib/utils"
-import { useVersionUpload } from "@/hooks/useVersionUpload"
+import { useUploadContext } from "@/contexts/UploadContext"
 import type { VMSAsset } from "@/types"
 
 interface VersionInfo {
@@ -60,12 +60,7 @@ export function VersionSheet({ open, onOpenChange, asset, onVersionUploaded }: V
     open ? `asset-versions-${asset.name}` : null,
   )
 
-  const { triggerVersionUpload } = useVersionUpload({
-    onComplete: () => {
-      mutate()
-      onVersionUploaded?.()
-    },
-  })
+  const { openUpload } = useUploadContext()
 
   const { call: getVersionDownloadUrl } = useFrappePostCall("vms.api.get_version_download_url")
   const { call: restoreVersionCall } = useFrappePostCall("vms.api.restore_version")
@@ -141,7 +136,12 @@ export function VersionSheet({ open, onOpenChange, asset, onVersionUploaded }: V
               size="sm"
               variant="outline"
               className="w-full"
-              onClick={() => triggerVersionUpload(asset)}
+              onClick={() => openUpload({
+                versionOf: asset,
+                project: asset.project,
+                category: asset.category,
+                onComplete: () => { mutate(); onVersionUploaded?.() },
+              })}
             >
               <HugeiconsIcon icon={Upload04Icon} strokeWidth={2} data-icon="inline-start" size={16} />
               Upload new version

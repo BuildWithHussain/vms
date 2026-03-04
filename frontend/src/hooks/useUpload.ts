@@ -15,6 +15,7 @@ export interface FileUploadItem {
   project?: string
   category?: string
   folder?: string
+  versionOf?: string
 }
 
 const MAX_CONCURRENT = 2
@@ -313,6 +314,7 @@ export function useUpload(options?: {
         await confirmUpload({
           asset_name: data.asset_name,
           file_size: item.file.size,
+          ...(item.versionOf ? { version_of: item.versionOf } : {}),
         })
 
         updateFile(item.id, { status: "done" })
@@ -400,6 +402,7 @@ export function useUpload(options?: {
       project?: string
       category?: string
       folder?: string
+      versionOf?: string
     }) => {
       const items: FileUploadItem[] = newFiles.map((file) => ({
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -410,6 +413,7 @@ export function useUpload(options?: {
         project: opts?.project,
         category: opts?.category,
         folder: opts?.folder,
+        versionOf: opts?.versionOf,
       }))
 
       setFiles((prev) => [...prev, ...items])

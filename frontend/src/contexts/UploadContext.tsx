@@ -9,6 +9,7 @@ import {
 } from "react"
 import { useFrappePostCall } from "frappe-react-sdk"
 import { useUpload, type FileUploadItem } from "@/hooks/useUpload"
+import type { VMSAsset } from "@/types"
 
 export interface UploadConfig {
   project?: string
@@ -17,6 +18,7 @@ export interface UploadConfig {
   existingFileNames?: string[]
   initialFiles?: File[]
   onComplete?: () => void
+  versionOf?: VMSAsset
 }
 
 interface UploadContextType {

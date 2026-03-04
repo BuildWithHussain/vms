@@ -73,6 +73,8 @@ export function UploadDialog() {
   const [nonDuplicates, setNonDuplicates] = useState<File[]>([])
   const initialFilesProcessed = useRef(false)
 
+  const isVersionMode = !!config.versionOf
+
   const allDone =
     files.length > 0 &&
     files.every(
@@ -106,6 +108,18 @@ export function UploadDialog() {
 
   const processIncomingFiles = useCallback(
     (incoming: File[]) => {
+      // Version mode: single file only, pass versionOf, skip duplicate check
+      if (isVersionMode) {
+        const filesToAdd = incoming.slice(0, 1)
+        addFiles(filesToAdd, {
+          project: config.project,
+          category,
+          folder: config.folder,
+          versionOf: config.versionOf!.name,
+        })
+        return
+      }
+
       if (!config.existingFileNames || config.existingFileNames.length === 0) {
         addFiles(incoming, {
           project: config.project,
@@ -234,11 +248,13 @@ export function UploadDialog() {
           <DialogHeader>
             <div className="flex items-center justify-between">
               <div>
-                <DialogTitle>Upload Assets</DialogTitle>
+                <DialogTitle>{isVersionMode ? "Upload New Version" : "Upload Assets"}</DialogTitle>
                 <DialogDescription>
-                  {config.project
-                    ? "Upload files to this project."
-                    : "Upload files without a project."}
+                  {isVersionMode
+                    ? "Replace the current file with a new version."
+                    : config.project
+                      ? "Upload files to this project."
+                      : "Upload files without a project."}
                 </DialogDescription>
               </div>
               {(isUploading || files.length > 0) && (
@@ -256,22 +272,44 @@ export function UploadDialog() {
           </DialogHeader>
 
           <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
-            <div className="space-y-2">
-              <Label>Category</Label>
-              <Select value={category} onValueChange={setCategory} disabled={isUploading}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Footage">Footage</SelectItem>
-                  <SelectItem value="For Review">For Review</SelectItem>
-                  <SelectItem value="Deliverable">Deliverable</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {isVersionMode ? (
+              <div className="flex items-center gap-3 rounded-lg border p-3">
+                {config.versionOf!.thumbnail_url ? (
+                  <img
+                    src={config.versionOf!.thumbnail_url}
+                    alt=""
+                    className="size-10 rounded object-cover shrink-0"
+                  />
+                ) : (
+                  <div className="size-10 rounded bg-muted shrink-0" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{config.versionOf!.file_name}</p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="rounded bg-muted px-1.5 py-0.5 font-medium">
+                      v{config.versionOf!.version || 1} → v{(config.versionOf!.version || 1) + 1}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <Select value={category} onValueChange={setCategory} disabled={isUploading}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Footage">Footage</SelectItem>
+                    <SelectItem value="For Review">For Review</SelectItem>
+                    <SelectItem value="Deliverable">Deliverable</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Duplicate resolution */}
-            {duplicates.length > 0 && (
+            {!isVersionMode && duplicates.length > 0 && (
               <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
                 <div className="flex items-center gap-2 text-sm font-medium text-amber-800 dark:text-amber-200">
                   <HugeiconsIcon
@@ -372,7 +410,7 @@ export function UploadDialog() {
               onClick={() => fileInputRef.current?.click()}
               className={cn(
                 "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center transition-colors",
-                isUploading || duplicates.length > 0
+                isUploading || duplicates.length > 0 || (isVersionMode && files.length > 0)
                   ? "pointer-events-none border-muted opacity-50"
                   : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30",
               )}
@@ -382,14 +420,16 @@ export function UploadDialog() {
                 strokeWidth={1.5}
                 className="size-10 text-muted-foreground"
               />
-              <div className="text-sm font-medium">Drop files here or click to browse</div>
+              <div className="text-sm font-medium">
+                {isVersionMode ? "Drop a file here or click to browse" : "Drop files here or click to browse"}
+              </div>
               <div className="text-xs text-muted-foreground">
                 Video files (mp4, mov, avi, mkv, webm)
               </div>
               <input
                 ref={fileInputRef}
                 type="file"
-                multiple
+                {...(isVersionMode ? {} : { multiple: true })}
                 accept="video/*,audio/*,image/*,.mkv,.avi,.m4v"
                 onChange={handleFileSelect}
                 className="hidden"

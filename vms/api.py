@@ -223,8 +223,16 @@ def abort_multipart(asset_name: str, upload_id: str):
 
 
 @frappe.whitelist()
-def confirm_upload(asset_name: str, file_size: int):
-	"""Mark an asset as Ready after successful upload to R2."""
+def confirm_upload(asset_name: str, file_size: int, version_of: str | None = None):
+	"""Mark an asset as Ready after successful upload to R2.
+
+	If version_of is provided, treats this as a version upload:
+	- Saves the target asset's current state as a VMS Asset Version record
+	- Copies the uploaded (source) asset's file data onto the target asset
+	- Bumps the target's version number
+	- Deletes the temporary source asset record
+	- Returns the target asset info
+	"""
 	asset = frappe.get_doc("VMS Asset", asset_name)
 
 	if asset.status != "Uploading":
@@ -235,6 +243,9 @@ def confirm_upload(asset_name: str, file_size: int):
 	asset.uploaded_at = frappe.utils.now_datetime()
 	asset.save(ignore_permissions=True)
 
+	if version_of:
+		return _apply_version_swap(source_asset=asset, target_name=version_of)
+
 	# Enqueue thumbnail generation as background job
 	frappe.enqueue(
 		"vms.thumbnails.generate_thumbnail",
@@ -244,6 +255,87 @@ def confirm_upload(asset_name: str, file_size: int):
 	)
 
 	return {"status": "ok", "asset_name": asset.name}
+
+
+def _apply_version_swap(source_asset, target_name: str) -> dict:
+	"""Swap a newly uploaded temp asset's file data onto the target asset.
+
+	1. Save target's current state as a VMS Asset Version
+	2. Copy source's file fields onto target
+	3. Bump target version, clear thumbnail
+	4. Delete the temp source asset record (R2 object stays)
+	5. Enqueue thumbnail generation + audit log for target
+	"""
+	target = frappe.get_doc("VMS Asset", target_name)
+
+	if target.status != "Ready":
+		frappe.throw(_("Target asset must be in Ready status"))
+	if target.deleted_at:
+		frappe.throw(_("Cannot upload a new version of a trashed asset"))
+
+	current_version = target.version or 1
+
+	# Save target's current state as a version record
+	frappe.get_doc(
+		{
+			"doctype": "VMS Asset Version",
+			"asset": target.name,
+			"version_number": current_version,
+			"r2_key": target.r2_key,
+			"file_size": target.file_size,
+			"file_type": target.file_type,
+			"file_name": target.file_name,
+			"uploaded_by": target.uploaded_by,
+			"uploaded_at": target.uploaded_at,
+			"thumbnail_url": target.thumbnail_url,
+		}
+	).insert(ignore_permissions=True)
+
+	# Capture source asset's file data before deleting the temp record
+	new_r2_key = source_asset.r2_key
+	new_file_name = source_asset.file_name
+	new_file_type = source_asset.file_type
+	new_file_size = source_asset.file_size
+	new_uploaded_by = source_asset.uploaded_by
+	new_uploaded_at = source_asset.uploaded_at
+
+	# Delete the temp source asset first to avoid r2_key uniqueness violation
+	frappe.delete_doc("VMS Asset", source_asset.name, ignore_permissions=True, force=True)
+
+	# Copy source asset's file data onto target
+	target.r2_key = new_r2_key
+	target.file_name = new_file_name
+	target.file_type = new_file_type
+	target.file_size = new_file_size
+	target.uploaded_by = new_uploaded_by
+	target.uploaded_at = new_uploaded_at
+	target.version = current_version + 1
+	target.thumbnail_url = None
+	target.save(ignore_permissions=True)
+
+	# Enqueue thumbnail generation for target
+	frappe.enqueue(
+		"vms.thumbnails.generate_thumbnail",
+		asset_name=target.name,
+		queue="default",
+		enqueue_after_commit=True,
+	)
+
+	_create_audit_log(
+		action="New Version",
+		asset_name=target.name,
+		file_name=target.file_name,
+		file_type=target.file_type,
+		project=target.project,
+		file_size=target.file_size,
+	)
+
+	return {
+		"status": "ok",
+		"asset_name": target.name,
+		"version_of": target.name,
+		"version": target.version,
+	}
 
 
 @frappe.whitelist()
@@ -1281,122 +1373,6 @@ def get_shared_asset_view_url(asset_name: str, project: str, token: str | None =
 
 
 # ── Asset Versions ───────────────────────────────────────────────────────────
-
-
-@frappe.whitelist()
-def upload_new_version(asset_name: str, file_name: str, content_type: str, file_size: int = 0):
-	"""Upload a new version of an existing asset.
-
-	Saves the current asset state as a VMS Asset Version record,
-	then generates a presigned URL for the new file upload.
-	The asset record is updated in place so all links/comments remain attached.
-	"""
-	asset = frappe.get_doc("VMS Asset", asset_name)
-
-	if asset.status not in ("Ready", "Error"):
-		frappe.throw(_("Asset must be in Ready or Error status to upload a new version"))
-
-	if asset.deleted_at:
-		frappe.throw(_("Cannot upload a new version of a trashed asset"))
-
-	settings = frappe.get_single("VMS Settings")
-	file_size = int(file_size or 0)
-
-	# Validate file size
-	max_size = int(settings.max_file_size or 0)
-	if max_size and file_size and file_size > max_size:
-		max_mb = max_size / (1024**2)
-		if max_mb >= 1024 and max_mb % 1024 == 0:
-			size_label = f"{int(max_mb / 1024)} GB"
-		elif max_mb >= 1024:
-			size_label = f"{round(max_mb / 1024, 1)} GB"
-		else:
-			size_label = f"{int(max_mb)} MB"
-		frappe.throw(_("File size exceeds the maximum allowed size of {0}").format(size_label))
-
-	# Save current asset state as a version record
-	current_version = asset.version or 1
-	frappe.get_doc(
-		{
-			"doctype": "VMS Asset Version",
-			"asset": asset.name,
-			"version_number": current_version,
-			"r2_key": asset.r2_key,
-			"file_size": asset.file_size,
-			"file_type": asset.file_type,
-			"file_name": asset.file_name,
-			"uploaded_by": asset.uploaded_by,
-			"uploaded_at": asset.uploaded_at,
-			"thumbnail_url": asset.thumbnail_url,
-		}
-	).insert(ignore_permissions=True)
-
-	# Generate new R2 key and presigned URL
-	use_multipart = file_size > MULTIPART_THRESHOLD
-
-	if use_multipart:
-		r2_key, upload_id = create_multipart_upload(file_name, content_type, asset.project)
-	else:
-		upload_url, r2_key = generate_presigned_upload_url(file_name, content_type, asset.project)
-
-	# Update the asset to Uploading status with new file info
-	asset.status = "Uploading"
-	asset.r2_key = r2_key
-	asset.file_name = file_name
-	asset.file_type = content_type
-	asset.file_size = 0
-	asset.version = current_version + 1
-	asset.thumbnail_url = None
-	asset.uploaded_by = frappe.session.user
-	asset.save(ignore_permissions=True)
-
-	result = {
-		"r2_key": r2_key,
-		"asset_name": asset.name,
-		"version": asset.version,
-		"multipart": use_multipart,
-	}
-
-	if use_multipart:
-		result["upload_id"] = upload_id
-		result["part_size"] = MULTIPART_PART_SIZE
-	else:
-		result["upload_url"] = upload_url
-
-	return result
-
-
-@frappe.whitelist()
-def confirm_version_upload(asset_name: str, file_size: int):
-	"""Mark a version upload as complete. Same as confirm_upload but for versions."""
-	asset = frappe.get_doc("VMS Asset", asset_name)
-
-	if asset.status != "Uploading":
-		frappe.throw(_("Asset is not in Uploading status"))
-
-	asset.status = "Ready"
-	asset.file_size = int(file_size)
-	asset.uploaded_at = frappe.utils.now_datetime()
-	asset.save(ignore_permissions=True)
-
-	# Enqueue thumbnail generation
-	frappe.enqueue(
-		"vms.thumbnails.generate_thumbnail",
-		asset_name=asset.name,
-		queue="default",
-		enqueue_after_commit=True,
-	)
-
-	_create_audit_log(
-		action="New Version",
-		asset_name=asset.name,
-		file_name=asset.file_name,
-		file_type=asset.file_type,
-		project=asset.project,
-		file_size=asset.file_size,
-	)
-
-	return {"status": "ok", "asset_name": asset.name, "version": asset.version}
 
 
 @frappe.whitelist(methods=["GET"])
