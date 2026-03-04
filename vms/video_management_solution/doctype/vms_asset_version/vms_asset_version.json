@@ -1,0 +1,121 @@
+{
+ "actions": [],
+ "autoname": "naming_series:VMS-VER-.#####",
+ "creation": "2026-03-04 10:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "naming_series",
+  "asset",
+  "version_number",
+  "column_break_1",
+  "r2_key",
+  "file_size",
+  "file_type",
+  "section_break_1",
+  "uploaded_by",
+  "uploaded_at",
+  "column_break_2",
+  "file_name",
+  "thumbnail_url"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "label": "Series",
+   "options": "VMS-VER-.#####",
+   "default": "VMS-VER-.#####"
+  },
+  {
+   "fieldname": "asset",
+   "fieldtype": "Link",
+   "label": "Asset",
+   "options": "VMS Asset",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "version_number",
+   "fieldtype": "Int",
+   "label": "Version Number",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "r2_key",
+   "fieldtype": "Data",
+   "label": "R2 Key",
+   "reqd": 1
+  },
+  {
+   "fieldname": "file_size",
+   "fieldtype": "Int",
+   "label": "File Size (bytes)"
+  },
+  {
+   "fieldname": "file_type",
+   "fieldtype": "Data",
+   "label": "File Type"
+  },
+  {
+   "fieldname": "section_break_1",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "uploaded_by",
+   "fieldtype": "Link",
+   "label": "Uploaded By",
+   "options": "User"
+  },
+  {
+   "fieldname": "uploaded_at",
+   "fieldtype": "Datetime",
+   "label": "Uploaded At"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "file_name",
+   "fieldtype": "Data",
+   "label": "File Name"
+  },
+  {
+   "fieldname": "thumbnail_url",
+   "fieldtype": "Data",
+   "label": "Thumbnail URL"
+  }
+ ],
+ "links": [],
+ "modified": "2026-03-04 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Video Management Solution",
+ "name": "VMS Asset Version",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "Video Manager",
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC"
+}

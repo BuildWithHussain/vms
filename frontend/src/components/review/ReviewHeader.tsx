@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowLeft01Icon, Download04Icon, Link01Icon, Copy01Icon, SubtitleIcon, Scissor01Icon, GitForkIcon, Video01Icon, YoutubeIcon } from "@hugeicons/core-free-icons"
+import { ArrowLeft01Icon, Download04Icon, Link01Icon, Copy01Icon, SubtitleIcon, Scissor01Icon, GitForkIcon, Video01Icon, YoutubeIcon, Layers01Icon } from "@hugeicons/core-free-icons"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
@@ -38,6 +38,8 @@ interface ReviewHeaderProps {
   youtubeVideoUrl?: string
   onOpenYouTubeUpload?: () => void
   onResetYouTubeUpload?: () => void
+  version?: number
+  onOpenVersions?: () => void
 }
 
 export function ReviewHeader({
@@ -65,6 +67,8 @@ export function ReviewHeader({
   youtubeVideoUrl,
   onOpenYouTubeUpload,
   onResetYouTubeUpload,
+  version,
+  onOpenVersions,
 }: ReviewHeaderProps) {
   const navigate = useNavigate()
   const { isGuest, token } = useReviewContext()
@@ -252,6 +256,30 @@ export function ReviewHeader({
           </>
         )
       })()}
+
+      {/* Versions button — auth users only */}
+      {!isGuest && onOpenVersions && (
+        <>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            className="md:hidden"
+            onClick={onOpenVersions}
+            title="Version history"
+          >
+            <HugeiconsIcon icon={Layers01Icon} strokeWidth={2} size={16} />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="hidden md:inline-flex"
+            onClick={onOpenVersions}
+          >
+            <HugeiconsIcon icon={Layers01Icon} strokeWidth={2} data-icon="inline-start" size={16} />
+            {version && version > 1 ? `v${version}` : "Versions"}
+          </Button>
+        </>
+      )}
 
       {/* Share button — auth users only */}
       {!isGuest && (

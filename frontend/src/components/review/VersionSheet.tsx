@@ -1,0 +1,144 @@
+import { useFrappeGetCall } from "frappe-react-sdk"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { Upload04Icon, CheckmarkCircle02Icon } from "@hugeicons/core-free-icons"
+import { Button } from "@/components/ui/button"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet"
+import { Badge } from "@/components/ui/badge"
+import { Spinner } from "@/components/ui/spinner"
+import { formatBytes } from "@/lib/utils"
+import { useVersionUpload } from "@/hooks/useVersionUpload"
+import type { VMSAsset } from "@/types"
+
+interface VersionInfo {
+  version_number: number
+  file_name: string
+  file_size: number
+  file_type: string
+  uploaded_by: string
+  uploaded_at: string
+  thumbnail_url?: string
+  uploader_name: string
+  uploader_image?: string
+  is_current?: boolean
+}
+
+interface VersionResponse {
+  current: VersionInfo
+  versions: VersionInfo[]
+  total_versions: number
+}
+
+interface VersionSheetProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  asset: VMSAsset
+  onVersionUploaded?: () => void
+}
+
+export function VersionSheet({ open, onOpenChange, asset, onVersionUploaded }: VersionSheetProps) {
+  const { data, isLoading, mutate } = useFrappeGetCall<{ message: VersionResponse }>(
+    "vms.api.get_asset_versions",
+    { asset_name: asset.name },
+    open ? `asset-versions-${asset.name}` : null,
+  )
+
+  const { triggerVersionUpload } = useVersionUpload({
+    onComplete: () => {
+      mutate()
+      onVersionUploaded?.()
+    },
+  })
+
+  const versionData = data?.message
+  const allVersions = versionData
+    ? [versionData.current, ...versionData.versions]
+    : []
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>Version History</SheetTitle>
+          <SheetDescription>
+            {versionData
+              ? `${versionData.total_versions} version${versionData.total_versions !== 1 ? "s" : ""}`
+              : "Loading..."}
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="mt-4 space-y-3">
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full"
+            onClick={() => triggerVersionUpload(asset)}
+          >
+            <HugeiconsIcon icon={Upload04Icon} strokeWidth={2} data-icon="inline-start" size={16} />
+            Upload new version
+          </Button>
+
+          {isLoading && (
+            <div className="flex items-center justify-center py-8">
+              <Spinner className="size-5" />
+            </div>
+          )}
+
+          {!isLoading && allVersions.length > 0 && (
+            <div className="space-y-2">
+              {allVersions.map((v) => (
+                <div
+                  key={v.is_current ? "current" : v.version_number}
+                  className="flex items-start gap-3 rounded-lg border p-3"
+                >
+                  {v.thumbnail_url ? (
+                    <img
+                      src={v.thumbnail_url}
+                      alt=""
+                      className="size-10 rounded object-cover shrink-0"
+                    />
+                  ) : (
+                    <div className="size-10 rounded bg-muted shrink-0" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-medium">v{v.version_number}</span>
+                      {v.is_current && (
+                        <Badge variant="default" className="text-[10px] gap-0.5 px-1.5 py-0">
+                          <HugeiconsIcon icon={CheckmarkCircle02Icon} size={10} />
+                          Current
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">{v.file_name}</p>
+                    <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
+                      <span>{v.uploader_name}</span>
+                      <span>&middot;</span>
+                      <span>{v.file_size ? formatBytes(v.file_size) : ""}</span>
+                    </div>
+                    {v.uploaded_at && (
+                      <p className="mt-0.5 text-[11px] text-muted-foreground">
+                        {new Date(v.uploaded_at).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}

@@ -28,6 +28,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { useUploadContext } from "@/contexts/UploadContext"
 import { MoveAssetDialog } from "@/components/MoveAssetDialog"
+import { useVersionUpload } from "@/hooks/useVersionUpload"
 import { DeleteAssetDialog } from "@/components/DeleteAssetDialog"
 import { RenameAssetDialog } from "@/components/RenameAssetDialog"
 import { MediaPlayerDialog } from "@/components/MediaPlayerDialog"
@@ -139,9 +140,12 @@ export function UncategorisedPage() {
     [clearSelection, toggleSelect],
   )
 
+  const { triggerVersionUpload } = useVersionUpload({ onComplete: () => mutate() })
+
   const menuActions: AssetMenuActions = {
     onOpen: handleAssetClick,
     onDownload: (asset) => downloadOne(asset.name, asset.file_name),
+    onUploadNewVersion: triggerVersionUpload,
     onRename: handleMenuRename,
     onDelete: handleMenuDelete,
     onMoveToFolder: handleMenuMove,

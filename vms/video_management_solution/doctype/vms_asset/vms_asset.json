@@ -40,6 +40,8 @@
   "youtube_video_id",
   "column_break_youtube",
   "youtube_video_url",
+  "section_break_versions",
+  "version",
   "section_break_trash",
   "deleted_at",
   "column_break_trash",
@@ -248,6 +250,18 @@
    "fieldname": "youtube_video_url",
    "fieldtype": "Data",
    "label": "YouTube Video URL",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_break_versions",
+   "fieldtype": "Section Break",
+   "label": "Versions"
+  },
+  {
+   "fieldname": "version",
+   "fieldtype": "Int",
+   "label": "Version",
+   "default": "1",
    "read_only": 1
   },
   {

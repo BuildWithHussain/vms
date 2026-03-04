@@ -10,6 +10,7 @@ import {
   PencilEdit01Icon,
   FolderTransferIcon,
   Delete02Icon,
+  Upload04Icon,
 } from "@hugeicons/core-free-icons"
 import {
   DropdownMenu,
@@ -34,6 +35,7 @@ export interface AssetMenuActions {
   onCopyShareLink?: (asset: VMSAsset) => void
   onToggleSharing?: (asset: VMSAsset) => void
   onConvert?: (asset: VMSAsset) => void
+  onUploadNewVersion?: (asset: VMSAsset) => void
   onRename?: (asset: VMSAsset) => void
   onMoveToFolder?: (asset: VMSAsset) => void
   onDelete?: (asset: VMSAsset) => void
@@ -59,7 +61,8 @@ function MenuItems({ asset, actions, isConvertible, Separator, Item }: MenuItems
   const hasMiddleActions =
     (actions.onCopyShareLink && isShared) ||
     actions.onToggleSharing ||
-    (actions.onConvert && isConvertible)
+    (actions.onConvert && isConvertible) ||
+    actions.onUploadNewVersion
   const hasEditActions = actions.onRename || actions.onMoveToFolder
   const hasDeleteAction = !!actions.onDelete
 
@@ -96,6 +99,12 @@ function MenuItems({ asset, actions, isConvertible, Separator, Item }: MenuItems
         <Item onClick={() => actions.onConvert!(asset)}>
           <HugeiconsIcon icon={Exchange01Icon} strokeWidth={2} />
           Convert to MP4
+        </Item>
+      )}
+      {actions.onUploadNewVersion && isReady && (
+        <Item onClick={() => actions.onUploadNewVersion!(asset)}>
+          <HugeiconsIcon icon={Upload04Icon} strokeWidth={2} />
+          Upload new version
         </Item>
       )}
       {hasMiddleActions && (hasEditActions || hasDeleteAction) && isReady && (

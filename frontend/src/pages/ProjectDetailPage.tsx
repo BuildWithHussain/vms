@@ -62,6 +62,7 @@ import { DeleteFolderDialog } from "@/components/DeleteFolderDialog"
 import { DropZoneOverlay } from "@/components/DropZoneOverlay"
 import { CategoryBadge } from "@/components/CategoryBadge"
 import { useDownload } from "@/hooks/useDownload"
+import { useVersionUpload } from "@/hooks/useVersionUpload"
 import { UserAvatar } from "@/components/UserAvatar"
 import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -151,6 +152,8 @@ export function ProjectDetailPage() {
     mutateForReview()
     mutateDeliverables()
   }, [mutateFolderAssets, mutateForReview, mutateDeliverables])
+
+  const { triggerVersionUpload } = useVersionUpload({ onComplete: () => mutateAssets() })
 
   const { data: folders, mutate: mutateFolders } = useFrappeGetDocList<VMSFolder>("VMS Folder", {
     fields: ["name", "folder_name", "creation"],
@@ -622,6 +625,7 @@ export function ProjectDetailPage() {
             onPlay={handleAssetClick}
             onCategoryChanged={() => mutateAssets()}
             onConvert={handleConvertToMp4}
+            onUploadNewVersion={triggerVersionUpload}
             onRename={handleMenuRename}
             onDelete={handleMenuDelete}
             onMoveToFolder={handleMenuMoveToFolder}
@@ -681,6 +685,7 @@ export function ProjectDetailPage() {
             onPlay={handleAssetClick}
             onCategoryChanged={() => mutateAssets()}
             onConvert={handleConvertToMp4}
+            onUploadNewVersion={triggerVersionUpload}
             onRename={handleMenuRename}
             onDelete={handleMenuDelete}
             onMoveToFolder={handleMenuMoveToFolder}
@@ -714,6 +719,7 @@ export function ProjectDetailPage() {
             onPlay={handleAssetClick}
             onCategoryChanged={() => mutateAssets()}
             onConvert={handleConvertToMp4}
+            onUploadNewVersion={triggerVersionUpload}
             onRename={handleMenuRename}
             onDelete={handleMenuDelete}
             onMoveToFolder={handleMenuMoveToFolder}
@@ -1181,6 +1187,7 @@ function AssetList({
   onPlay,
   onCategoryChanged,
   onConvert,
+  onUploadNewVersion,
   onRename,
   onDelete,
   onMoveToFolder,
@@ -1205,6 +1212,7 @@ function AssetList({
   onPlay: (assetName: string) => void
   onCategoryChanged?: () => void
   onConvert?: (assetName: string) => void
+  onUploadNewVersion?: (asset: VMSAsset) => void
   onRename?: (asset: VMSAsset) => void
   onDelete?: (asset: VMSAsset) => void
   onMoveToFolder?: (asset: VMSAsset) => void
@@ -1225,6 +1233,7 @@ function AssetList({
     onOpen: (asset) => onPlay(asset.name),
     onDownload: (asset) => downloadOne(asset.name, asset.file_name),
     onConvert: onConvert ? (asset) => onConvert(asset.name) : undefined,
+    onUploadNewVersion,
     onRename,
     onDelete,
     onMoveToFolder,

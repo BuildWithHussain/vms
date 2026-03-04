@@ -52,6 +52,7 @@ def get_review_data(asset_name: str, token: str | None = None):
 		"youtube_upload_status": asset.youtube_upload_status or "",
 		"youtube_video_id": asset.youtube_video_id or "",
 		"youtube_video_url": asset.youtube_video_url or "",
+		"version": asset.version or 1,
 	}
 
 	# Only expose review_token to authenticated users

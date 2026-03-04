@@ -1280,6 +1280,205 @@ def get_shared_asset_view_url(asset_name: str, project: str, token: str | None =
 	return {"url": url}
 
 
+# ── Asset Versions ───────────────────────────────────────────────────────────
+
+
+@frappe.whitelist()
+def upload_new_version(asset_name: str, file_name: str, content_type: str, file_size: int = 0):
+	"""Upload a new version of an existing asset.
+
+	Saves the current asset state as a VMS Asset Version record,
+	then generates a presigned URL for the new file upload.
+	The asset record is updated in place so all links/comments remain attached.
+	"""
+	asset = frappe.get_doc("VMS Asset", asset_name)
+
+	if asset.status not in ("Ready", "Error"):
+		frappe.throw(_("Asset must be in Ready or Error status to upload a new version"))
+
+	if asset.deleted_at:
+		frappe.throw(_("Cannot upload a new version of a trashed asset"))
+
+	settings = frappe.get_single("VMS Settings")
+	file_size = int(file_size or 0)
+
+	# Validate file size
+	max_size = int(settings.max_file_size or 0)
+	if max_size and file_size and file_size > max_size:
+		max_mb = max_size / (1024**2)
+		if max_mb >= 1024 and max_mb % 1024 == 0:
+			size_label = f"{int(max_mb / 1024)} GB"
+		elif max_mb >= 1024:
+			size_label = f"{round(max_mb / 1024, 1)} GB"
+		else:
+			size_label = f"{int(max_mb)} MB"
+		frappe.throw(_("File size exceeds the maximum allowed size of {0}").format(size_label))
+
+	# Save current asset state as a version record
+	current_version = asset.version or 1
+	frappe.get_doc(
+		{
+			"doctype": "VMS Asset Version",
+			"asset": asset.name,
+			"version_number": current_version,
+			"r2_key": asset.r2_key,
+			"file_size": asset.file_size,
+			"file_type": asset.file_type,
+			"file_name": asset.file_name,
+			"uploaded_by": asset.uploaded_by,
+			"uploaded_at": asset.uploaded_at,
+			"thumbnail_url": asset.thumbnail_url,
+		}
+	).insert(ignore_permissions=True)
+
+	# Generate new R2 key and presigned URL
+	use_multipart = file_size > MULTIPART_THRESHOLD
+
+	if use_multipart:
+		r2_key, upload_id = create_multipart_upload(file_name, content_type, asset.project)
+	else:
+		upload_url, r2_key = generate_presigned_upload_url(file_name, content_type, asset.project)
+
+	# Update the asset to Uploading status with new file info
+	asset.status = "Uploading"
+	asset.r2_key = r2_key
+	asset.file_name = file_name
+	asset.file_type = content_type
+	asset.file_size = 0
+	asset.version = current_version + 1
+	asset.thumbnail_url = None
+	asset.uploaded_by = frappe.session.user
+	asset.save(ignore_permissions=True)
+
+	result = {
+		"r2_key": r2_key,
+		"asset_name": asset.name,
+		"version": asset.version,
+		"multipart": use_multipart,
+	}
+
+	if use_multipart:
+		result["upload_id"] = upload_id
+		result["part_size"] = MULTIPART_PART_SIZE
+	else:
+		result["upload_url"] = upload_url
+
+	return result
+
+
+@frappe.whitelist()
+def confirm_version_upload(asset_name: str, file_size: int):
+	"""Mark a version upload as complete. Same as confirm_upload but for versions."""
+	asset = frappe.get_doc("VMS Asset", asset_name)
+
+	if asset.status != "Uploading":
+		frappe.throw(_("Asset is not in Uploading status"))
+
+	asset.status = "Ready"
+	asset.file_size = int(file_size)
+	asset.uploaded_at = frappe.utils.now_datetime()
+	asset.save(ignore_permissions=True)
+
+	# Enqueue thumbnail generation
+	frappe.enqueue(
+		"vms.thumbnails.generate_thumbnail",
+		asset_name=asset.name,
+		queue="default",
+		enqueue_after_commit=True,
+	)
+
+	_create_audit_log(
+		action="New Version",
+		asset_name=asset.name,
+		file_name=asset.file_name,
+		file_type=asset.file_type,
+		project=asset.project,
+		file_size=asset.file_size,
+	)
+
+	return {"status": "ok", "asset_name": asset.name, "version": asset.version}
+
+
+@frappe.whitelist(methods=["GET"])
+def get_asset_versions(asset_name: str):
+	"""Get version history for an asset, including the current version."""
+	asset = frappe.db.get_value(
+		"VMS Asset",
+		asset_name,
+		[
+			"name",
+			"version",
+			"file_name",
+			"file_size",
+			"file_type",
+			"uploaded_by",
+			"uploaded_at",
+			"thumbnail_url",
+		],
+		as_dict=True,
+	)
+	if not asset:
+		frappe.throw(_("Asset not found"), frappe.DoesNotExistError)
+
+	# Get historical versions
+	versions = frappe.get_all(
+		"VMS Asset Version",
+		filters={"asset": asset_name},
+		fields=[
+			"name",
+			"version_number",
+			"file_name",
+			"file_size",
+			"file_type",
+			"uploaded_by",
+			"uploaded_at",
+			"thumbnail_url",
+		],
+		order_by="version_number desc",
+	)
+
+	# Enrich with uploader info
+	user_emails = list(
+		{v.uploaded_by for v in versions if v.uploaded_by} | {asset.uploaded_by}
+		if asset.uploaded_by
+		else set()
+	)
+	user_map = {}
+	if user_emails:
+		users = frappe.get_all(
+			"User",
+			filters={"name": ["in", user_emails]},
+			fields=["name", "full_name", "user_image"],
+		)
+		user_map = {u.name: u for u in users}
+
+	for v in versions:
+		u = user_map.get(v.uploaded_by, {})
+		v["uploader_name"] = u.get("full_name", v.uploaded_by)
+		v["uploader_image"] = u.get("user_image")
+
+	# Current version info
+	cu = user_map.get(asset.uploaded_by, {})
+	current = {
+		"version_number": asset.version or 1,
+		"file_name": asset.file_name,
+		"file_size": asset.file_size,
+		"file_type": asset.file_type,
+		"uploaded_by": asset.uploaded_by,
+		"uploaded_at": asset.uploaded_at,
+		"thumbnail_url": asset.thumbnail_url,
+		"uploader_name": cu.get("full_name", asset.uploaded_by),
+		"uploader_image": cu.get("user_image"),
+		"is_current": True,
+	}
+
+	return {
+		"current": current,
+		"versions": versions,
+		"total_versions": len(versions) + 1,
+	}
+
+
 @frappe.whitelist(allow_guest=True)
 def get_shared_asset_download_url(asset_name: str, project: str, token: str | None = None):
 	"""Get a presigned download URL for an asset in a shared project (guest-accessible)."""

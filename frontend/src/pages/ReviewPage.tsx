@@ -9,6 +9,7 @@ import { VideoPlayer } from "@/components/review/VideoPlayer"
 import { ImageViewer } from "@/components/review/ImageViewer"
 import { CommentPanel } from "@/components/review/CommentPanel"
 import { TranscriptionSheet } from "@/components/review/TranscriptionSheet"
+import { VersionSheet } from "@/components/review/VersionSheet"
 import { SplitVideoDialog } from "@/components/review/SplitVideoDialog"
 import { YouTubeUploadDialog } from "@/components/review/YouTubeUploadDialog"
 import { toast } from "sonner"
@@ -33,6 +34,7 @@ interface ReviewData {
   youtube_upload_status?: string
   youtube_video_id?: string
   youtube_video_url?: string
+  version?: number
 }
 
 export function ReviewPage() {
@@ -113,6 +115,7 @@ function ReviewPageInner({
   const { replayAnnotation, annotationMode, dismissReplay, cancelAnnotation, isGuest } = useReviewContext()
   const isImage = asset.file_type?.startsWith("image/")
   const [transcriptionOpen, setTranscriptionOpen] = useState(false)
+  const [versionSheetOpen, setVersionSheetOpen] = useState(false)
   const [splitDialogOpen, setSplitDialogOpen] = useState(false)
   const [youtubeDialogOpen, setYoutubeDialogOpen] = useState(false)
   const [isPolling, setIsPolling] = useState(asset.transcription_status === "Processing")
@@ -359,6 +362,8 @@ function ReviewPageInner({
         youtubeVideoUrl={youtubeVideoUrl}
         onOpenYouTubeUpload={() => setYoutubeDialogOpen(true)}
         onResetYouTubeUpload={handleResetYouTubeUpload}
+        version={asset.version}
+        onOpenVersions={() => setVersionSheetOpen(true)}
       />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto md:flex-row md:overflow-hidden">
@@ -384,6 +389,15 @@ function ReviewPageInner({
           onRefresh={() => mutateTranscription()}
           speakerNames={speakerNames}
           onSaveSpeakerNames={handleSaveSpeakerNames}
+        />
+      )}
+
+      {!isGuest && (
+        <VersionSheet
+          open={versionSheetOpen}
+          onOpenChange={setVersionSheetOpen}
+          asset={{ name: asset.name, file_name: asset.file_name, version: asset.version } as any}
+          onVersionUploaded={() => mutateReviewData()}
         />
       )}
 
