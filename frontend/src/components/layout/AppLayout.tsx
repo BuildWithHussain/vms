@@ -5,7 +5,7 @@ import { Header } from "./Header"
 import { SettingsDialog } from "@/components/SettingsDialog"
 import { CommandPalette, useCommandPalette } from "@/components/CommandPalette"
 import { UploadDialog } from "@/components/UploadDialog"
-import { UploadProvider, useUploadContext } from "@/contexts/UploadContext"
+import { useUploadContext } from "@/contexts/UploadContext"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 function AppLayoutInner() {
@@ -96,9 +96,5 @@ function AppLayoutInner() {
 }
 
 export function AppLayout() {
-  return (
-    <UploadProvider>
-      <AppLayoutInner />
-    </UploadProvider>
-  )
+  return <AppLayoutInner />
 }

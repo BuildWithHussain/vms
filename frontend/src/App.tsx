@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router"
 import { useFrappeAuth, useFrappeGetCall } from "frappe-react-sdk"
 import { Spinner } from "@/components/ui/spinner"
 import { UserProvider } from "@/context/UserContext"
+import { UploadProvider } from "@/contexts/UploadContext"
 import { AppLayout } from "@/components/layout/AppLayout"
 import { SetupWizard } from "@/pages/SetupWizard"
 
@@ -89,6 +90,7 @@ function SetupGate({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
+    <UploadProvider>
     <Routes>
       <Route
         element={
@@ -112,5 +114,6 @@ export default function App() {
       <Route path="shared/:projectId" element={<Suspense fallback={<PageSpinner />}><SharedProjectPage /></Suspense>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </UploadProvider>
   )
 }
