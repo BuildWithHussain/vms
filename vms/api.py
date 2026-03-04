@@ -1531,6 +1531,87 @@ def get_version_download_url(asset_name: str, version_number: int):
 	return {"url": url}
 
 
+@frappe.whitelist()
+def restore_version(asset_name: str, version_number: int):
+	"""Restore a historical version as the current version.
+
+	Saves the current asset state as a new VMS Asset Version record,
+	then copies the target version's file data back onto the asset.
+	"""
+	version_number = int(version_number)
+	asset = frappe.get_doc("VMS Asset", asset_name)
+
+	if asset.status not in ("Ready", "Error"):
+		frappe.throw(_("Asset must be in Ready or Error status to restore a version"))
+
+	if asset.deleted_at:
+		frappe.throw(_("Cannot restore a version of a trashed asset"))
+
+	current_version = asset.version or 1
+	if version_number == current_version:
+		frappe.throw(_("This is already the current version"))
+
+	# Look up the target historical version
+	ver = frappe.db.get_value(
+		"VMS Asset Version",
+		{"asset": asset_name, "version_number": version_number},
+		["name", "r2_key", "file_name", "file_size", "file_type", "uploaded_by", "uploaded_at", "thumbnail_url"],
+		as_dict=True,
+	)
+	if not ver:
+		frappe.throw(_("Version not found"), frappe.DoesNotExistError)
+
+	# Save current asset state as a version record
+	frappe.get_doc(
+		{
+			"doctype": "VMS Asset Version",
+			"asset": asset.name,
+			"version_number": current_version,
+			"r2_key": asset.r2_key,
+			"file_size": asset.file_size,
+			"file_type": asset.file_type,
+			"file_name": asset.file_name,
+			"uploaded_by": asset.uploaded_by,
+			"uploaded_at": asset.uploaded_at,
+			"thumbnail_url": asset.thumbnail_url,
+		}
+	).insert(ignore_permissions=True)
+
+	# Apply target version data to the asset
+	new_version = current_version + 1
+	asset.r2_key = ver.r2_key
+	asset.file_name = ver.file_name
+	asset.file_size = ver.file_size
+	asset.file_type = ver.file_type
+	asset.uploaded_by = ver.uploaded_by
+	asset.uploaded_at = ver.uploaded_at
+	asset.thumbnail_url = ver.thumbnail_url
+	asset.version = new_version
+	asset.save(ignore_permissions=True)
+
+	# Delete the historical version record (it's now the current version)
+	frappe.delete_doc("VMS Asset Version", ver.name, ignore_permissions=True)
+
+	# Enqueue thumbnail regeneration
+	frappe.enqueue(
+		"vms.thumbnails.generate_thumbnail",
+		asset_name=asset.name,
+		queue="default",
+		enqueue_after_commit=True,
+	)
+
+	_create_audit_log(
+		action="Version Restored",
+		asset_name=asset.name,
+		file_name=asset.file_name,
+		file_type=asset.file_type,
+		project=asset.project,
+		file_size=asset.file_size,
+	)
+
+	return {"status": "ok", "asset_name": asset.name, "version": new_version}
+
+
 @frappe.whitelist(allow_guest=True)
 def get_shared_asset_download_url(asset_name: str, project: str, token: str | None = None):
 	"""Get a presigned download URL for an asset in a shared project (guest-accessible)."""
