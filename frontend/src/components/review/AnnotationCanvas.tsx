@@ -14,7 +14,7 @@ export function AnnotationCanvas({
   readOnly = false,
   annotationData,
 }: AnnotationCanvasProps) {
-  const { fabricCanvas } = useReviewContext()
+  const { fabricCanvas, editAnnotationDataRef } = useReviewContext()
   const canvasWrapperRef = useRef<HTMLDivElement>(null)
   const canvasElRef = useRef<HTMLCanvasElement>(null)
   const initializedRef = useRef(false)
@@ -48,12 +48,19 @@ export function AnnotationCanvas({
     if (!container) return
 
     const rect = container.getBoundingClientRect()
-    fabricCanvas.initCanvas(canvasElRef.current, Math.floor(rect.width), Math.floor(rect.height))
+    const w = Math.floor(rect.width)
+    const h = Math.floor(rect.height)
+    fabricCanvas.initCanvas(canvasElRef.current, w, h)
     initializedRef.current = true
 
-    // Load annotation data for replay
+    // Load annotation data for replay (read-only)
     if (readOnly && annotationData) {
-      fabricCanvas.loadAnnotationData(annotationData, Math.floor(rect.width), Math.floor(rect.height))
+      fabricCanvas.loadAnnotationData(annotationData, w, h)
+    }
+    // Load annotation data for editing (editable)
+    else if (!readOnly && editAnnotationDataRef.current) {
+      fabricCanvas.loadAnnotationForEdit(editAnnotationDataRef.current, w, h)
+      editAnnotationDataRef.current = null
     }
 
     return () => {

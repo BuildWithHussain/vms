@@ -34,11 +34,14 @@ interface ReviewContextType {
   pendingAnnotation: string | null
   replayAnnotation: string | null
   replayTimestampRef: React.MutableRefObject<number | null>
+  editingAnnotationComment: string | null
+  editAnnotationDataRef: React.MutableRefObject<string | null>
   fabricCanvas: ReturnType<typeof useFabricCanvas>
   startAnnotation: () => void
   cancelAnnotation: () => void
   finishAnnotation: () => void
   viewAnnotation: (commentName: string, timestamp?: number | null) => Promise<void>
+  editAnnotation: (commentName: string, timestamp?: number | null) => Promise<void>
   dismissReplay: () => void
   clearPendingAnnotation: () => void
 }
@@ -71,6 +74,8 @@ export function ReviewProvider({ assetId, token, isGuest, assetVersion, children
   const [pendingAnnotation, setPendingAnnotation] = useState<string | null>(null)
   const [replayAnnotation, setReplayAnnotation] = useState<string | null>(null)
   const replayTimestampRef = useRef<number | null>(null)
+  const [editingAnnotationComment, setEditingAnnotationComment] = useState<string | null>(null)
+  const editAnnotationDataRef = useRef<string | null>(null)
 
   // Wrap setCurrentTime to auto-dismiss replay when video time drifts
   const setCurrentTime = useCallback((time: number) => {
@@ -98,10 +103,14 @@ export function ReviewProvider({ assetId, token, isGuest, assetVersion, children
     setAnnotationMode(true)
     setReplayAnnotation(null)
     replayTimestampRef.current = null
+    setEditingAnnotationComment(null)
+    editAnnotationDataRef.current = null
   }, [])
 
   const cancelAnnotation = useCallback(() => {
     setAnnotationMode(false)
+    setEditingAnnotationComment(null)
+    editAnnotationDataRef.current = null
   }, [])
 
   const finishAnnotation = useCallback(() => {
@@ -109,6 +118,31 @@ export function ReviewProvider({ assetId, token, isGuest, assetVersion, children
     setPendingAnnotation(data)
     setAnnotationMode(false)
   }, [fabricCanvas])
+
+  const editAnnotation = useCallback(
+    async (commentName: string, timestamp?: number | null) => {
+      if (timestamp != null) {
+        seekToRef.current?.(timestamp)
+      }
+      try {
+        const res = await fetchAnnotation({
+          comment_name: commentName,
+          ...(token ? { token } : {}),
+        })
+        const annotationData = res.message?.annotation_data
+        if (annotationData) {
+          setReplayAnnotation(null)
+          replayTimestampRef.current = null
+          setEditingAnnotationComment(commentName)
+          editAnnotationDataRef.current = annotationData
+          setAnnotationMode(true)
+        }
+      } catch {
+        // ignore fetch errors
+      }
+    },
+    [fetchAnnotation, token],
+  )
 
   const viewAnnotation = useCallback(
     async (commentName: string, timestamp?: number | null) => {
@@ -160,11 +194,14 @@ export function ReviewProvider({ assetId, token, isGuest, assetVersion, children
         pendingAnnotation,
         replayAnnotation,
         replayTimestampRef,
+        editingAnnotationComment,
+        editAnnotationDataRef,
         fabricCanvas,
         startAnnotation,
         cancelAnnotation,
         finishAnnotation,
         viewAnnotation,
+        editAnnotation,
         dismissReplay,
         clearPendingAnnotation,
       }}

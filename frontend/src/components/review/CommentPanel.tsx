@@ -28,7 +28,10 @@ export function CommentPanel() {
     pendingAnnotation,
     finishAnnotation,
     viewAnnotation,
+    editAnnotation,
+    editingAnnotationComment,
     clearPendingAnnotation,
+    cancelAnnotation,
     fabricCanvas,
     seekTo,
   } = useReviewContext()
@@ -51,6 +54,7 @@ export function CommentPanel() {
     editComment,
     deleteComment,
     resolveComment,
+    updateAnnotation,
   } = useReviewComments(assetId, sortBy, token, versionFilter)
 
   // Build version options: 1..assetVersion
@@ -98,6 +102,8 @@ export function CommentPanel() {
     [comments],
   )
 
+  const [isSavingAnnotation, setIsSavingAnnotation] = useState(false)
+
   const handleSubmit = useCallback(
     async (text: string, timestamp?: number | null, parentComment?: string | null, _annotationData?: string | null, submittedGuestName?: string | null) => {
       // Auto-capture annotation if still in draw mode
@@ -113,6 +119,19 @@ export function CommentPanel() {
     },
     [addComment, pendingAnnotation, annotationMode, fabricCanvas, clearPendingAnnotation, finishAnnotation],
   )
+
+  const handleSaveAnnotation = useCallback(async () => {
+    if (!editingAnnotationComment) return
+    const data = fabricCanvas.getAnnotationData()
+    if (!data) return
+    setIsSavingAnnotation(true)
+    try {
+      await updateAnnotation(editingAnnotationComment, data)
+      cancelAnnotation()
+    } finally {
+      setIsSavingAnnotation(false)
+    }
+  }, [editingAnnotationComment, fabricCanvas, updateAnnotation, cancelAnnotation])
 
   return (
     <div className="flex h-full flex-col border-t md:border-t-0 md:border-l">
@@ -190,6 +209,7 @@ export function CommentPanel() {
                 onDelete={deleteComment}
                 onEdit={editComment}
                 onViewAnnotation={viewAnnotation}
+                onEditAnnotation={editAnnotation}
                 currentUser={currentUser ?? undefined}
                 isGuest={isGuest}
               />
@@ -217,7 +237,10 @@ export function CommentPanel() {
           onColorChange={fabricCanvas.changeColor}
           onUndo={fabricCanvas.undo}
           onRedo={fabricCanvas.redo}
-          onBack={finishAnnotation}
+          onBack={editingAnnotationComment ? undefined : finishAnnotation}
+          onSave={editingAnnotationComment ? handleSaveAnnotation : undefined}
+          onCancel={editingAnnotationComment ? cancelAnnotation : undefined}
+          isSaving={isSavingAnnotation}
         />
       )}
     </div>

@@ -468,6 +468,61 @@ export function useFabricCanvas() {
     [],
   )
 
+  const loadAnnotationForEdit = useCallback(
+    (jsonStr: string, width: number, height: number) => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+
+      const json = JSON.parse(jsonStr) as AnnotationJSON
+
+      if (json._normalized) {
+        // Denormalize coordinates (same as loadAnnotationData)
+        for (const obj of json.objects as Record<string, unknown>[]) {
+          if (typeof obj.left === "number") obj.left = obj.left * width
+          if (typeof obj.top === "number") obj.top = obj.top * height
+          if (typeof obj.width === "number") obj.width = obj.width * width
+          if (typeof obj.height === "number") obj.height = obj.height * height
+          if (typeof obj.x1 === "number") obj.x1 = obj.x1 * width
+          if (typeof obj.y1 === "number") obj.y1 = obj.y1 * height
+          if (typeof obj.x2 === "number") obj.x2 = obj.x2 * width
+          if (typeof obj.y2 === "number") obj.y2 = obj.y2 * height
+          if (typeof obj.radius === "number") obj.radius = obj.radius * Math.min(width, height)
+          if (typeof obj.strokeWidth === "number")
+            obj.strokeWidth = obj.strokeWidth * Math.min(width, height)
+
+          if (Array.isArray(obj.path)) {
+            for (const seg of obj.path as (string | number)[][]) {
+              for (let i = 1; i < seg.length; i += 2) {
+                if (typeof seg[i] === "number") seg[i] = (seg[i] as number) * width
+                if (typeof seg[i + 1] === "number") seg[i + 1] = (seg[i + 1] as number) * height
+              }
+            }
+          }
+
+          if (Array.isArray(obj.points)) {
+            for (const pt of obj.points as { x: number; y: number }[]) {
+              pt.x = pt.x * width
+              pt.y = pt.y * height
+            }
+          }
+        }
+      }
+
+      isLoadingRef.current = true
+      canvas.loadFromJSON(JSON.stringify(json)).then(() => {
+        canvas.requestRenderAll()
+        isLoadingRef.current = false
+        // Keep objects editable (unlike loadAnnotationData which locks them)
+        // Initialize history with loaded state
+        historyRef.current = [JSON.stringify(canvas.toJSON())]
+        redoStackRef.current = []
+        setCanUndo(false)
+        setCanRedo(false)
+      })
+    },
+    [],
+  )
+
   const hasContent = useCallback((): boolean => {
     const canvas = canvasRef.current
     return !!canvas && canvas.getObjects().length > 0
@@ -489,6 +544,7 @@ export function useFabricCanvas() {
     clear,
     getAnnotationData,
     loadAnnotationData,
+    loadAnnotationForEdit,
     hasContent,
   }
 }

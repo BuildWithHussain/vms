@@ -25,7 +25,10 @@ interface AnnotationToolbarProps {
   onColorChange: (color: string) => void
   onUndo: () => void
   onRedo: () => void
-  onBack: () => void
+  onBack?: () => void
+  onSave?: () => void
+  onCancel?: () => void
+  isSaving?: boolean
 }
 
 const TOOLS: { value: DrawingTool; icon: typeof ArrowUpRight01Icon; label: string }[] = [
@@ -46,14 +49,29 @@ export function AnnotationToolbar({
   onUndo,
   onRedo,
   onBack,
+  onSave,
+  onCancel,
+  isSaving,
 }: AnnotationToolbarProps) {
+  const isEditMode = !!onSave
   return (
     <div className="border-t px-3 py-2 space-y-1.5">
-      {/* Row 1: Back + drawing tools */}
+      {/* Row 1: Back/Save + drawing tools */}
       <div className="flex items-center gap-1.5">
-        <Button variant="ghost" size="icon-sm" onClick={onBack} title="Done drawing">
-          <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} />
-        </Button>
+        {isEditMode ? (
+          <>
+            <Button variant="ghost" size="sm" onClick={onCancel} className="text-xs">
+              Cancel
+            </Button>
+            <Button size="sm" onClick={onSave} disabled={isSaving} className="text-xs">
+              {isSaving ? "Saving..." : "Save"}
+            </Button>
+          </>
+        ) : (
+          <Button variant="ghost" size="icon-sm" onClick={onBack} title="Done drawing">
+            <HugeiconsIcon icon={Cancel01Icon} size={16} strokeWidth={2} />
+          </Button>
+        )}
 
         <div className="h-5 w-px bg-border" />
 

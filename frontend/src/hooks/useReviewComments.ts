@@ -44,6 +44,10 @@ export function useReviewComments(
     "vms.review_api.resolve_comment",
   )
 
+  const { call: callUpdateAnnotation } = useFrappePostCall(
+    "vms.review_api.update_annotation",
+  )
+
   const comments = data?.message ?? []
 
   const addComment = useCallback(
@@ -85,6 +89,14 @@ export function useReviewComments(
     [callDeleteComment, mutate],
   )
 
+  const updateAnnotation = useCallback(
+    async (commentName: string, annotationData: string) => {
+      await callUpdateAnnotation({ comment_name: commentName, annotation_data: annotationData })
+      mutate()
+    },
+    [callUpdateAnnotation, mutate],
+  )
+
   const resolveComment = useCallback(
     async (commentName: string, isResolved: boolean) => {
       await callResolveComment({
@@ -104,6 +116,7 @@ export function useReviewComments(
     editComment,
     deleteComment,
     resolveComment,
+    updateAnnotation,
     mutate,
   }
 }

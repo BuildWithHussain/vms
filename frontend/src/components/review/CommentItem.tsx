@@ -45,6 +45,7 @@ interface CommentItemProps {
   onDelete: (name: string) => void
   onEdit: (name: string, newText: string) => Promise<void>
   onViewAnnotation?: (commentName: string, timestamp?: number | null) => void
+  onEditAnnotation?: (commentName: string, timestamp?: number | null) => Promise<void>
   currentUser?: string
   isNested?: boolean
   isGuest?: boolean
@@ -59,6 +60,7 @@ export function CommentItem({
   onDelete,
   onEdit,
   onViewAnnotation,
+  onEditAnnotation,
   currentUser,
   isNested = false,
   isGuest = false,
@@ -163,6 +165,16 @@ export function CommentItem({
                     <HugeiconsIcon icon={MailReply01Icon} size={14} strokeWidth={2} />
                   </Button>
                 )}
+                {isOwnComment && comment.has_annotation === 1 && (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => onEditAnnotation?.(comment.name, comment.video_timestamp)}
+                    title="Edit drawing"
+                  >
+                    <HugeiconsIcon icon={PenTool01Icon} size={14} strokeWidth={2} />
+                  </Button>
+                )}
                 {isOwnComment && (
                   <Button
                     variant="ghost"
@@ -227,6 +239,7 @@ export function CommentItem({
                 onDelete={onDelete}
                 onEdit={onEdit}
                 onViewAnnotation={onViewAnnotation}
+                onEditAnnotation={onEditAnnotation}
                 currentUser={currentUser}
                 isNested
                 isGuest={isGuest}

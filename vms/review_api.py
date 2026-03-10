@@ -313,6 +313,25 @@ def edit_comment(comment_name: str, comment_text: str):
 
 
 @frappe.whitelist()
+def update_annotation(comment_name: str, annotation_data: str):
+	"""Update annotation data on an existing comment. Only the comment author can edit."""
+	if not frappe.db.exists("VMS Review Comment", comment_name):
+		frappe.throw(_("Comment {0} does not exist").format(comment_name))
+
+	doc = frappe.get_doc("VMS Review Comment", comment_name)
+
+	if doc.commented_by != frappe.session.user:
+		frappe.throw(_("You can only edit your own annotations"), frappe.PermissionError)
+
+	doc.annotation_data = annotation_data
+	doc.has_annotation = 1
+	doc.is_edited = 1
+	doc.save(ignore_permissions=True)
+
+	return {"status": "ok"}
+
+
+@frappe.whitelist()
 def resolve_comment(comment_name: str, is_resolved: int):
 	"""Toggle the resolved flag on a comment."""
 	if not frappe.db.exists("VMS Review Comment", comment_name):
