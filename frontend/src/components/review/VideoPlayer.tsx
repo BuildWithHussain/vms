@@ -81,6 +81,7 @@ export function VideoPlayer({ assetName }: VideoPlayerProps) {
   }, [])
 
   const SKIP_SECONDS = 10
+  const FPS = 30
 
   const skipForward = useCallback(() => {
     player.seek(player.currentTime + SKIP_SECONDS)
@@ -90,30 +91,155 @@ export function VideoPlayer({ assetName }: VideoPlayerProps) {
     player.seek(player.currentTime - SKIP_SECONDS)
   }, [player])
 
-  // Keyboard shortcuts: Space (play/pause), ArrowLeft/Right (skip ±10s)
+  // JKL shuttle speeds: successive presses cycle through these
+  const SHUTTLE_SPEEDS = [1, 2, 4, 8] as const
+  const shuttleIndexRef = useRef(0)
+  const shuttleDirRef = useRef<"fwd" | "rev" | null>(null)
+  const rewindIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const playerRef = useRef(player)
+  playerRef.current = player
+
+  const clearRewind = useCallback(() => {
+    if (rewindIntervalRef.current) {
+      clearInterval(rewindIntervalRef.current)
+      rewindIntervalRef.current = null
+    }
+  }, [])
+
+  const startRewind = useCallback(
+    (speed: number) => {
+      clearRewind()
+      const video = videoRef.current
+      if (!video) return
+      video.pause()
+      // Seek backwards at `speed` x real-time, updating every 50ms
+      rewindIntervalRef.current = setInterval(() => {
+        const v = videoRef.current
+        if (!v) return
+        const step = speed * (50 / 1000)
+        const next = v.currentTime - step
+        if (next <= 0) {
+          playerRef.current.seek(0)
+          clearRewind()
+          shuttleIndexRef.current = 0
+          shuttleDirRef.current = null
+        } else {
+          playerRef.current.seek(next)
+        }
+      }, 50)
+    },
+    [clearRewind, videoRef],
+  )
+
+  // Clean up rewind interval on unmount
+  useEffect(() => clearRewind, [clearRewind])
+
+  // Keyboard shortcuts: JKL shuttle, Space, Arrow keys (frame/10-frame), M (mute), F (fullscreen)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName
       if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return
 
+      const video = videoRef.current
+      if (!video) return
+
       switch (e.code) {
         case "Space":
           e.preventDefault()
           player.togglePlay()
+          // Reset shuttle state on space
+          clearRewind()
+          shuttleIndexRef.current = 0
+          shuttleDirRef.current = null
           break
+
+        case "KeyK":
+          e.preventDefault()
+          // K always pauses and resets shuttle
+          clearRewind()
+          shuttleIndexRef.current = 0
+          shuttleDirRef.current = null
+          if (!video.paused) {
+            video.pause()
+          } else {
+            video.play()
+          }
+          break
+
+        case "KeyL": {
+          e.preventDefault()
+          clearRewind()
+          if (shuttleDirRef.current === "fwd" && shuttleIndexRef.current < SHUTTLE_SPEEDS.length - 1) {
+            shuttleIndexRef.current++
+          } else if (shuttleDirRef.current !== "fwd") {
+            shuttleIndexRef.current = 0
+            shuttleDirRef.current = "fwd"
+          }
+          const speed = SHUTTLE_SPEEDS[shuttleIndexRef.current]
+          video.playbackRate = speed
+          if (video.paused) video.play()
+          break
+        }
+
+        case "KeyJ": {
+          e.preventDefault()
+          // If currently playing forward, stop first
+          if (!video.paused) video.pause()
+          if (shuttleDirRef.current === "rev" && shuttleIndexRef.current < SHUTTLE_SPEEDS.length - 1) {
+            shuttleIndexRef.current++
+          } else if (shuttleDirRef.current !== "rev") {
+            shuttleIndexRef.current = 0
+            shuttleDirRef.current = "rev"
+          }
+          const speed = SHUTTLE_SPEEDS[shuttleIndexRef.current]
+          startRewind(speed)
+          break
+        }
+
         case "ArrowLeft":
           e.preventDefault()
-          player.seek(player.currentTime - SKIP_SECONDS)
+          clearRewind()
+          shuttleIndexRef.current = 0
+          shuttleDirRef.current = null
+          if (e.shiftKey) {
+            // Skip 10 frames
+            player.seek(player.currentTime - 10 / FPS)
+          } else {
+            // Skip 1 frame
+            player.seek(player.currentTime - 1 / FPS)
+          }
+          if (!video.paused) video.pause()
           break
+
         case "ArrowRight":
           e.preventDefault()
-          player.seek(player.currentTime + SKIP_SECONDS)
+          clearRewind()
+          shuttleIndexRef.current = 0
+          shuttleDirRef.current = null
+          if (e.shiftKey) {
+            // Skip 10 frames
+            player.seek(player.currentTime + 10 / FPS)
+          } else {
+            // Skip 1 frame
+            player.seek(player.currentTime + 1 / FPS)
+          }
+          if (!video.paused) video.pause()
+          break
+
+        case "KeyM":
+          e.preventDefault()
+          player.toggleMute()
+          break
+
+        case "KeyF":
+          e.preventDefault()
+          toggleFullscreen()
           break
       }
     }
     document.addEventListener("keydown", onKeyDown)
     return () => document.removeEventListener("keydown", onKeyDown)
-  }, [player])
+  }, [player, clearRewind, startRewind, toggleFullscreen, videoRef])
 
   const isCanvasActive = annotationMode || !!replayAnnotation
 
