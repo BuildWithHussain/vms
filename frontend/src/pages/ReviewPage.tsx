@@ -99,7 +99,7 @@ export function ReviewPage() {
   }
 
   return (
-    <ReviewProvider assetId={assetId} token={token} isGuest={isGuest}>
+    <ReviewProvider assetId={assetId} token={token} isGuest={isGuest} assetVersion={asset.version ?? 1}>
       <ReviewPageInner asset={asset} mutateReviewData={mutateReviewData} />
     </ReviewProvider>
   )

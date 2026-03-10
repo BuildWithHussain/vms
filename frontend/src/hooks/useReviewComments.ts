@@ -6,6 +6,7 @@ export function useReviewComments(
   assetId: string | undefined,
   sortBy: string = "timestamp",
   token?: string | null,
+  version?: number | "all" | null,
 ) {
   const {
     data,
@@ -18,9 +19,10 @@ export function useReviewComments(
           asset_name: assetId,
           sort_by: sortBy,
           ...(token ? { token } : {}),
+          ...(version && version !== "all" ? { version } : {}),
         }
       : undefined,
-    assetId ? `review-comments-${assetId}-${sortBy}` : undefined,
+    assetId ? `review-comments-${assetId}-${sortBy}-${version ?? "all"}` : undefined,
     {
       revalidateOnFocus: false,
     },

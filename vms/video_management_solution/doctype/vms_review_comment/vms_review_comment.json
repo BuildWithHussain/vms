@@ -8,6 +8,7 @@
   "naming_series",
   "asset",
   "parent_comment",
+  "version",
   "column_break_1",
   "commented_by",
   "guest_name",
@@ -46,6 +47,13 @@
    "fieldtype": "Link",
    "label": "Parent Comment",
    "options": "VMS Review Comment"
+  },
+  {
+   "fieldname": "version",
+   "fieldtype": "Int",
+   "label": "Version",
+   "default": "1",
+   "description": "Asset version when this comment was created"
   },
   {
    "fieldname": "column_break_1",
@@ -134,7 +142,7 @@
   }
  ],
  "links": [],
- "modified": "2026-02-25 12:00:00.000000",
+ "modified": "2026-03-10 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Video Management Solution",
  "name": "VMS Review Comment",

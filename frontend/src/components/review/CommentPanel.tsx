@@ -5,6 +5,13 @@ import { useFrappeAuth } from "frappe-react-sdk"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { CommentItem } from "./CommentItem"
 import { CommentInput } from "./CommentInput"
 import { AnnotationToolbar } from "./AnnotationToolbar"
@@ -16,6 +23,7 @@ export function CommentPanel() {
     assetId,
     token,
     isGuest,
+    assetVersion,
     annotationMode,
     pendingAnnotation,
     finishAnnotation,
@@ -28,6 +36,7 @@ export function CommentPanel() {
   const { currentUser } = useFrappeAuth()
 
   const [sortBy, setSortBy] = useState<"timestamp" | "recent">("recent")
+  const [versionFilter, setVersionFilter] = useState<number | "all">(assetVersion)
   const [replyTo, setReplyTo] = useState<{
     name: string
     commenterName: string
@@ -42,7 +51,21 @@ export function CommentPanel() {
     editComment,
     deleteComment,
     resolveComment,
-  } = useReviewComments(assetId, sortBy, token)
+  } = useReviewComments(assetId, sortBy, token, versionFilter)
+
+  // Build version options: 1..assetVersion
+  const versionOptions = useMemo(() => {
+    const options: { value: string; label: string }[] = [
+      { value: "all", label: "All versions" },
+    ]
+    for (let v = assetVersion; v >= 1; v--) {
+      options.push({
+        value: String(v),
+        label: v === assetVersion ? `v${v} (latest)` : `v${v}`,
+      })
+    }
+    return options
+  }, [assetVersion])
 
   // Build thread tree: top-level comments + their replies
   const threadedComments = useMemo(() => {
@@ -98,15 +121,36 @@ export function CommentPanel() {
         <h3 className="text-sm font-semibold">
           Comments{topLevelCount > 0 ? ` (${topLevelCount})` : ""}
         </h3>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-xs"
-          onClick={() => setSortBy(sortBy === "timestamp" ? "recent" : "timestamp")}
-        >
-          <HugeiconsIcon icon={Sorting01Icon} size={14} strokeWidth={2} />
-          {sortBy === "timestamp" ? "By time" : "Recent"}
-        </Button>
+        <div className="flex items-center gap-1">
+          {assetVersion > 1 && (
+            <Select
+              value={String(versionFilter)}
+              onValueChange={(val) =>
+                setVersionFilter(val === "all" ? "all" : Number(val))
+              }
+            >
+              <SelectTrigger className="h-7 w-auto gap-1 border-none px-2 text-xs shadow-none">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end">
+                {versionOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs"
+            onClick={() => setSortBy(sortBy === "timestamp" ? "recent" : "timestamp")}
+          >
+            <HugeiconsIcon icon={Sorting01Icon} size={14} strokeWidth={2} />
+            {sortBy === "timestamp" ? "By time" : "Recent"}
+          </Button>
+        </div>
       </div>
 
       {/* Comment list */}
@@ -130,7 +174,9 @@ export function CommentPanel() {
             </div>
           ) : threadedComments.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-              No comments yet. Be the first to add feedback.
+              {versionFilter !== "all" && assetVersion > 1
+                ? `No comments on v${versionFilter}.`
+                : "No comments yet. Be the first to add feedback."}
             </div>
           ) : (
             threadedComments.map(({ comment, replies }) => (

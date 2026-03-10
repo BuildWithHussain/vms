@@ -14,6 +14,7 @@ interface ReviewContextType {
   assetId: string
   token: string | null
   isGuest: boolean
+  assetVersion: number
 
   // Guest identity
   guestName: string
@@ -48,10 +49,11 @@ interface ReviewProviderProps {
   assetId: string
   token: string | null
   isGuest: boolean
+  assetVersion: number
   children: ReactNode
 }
 
-export function ReviewProvider({ assetId, token, isGuest, children }: ReviewProviderProps) {
+export function ReviewProvider({ assetId, token, isGuest, assetVersion, children }: ReviewProviderProps) {
   const [currentTime, setCurrentTimeRaw] = useState(0)
   const seekToRef = useRef<((time: number) => void) | null>(null)
 
@@ -146,6 +148,7 @@ export function ReviewProvider({ assetId, token, isGuest, children }: ReviewProv
         assetId,
         token,
         isGuest,
+        assetVersion,
         guestName,
         setGuestName,
         currentTime,

@@ -94,6 +94,7 @@ export interface VMSReviewComment {
   has_annotation: 0 | 1
   is_edited: 0 | 1
   annotation_data?: string | null
+  version?: number
   creation: string
   modified: string
 }

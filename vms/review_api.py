@@ -110,10 +110,16 @@ def get_review_view_url(asset_name: str, token: str | None = None):
 
 
 @frappe.whitelist(methods=["GET"], allow_guest=True)
-def get_comments(asset_name: str, sort_by: str = "timestamp", token: str | None = None):
+def get_comments(
+	asset_name: str,
+	sort_by: str = "timestamp",
+	token: str | None = None,
+	version: int | str | None = None,
+):
 	"""Get flat list of comments for an asset with commenter info.
 
 	Client builds the thread tree from parent_comment references.
+	version: filter by asset version number, or None/"all" for all versions.
 	"""
 	_validate_public_token(asset_name, token)
 
@@ -124,9 +130,16 @@ def get_comments(asset_name: str, sort_by: str = "timestamp", token: str | None 
 	if sort_by == "recent":
 		order_by = "creation desc"
 
+	filters = {"asset": asset_name, "deleted_at": ["is", "not set"]}
+
+	# Filter by version if specified (not "all" or empty)
+	if version and str(version).lower() != "all":
+		version_int = int(version)
+		filters["version"] = version_int
+
 	comments = frappe.get_all(
 		"VMS Review Comment",
-		filters={"asset": asset_name, "deleted_at": ["is", "not set"]},
+		filters=filters,
 		fields=[
 			"name",
 			"asset",
@@ -138,6 +151,7 @@ def get_comments(asset_name: str, sort_by: str = "timestamp", token: str | None 
 			"is_resolved",
 			"has_annotation",
 			"is_edited",
+			"version",
 			"creation",
 			"modified",
 		],
@@ -192,6 +206,9 @@ def add_comment(
 	if is_guest and not guest_name:
 		frappe.throw(_("Guest name is required"))
 
+	# Get current asset version to stamp the comment
+	asset_version = frappe.db.get_value("VMS Asset", asset_name, "version") or 1
+
 	doc = frappe.get_doc(
 		{
 			"doctype": "VMS Review Comment",
@@ -201,6 +218,7 @@ def add_comment(
 			"parent_comment": parent_comment,
 			"commented_by": None if is_guest else frappe.session.user,
 			"guest_name": guest_name if is_guest else None,
+			"version": asset_version,
 		}
 	)
 
@@ -236,6 +254,7 @@ def add_comment(
 		"commenter_image": commenter_image if not is_guest else None,
 		"is_resolved": doc.is_resolved,
 		"has_annotation": doc.has_annotation,
+		"version": doc.version,
 		"creation": str(doc.creation),
 		"modified": str(doc.modified),
 	}
