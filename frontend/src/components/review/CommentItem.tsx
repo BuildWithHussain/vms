@@ -1,4 +1,8 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useCallback } from "react"
+import Lightbox from "yet-another-react-lightbox"
+import Zoom from "yet-another-react-lightbox/plugins/zoom"
+import Fullscreen from "yet-another-react-lightbox/plugins/fullscreen"
+import "yet-another-react-lightbox/styles.css"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   CheckmarkCircle02Icon,
@@ -69,7 +73,28 @@ export function CommentItem({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showEditDialog, setShowEditDialog] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
+  const [lightboxSlides, setLightboxSlides] = useState<{ src: string }[]>([])
   const editEditorRef = useRef<CommentEditorHandle>(null)
+  const handleCommentClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const target = e.target as HTMLElement
+      if (target.tagName === "IMG") {
+        e.stopPropagation()
+        const container = target.closest("[data-comment-body]")
+        if (!container) return
+        const imgs = Array.from(container.querySelectorAll("img"))
+        const slides = imgs.map((img) => ({ src: img.src }))
+        const index = imgs.indexOf(target as HTMLImageElement)
+        setLightboxSlides(slides)
+        setLightboxIndex(index >= 0 ? index : 0)
+        setLightboxOpen(true)
+      }
+    },
+    [],
+  )
+
   const hasTimestamp = comment.video_timestamp != null
   const isGuestComment = !!comment.guest_name && !comment.commented_by
   const isOwnComment = !!currentUser && comment.commented_by === currentUser
@@ -137,8 +162,10 @@ export function CommentItem({
             </div>
 
             <div
-              className="mt-0.5 text-sm text-foreground break-words [&_p]:mb-0 [&_.mention]:rounded [&_.mention]:bg-primary/10 [&_.mention]:px-1 [&_.mention]:py-0.5 [&_.mention]:font-medium [&_.mention]:text-primary [&_img]:mt-1.5 [&_img]:max-w-full [&_img]:rounded-md [&_img]:max-h-48 [&_img]:object-contain"
+              data-comment-body
+              className="mt-0.5 text-sm text-foreground break-words [&_p]:mb-0 [&_.mention]:rounded [&_.mention]:bg-primary/10 [&_.mention]:px-1 [&_.mention]:py-0.5 [&_.mention]:font-medium [&_.mention]:text-primary [&_img]:mt-1.5 [&_img]:max-w-full [&_img]:rounded-md [&_img]:max-h-48 [&_img]:object-contain [&_img]:cursor-zoom-in"
               dangerouslySetInnerHTML={{ __html: comment.comment_text }}
+              onClick={handleCommentClick}
             />
 
             <div className="mt-1 flex items-center gap-1">
@@ -247,6 +274,14 @@ export function CommentItem({
             ))}
         </div>
       )}
+
+      <Lightbox
+        open={lightboxOpen}
+        close={() => setLightboxOpen(false)}
+        index={lightboxIndex}
+        slides={lightboxSlides}
+        plugins={[Zoom, Fullscreen]}
+      />
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <AlertDialogContent size="sm">
