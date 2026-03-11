@@ -1,13 +1,40 @@
 import { useState } from "react"
 import { useNavigate } from "react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowLeft01Icon, Download04Icon, Link01Icon, Copy01Icon, SubtitleIcon, Scissor01Icon, GitForkIcon, Video01Icon, YoutubeIcon, Layers01Icon } from "@hugeicons/core-free-icons"
+import {
+  ArrowLeft01Icon,
+  Download04Icon,
+  Link01Icon,
+  Copy01Icon,
+  SubtitleIcon,
+  Scissor01Icon,
+  GitForkIcon,
+  Video01Icon,
+  YoutubeIcon,
+  Layers01Icon,
+  Settings05Icon,
+  Share08Icon,
+} from "@hugeicons/core-free-icons"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
 import { Spinner } from "@/components/ui/spinner"
 import { useDownload } from "@/hooks/useDownload"
 import { useReviewContext } from "@/hooks/useReviewContext"
@@ -74,6 +101,7 @@ export function ReviewHeader({
   const { isGuest, token } = useReviewContext()
   const { downloadOne, isDownloading } = useDownload(token)
   const [toggling, setToggling] = useState(false)
+  const [publicLinkOpen, setPublicLinkOpen] = useState(false)
   const isVideo = !fileType || fileType.startsWith("video/") || fileType.startsWith("audio/")
 
   const handleBack = () => {
@@ -170,94 +198,7 @@ export function ReviewHeader({
         </div>
       </div>
 
-      {/* Generate Proxy button — auth users only, video only, no proxy yet */}
-      {!isGuest && isVideo && !proxyStatus && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onGenerateProxy}
-          disabled={isGeneratingProxy}
-        >
-          <HugeiconsIcon icon={Video01Icon} strokeWidth={2} data-icon="inline-start" size={16} />
-          <span className="hidden md:inline">Generate Proxy</span>
-        </Button>
-      )}
-      {!isGuest && isVideo && proxyStatus === "Processing" && (
-        <Button variant="outline" size="sm" disabled>
-          <Spinner className="size-3.5" />
-          <span className="hidden md:inline ml-1">Generating proxy...</span>
-        </Button>
-      )}
-      {!isGuest && isVideo && proxyStatus === "Ready" && (
-        <Badge variant="secondary" className="text-[10px] shrink-0">Proxy</Badge>
-      )}
-
-      {/* YouTube button — auth users only, video only */}
-      {!isGuest && isVideo && (() => {
-        if (youtubeUploadStatus === "Queued" || youtubeUploadStatus === "Uploading") {
-          return (
-            <Button variant="outline" size="sm" disabled>
-              <Spinner className="size-3.5" />
-              <span className="hidden md:inline ml-1">
-                {youtubeUploadStatus === "Queued" ? "Queued..." : "Uploading..."}
-              </span>
-            </Button>
-          )
-        }
-        if (youtubeUploadStatus === "Complete" && youtubeVideoUrl) {
-          return (
-            <div className="flex items-center gap-1">
-              <a href={youtubeVideoUrl} target="_blank" rel="noopener noreferrer">
-                <Badge variant="secondary" className="cursor-pointer text-[10px] gap-1 shrink-0">
-                  <HugeiconsIcon icon={YoutubeIcon} size={12} />
-                  YouTube
-                </Badge>
-              </a>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={onResetYouTubeUpload}
-                title="Re-upload to YouTube"
-                className="size-6"
-              >
-                <HugeiconsIcon icon={YoutubeIcon} size={12} />
-              </Button>
-            </div>
-          )
-        }
-        if (youtubeUploadStatus === "Error") {
-          return (
-            <Button variant="outline" size="sm" onClick={onOpenYouTubeUpload}>
-              <HugeiconsIcon icon={YoutubeIcon} strokeWidth={2} data-icon="inline-start" size={16} />
-              <span className="hidden md:inline">Retry</span>
-            </Button>
-          )
-        }
-        return (
-          <>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              className="md:hidden"
-              onClick={onOpenYouTubeUpload}
-              title="Upload to YouTube"
-            >
-              <HugeiconsIcon icon={YoutubeIcon} strokeWidth={2} size={16} />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="hidden md:inline-flex"
-              onClick={onOpenYouTubeUpload}
-            >
-              <HugeiconsIcon icon={YoutubeIcon} strokeWidth={2} data-icon="inline-start" size={16} />
-              YouTube
-            </Button>
-          </>
-        )
-      })()}
-
-      {/* Versions button — auth users only */}
+      {/* Versions button — auth users only, remains as-is */}
       {!isGuest && onOpenVersions && (
         <>
           <Button
@@ -281,137 +222,193 @@ export function ReviewHeader({
         </>
       )}
 
-      {/* Share button — auth users only */}
-      {!isGuest && (
-        <Popover>
-          <PopoverTrigger className={buttonVariants({ variant: "outline", size: "sm" })}>
-            <HugeiconsIcon icon={Link01Icon} strokeWidth={2} data-icon="inline-start" size={16} />
-            <span className="hidden md:inline">Share</span>
-          </PopoverTrigger>
-          <PopoverContent className="w-80" align="end">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="public-review-toggle" className="text-sm font-medium">
-                  Public review link
-                </Label>
-                <Switch
-                  id="public-review-toggle"
-                  checked={isPublicReview}
-                  onCheckedChange={handleToggle}
-                  disabled={toggling}
-                />
-              </div>
-              {isPublicReview && shareUrl && (
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={shareUrl}
-                    readOnly
-                    className="text-xs"
-                    onClick={(e) => (e.target as HTMLInputElement).select()}
-                  />
-                  <Button variant="outline" size="icon-sm" onClick={handleCopy}>
-                    <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} size={14} />
-                  </Button>
-                </div>
-              )}
-              {isPublicReview && !shareUrl && (
-                <p className="text-xs text-muted-foreground">Generating link...</p>
-              )}
-            </div>
-          </PopoverContent>
-        </Popover>
+      {/* Tools dropdown — auth users only */}
+      {!isGuest && isVideo && (
+        <DropdownMenu>
+          <DropdownMenuTrigger className={buttonVariants({ variant: "outline", size: "sm" })}>
+            <HugeiconsIcon icon={Settings05Icon} strokeWidth={2} data-icon="inline-start" size={16} />
+            <span className="hidden md:inline">Tools</span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {/* Transcribe */}
+            {transcriptionStatus === "Processing" ? (
+              <DropdownMenuItem disabled>
+                <Spinner className="size-3.5" />
+                Transcribing...
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onClick={onOpenTranscription}>
+                <HugeiconsIcon icon={SubtitleIcon} strokeWidth={2} size={16} />
+                {transcriptionStatus === "Complete" ? "Transcript" : "Transcribe"}
+              </DropdownMenuItem>
+            )}
+
+            {/* Split */}
+            {assetStatus === "Processing" ? (
+              <DropdownMenuItem disabled>
+                <Spinner className="size-3.5" />
+                {splitProgress?.stage === "downloading"
+                  ? "Downloading..."
+                  : splitProgress?.stage === "splitting"
+                    ? "Splitting..."
+                    : splitProgress?.stage === "uploading"
+                      ? `Uploading ${splitProgress.current}/${splitProgress.total}...`
+                      : "Splitting..."}
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onClick={onOpenSplit}>
+                <HugeiconsIcon icon={Scissor01Icon} strokeWidth={2} size={16} />
+                Split
+              </DropdownMenuItem>
+            )}
+
+            {/* Generate Proxy */}
+            {!proxyStatus && (
+              <DropdownMenuItem
+                onClick={onGenerateProxy}
+                disabled={isGeneratingProxy}
+              >
+                <HugeiconsIcon icon={Video01Icon} strokeWidth={2} size={16} />
+                Generate Proxy
+              </DropdownMenuItem>
+            )}
+            {proxyStatus === "Processing" && (
+              <DropdownMenuItem disabled>
+                <Spinner className="size-3.5" />
+                Generating proxy...
+              </DropdownMenuItem>
+            )}
+            {proxyStatus === "Ready" && (
+              <DropdownMenuItem disabled>
+                <HugeiconsIcon icon={Video01Icon} strokeWidth={2} size={16} />
+                Proxy ready
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
 
-      {/* Split button — auth users only, video only, hidden while Processing */}
-      {!isGuest && isVideo && assetStatus !== "Processing" && (
-        <>
-          <Button
-            variant="outline"
-            size="icon-sm"
-            className="md:hidden"
-            onClick={onOpenSplit}
-            title="Split video"
-          >
-            <HugeiconsIcon icon={Scissor01Icon} strokeWidth={2} size={16} />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="hidden md:inline-flex"
-            onClick={onOpenSplit}
-          >
-            <HugeiconsIcon icon={Scissor01Icon} strokeWidth={2} data-icon="inline-start" size={16} />
-            Split
-          </Button>
-        </>
+      {/* Share dropdown — auth users only */}
+      {!isGuest && (
+        <DropdownMenu>
+          <DropdownMenuTrigger className={buttonVariants({ variant: "outline", size: "sm" })}>
+            <HugeiconsIcon icon={Share08Icon} strokeWidth={2} data-icon="inline-start" size={16} />
+            <span className="hidden md:inline">Share</span>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {/* Download */}
+            <DropdownMenuItem
+              onClick={() => downloadOne(assetName, fileName)}
+              disabled={isDownloading}
+            >
+              <HugeiconsIcon icon={Download04Icon} strokeWidth={2} size={16} />
+              Download
+            </DropdownMenuItem>
+
+            {/* Public Link */}
+            <DropdownMenuItem onClick={() => setPublicLinkOpen(true)}>
+              <HugeiconsIcon icon={Link01Icon} strokeWidth={2} size={16} />
+              Public Link
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            {/* YouTube */}
+            {isVideo && (() => {
+              if (youtubeUploadStatus === "Queued" || youtubeUploadStatus === "Uploading") {
+                return (
+                  <DropdownMenuItem disabled>
+                    <Spinner className="size-3.5" />
+                    {youtubeUploadStatus === "Queued" ? "Queued..." : "Uploading..."}
+                  </DropdownMenuItem>
+                )
+              }
+              if (youtubeUploadStatus === "Complete" && youtubeVideoUrl) {
+                return (
+                  <>
+                    <DropdownMenuItem onClick={() => window.open(youtubeVideoUrl, "_blank")}>
+                      <HugeiconsIcon icon={YoutubeIcon} strokeWidth={2} size={16} />
+                      View on YouTube
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onResetYouTubeUpload}>
+                      <HugeiconsIcon icon={YoutubeIcon} strokeWidth={2} size={16} />
+                      Re-upload to YouTube
+                    </DropdownMenuItem>
+                  </>
+                )
+              }
+              if (youtubeUploadStatus === "Error") {
+                return (
+                  <DropdownMenuItem onClick={onOpenYouTubeUpload}>
+                    <HugeiconsIcon icon={YoutubeIcon} strokeWidth={2} size={16} />
+                    Retry YouTube Upload
+                  </DropdownMenuItem>
+                )
+              }
+              return (
+                <DropdownMenuItem onClick={onOpenYouTubeUpload}>
+                  <HugeiconsIcon icon={YoutubeIcon} strokeWidth={2} size={16} />
+                  YouTube
+                </DropdownMenuItem>
+              )
+            })()}
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
-      {!isGuest && isVideo && assetStatus === "Processing" && (
-        <Button variant="outline" size="sm" disabled>
-          <Spinner className="size-3.5" />
-          <span className="hidden md:inline ml-1">
-            {splitProgress?.stage === "downloading"
-              ? "Downloading..."
-              : splitProgress?.stage === "splitting"
-                ? `Splitting...`
-                : splitProgress?.stage === "uploading"
-                  ? `Uploading ${splitProgress.current}/${splitProgress.total}...`
-                  : "Splitting..."}
-          </span>
+
+      {/* Guest download button */}
+      {isGuest && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => downloadOne(assetName, fileName)}
+          disabled={isDownloading}
+        >
+          <HugeiconsIcon icon={Download04Icon} strokeWidth={2} data-icon="inline-start" size={16} />
+          Download
         </Button>
       )}
 
-      {/* Transcribe button — auth users only, video/audio only */}
-      {!isGuest && isVideo && (
-        <>
-          {transcriptionStatus === "Processing" ? (
-            <Button variant="outline" size="sm" onClick={onOpenTranscription}>
-              <Spinner className="size-3.5" />
-              <span className="hidden md:inline ml-1">Transcribing...</span>
-            </Button>
-          ) : (
-            <>
-              <Button
-                variant="outline"
-                size="icon-sm"
-                className="md:hidden"
-                onClick={onOpenTranscription}
-                title={transcriptionStatus === "Complete" ? "View transcription" : "Transcribe video"}
-              >
-                <HugeiconsIcon icon={SubtitleIcon} strokeWidth={2} size={16} />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="hidden md:inline-flex"
-                onClick={onOpenTranscription}
-              >
-                <HugeiconsIcon icon={SubtitleIcon} strokeWidth={2} data-icon="inline-start" size={16} />
-                {transcriptionStatus === "Complete" ? "Transcript" : "Transcribe"}
-              </Button>
-            </>
-          )}
-        </>
-      )}
-
-      <Button
-        variant="outline"
-        size="icon-sm"
-        className="md:hidden"
-        onClick={() => downloadOne(assetName, fileName)}
-        disabled={isDownloading}
-      >
-        <HugeiconsIcon icon={Download04Icon} strokeWidth={2} size={16} />
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        className="hidden md:inline-flex"
-        onClick={() => downloadOne(assetName, fileName)}
-        disabled={isDownloading}
-      >
-        <HugeiconsIcon icon={Download04Icon} strokeWidth={2} data-icon="inline-start" size={16} />
-        Download
-      </Button>
+      {/* Public Link Dialog */}
+      <Dialog open={publicLinkOpen} onOpenChange={setPublicLinkOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Public Review Link</DialogTitle>
+            <DialogDescription>
+              Share this link to allow anyone to view and comment on this asset.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="public-review-toggle" className="text-sm font-medium">
+                Enable public link
+              </Label>
+              <Switch
+                id="public-review-toggle"
+                checked={isPublicReview}
+                onCheckedChange={handleToggle}
+                disabled={toggling}
+              />
+            </div>
+            {isPublicReview && shareUrl && (
+              <div className="flex items-center gap-2">
+                <Input
+                  value={shareUrl}
+                  readOnly
+                  className="text-xs"
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                />
+                <Button variant="outline" size="icon-sm" onClick={handleCopy}>
+                  <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} size={14} />
+                </Button>
+              </div>
+            )}
+            {isPublicReview && !shareUrl && (
+              <p className="text-xs text-muted-foreground">Generating link...</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
