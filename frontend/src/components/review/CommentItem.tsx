@@ -137,7 +137,7 @@ export function CommentItem({
             </div>
 
             <div
-              className="mt-0.5 text-sm text-foreground break-words [&_p]:mb-0 [&_.mention]:rounded [&_.mention]:bg-primary/10 [&_.mention]:px-1 [&_.mention]:py-0.5 [&_.mention]:font-medium [&_.mention]:text-primary"
+              className="mt-0.5 text-sm text-foreground break-words [&_p]:mb-0 [&_.mention]:rounded [&_.mention]:bg-primary/10 [&_.mention]:px-1 [&_.mention]:py-0.5 [&_.mention]:font-medium [&_.mention]:text-primary [&_img]:mt-1.5 [&_img]:max-w-full [&_img]:rounded-md [&_img]:max-h-48 [&_img]:object-contain"
               dangerouslySetInnerHTML={{ __html: comment.comment_text }}
             />
 

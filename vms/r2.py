@@ -45,6 +45,24 @@ def generate_presigned_upload_url(file_name, content_type, project):
 	return url, r2_key
 
 
+def generate_presigned_upload_url_raw(r2_key, content_type):
+	"""Generate a presigned upload URL for a given r2_key (no key generation)."""
+	settings = frappe.get_single("VMS Settings")
+	client = get_r2_client()
+
+	url = client.generate_presigned_url(
+		"put_object",
+		Params={
+			"Bucket": settings.r2_bucket_name,
+			"Key": r2_key,
+			"ContentType": content_type,
+		},
+		ExpiresIn=settings.presigned_url_expiry or 3600,
+	)
+
+	return url
+
+
 # ---------------------------------------------------------------------------
 # Multipart upload helpers (for files > 2 GB)
 # ---------------------------------------------------------------------------

@@ -1,11 +1,12 @@
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { MailSend01Icon, Clock01Icon, Cancel01Icon, PenTool01Icon } from "@hugeicons/core-free-icons"
+import { MailSend01Icon, Clock01Icon, Cancel01Icon, PenTool01Icon, Image02Icon } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { formatTimestamp } from "@/hooks/useVideoPlayer"
 import { useReviewContext } from "@/hooks/useReviewContext"
-import { CommentEditor, type CommentEditorHandle } from "./CommentEditor"
+import { useFrappePostCall } from "frappe-react-sdk"
+import { CommentEditor, type CommentEditorHandle, type ImageUploadFn } from "./CommentEditor"
 
 interface CommentInputProps {
   replyTo?: { name: string; commenterName: string; timestamp?: number | null } | null
@@ -29,6 +30,8 @@ export function CommentInput({
     isGuest,
     guestName,
     setGuestName,
+    assetId,
+    token,
   } = useReviewContext()
 
   const hasAnnotation = !!pendingAnnotation
@@ -37,6 +40,28 @@ export function CommentInput({
   const [localGuestName, setLocalGuestName] = useState(guestName)
   const editorRef = useRef<CommentEditorHandle>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+
+  const { call: callUploadImage } = useFrappePostCall("vms.review_api.upload_comment_image")
+
+  const handleImageUpload: ImageUploadFn = useCallback(async (file: File) => {
+    const res = await callUploadImage({
+      asset_name: assetId,
+      file_name: file.name,
+      content_type: file.type,
+      ...(token ? { token } : {}),
+    })
+    const { upload_url, view_url, r2_key } = res.message
+
+    // PUT the file directly to R2
+    await fetch(upload_url, {
+      method: "PUT",
+      body: file,
+      headers: { "Content-Type": file.type },
+    })
+
+    return { src: view_url, r2Key: r2_key }
+  }, [callUploadImage, assetId, token])
 
   // Sync localGuestName when prop changes
   useEffect(() => {
@@ -132,6 +157,25 @@ export function CommentInput({
             >
               <HugeiconsIcon icon={PenTool01Icon} size={14} strokeWidth={2} />
             </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => imageInputRef.current?.click()}
+              title="Attach image"
+            >
+              <HugeiconsIcon icon={Image02Icon} size={14} strokeWidth={2} />
+            </Button>
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) editorRef.current?.insertImage(file)
+                e.target.value = ""
+              }}
+            />
             <span className="text-[10px] text-muted-foreground">
               {hasAnnotation ? "annotation attached" : attachTimestamp ? "timestamp attached" : "click to attach"}
             </span>
@@ -141,6 +185,7 @@ export function CommentInput({
             onSubmit={handleSubmit}
             isGuest={isGuest}
             placeholder={isGuest ? "Add a comment..." : "Add a comment... Type @ to mention"}
+            onImageUpload={handleImageUpload}
           />
         </div>
 

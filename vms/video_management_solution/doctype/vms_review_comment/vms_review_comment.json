@@ -76,7 +76,7 @@
   },
   {
    "fieldname": "comment_text",
-   "fieldtype": "Small Text",
+   "fieldtype": "Text Editor",
    "in_list_view": 1,
    "label": "Comment Text",
    "reqd": 1

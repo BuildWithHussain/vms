@@ -1,7 +1,14 @@
+import re
+import uuid
+
 import frappe
 from frappe import _
 
-from vms.r2 import generate_presigned_download_url, generate_presigned_view_url
+from vms.r2 import (
+	generate_presigned_download_url,
+	generate_presigned_upload_url_raw,
+	generate_presigned_view_url,
+)
 
 
 def _validate_public_token(asset_name, token):
@@ -158,6 +165,11 @@ def get_comments(
 		order_by=order_by,
 		limit=500,
 	)
+
+	# Re-sign image URLs in comment HTML
+	for comment in comments:
+		if comment.comment_text and "data-r2-key" in comment.comment_text:
+			comment["comment_text"] = _re_sign_comment_images(comment.comment_text)
 
 	# Attach commenter info
 	for comment in comments:
@@ -329,6 +341,58 @@ def update_annotation(comment_name: str, annotation_data: str):
 	doc.save(ignore_permissions=True)
 
 	return {"status": "ok"}
+
+
+@frappe.whitelist(allow_guest=True)
+def upload_comment_image(
+	asset_name: str,
+	file_name: str,
+	content_type: str,
+	token: str | None = None,
+):
+	"""Get a presigned upload URL for a comment image.
+
+	Images are stored in R2 under comment-images/{uuid}.{ext}.
+	Returns the upload URL and r2_key for the frontend to PUT the image.
+	"""
+	_validate_public_token(asset_name, token)
+
+	if not frappe.db.exists("VMS Asset", asset_name):
+		frappe.throw(_("Asset {0} does not exist").format(asset_name))
+
+	# Validate content type is an image
+	if not content_type.startswith("image/"):
+		frappe.throw(_("Only image files are allowed"))
+
+	ext = file_name.rsplit(".", 1)[-1] if "." in file_name else "png"
+	r2_key = f"comment-images/{uuid.uuid4().hex}.{ext}"
+
+	upload_url = generate_presigned_upload_url_raw(r2_key, content_type)
+	view_url = generate_presigned_view_url(r2_key)
+
+	return {
+		"upload_url": upload_url,
+		"view_url": view_url,
+		"r2_key": r2_key,
+	}
+
+
+def _re_sign_comment_images(html: str) -> str:
+	"""Find <img> tags with data-r2-key attribute and replace src with fresh presigned URLs."""
+	if not html or "data-r2-key" not in html:
+		return html
+
+	def replace_src(match):
+		full_tag = match.group(0)
+		r2_key_match = re.search(r'data-r2-key="([^"]+)"', full_tag)
+		if not r2_key_match:
+			return full_tag
+		r2_key = r2_key_match.group(1)
+		fresh_url = generate_presigned_view_url(r2_key)
+		# Replace the src attribute value
+		return re.sub(r'src="[^"]*"', f'src="{fresh_url}"', full_tag)
+
+	return re.sub(r"<img[^>]+>", replace_src, html)
 
 
 @frappe.whitelist()

@@ -3,6 +3,7 @@ import { useEditor, EditorContent, ReactRenderer } from "@tiptap/react"
 import { StarterKit } from "@tiptap/starter-kit"
 import { Placeholder } from "@tiptap/extensions"
 import { Mention } from "@tiptap/extension-mention"
+import { Image as TiptapImage } from "@tiptap/extension-image"
 import type { SuggestionProps, SuggestionKeyDownProps } from "@tiptap/suggestion"
 import tippy, { type Instance as TippyInstance } from "tippy.js"
 import { useFrappeGetCall } from "frappe-react-sdk"
@@ -19,7 +20,10 @@ export interface CommentEditorHandle {
   clearContent: () => void
   focus: () => void
   isEmpty: () => boolean
+  insertImage: (file: File) => void
 }
+
+export type ImageUploadFn = (file: File) => Promise<{ src: string; r2Key: string }>
 
 interface CommentEditorProps {
   placeholder?: string
@@ -27,6 +31,7 @@ interface CommentEditorProps {
   isGuest?: boolean
   className?: string
   initialContent?: string
+  onImageUpload?: ImageUploadFn
 }
 
 // --- Mention suggestion list component ---
@@ -108,7 +113,7 @@ MentionList.displayName = "MentionList"
 
 // --- Main CommentEditor ---
 export const CommentEditor = forwardRef<CommentEditorHandle, CommentEditorProps>(
-  ({ placeholder = "Add a comment...", onSubmit, isGuest = false, className, initialContent }, ref) => {
+  ({ placeholder = "Add a comment...", onSubmit, isGuest = false, className, initialContent, onImageUpload }, ref) => {
     // Fetch mentionable users (only for authenticated users)
     const { data: usersData } = useFrappeGetCall<{ message: MentionUser[] }>(
       "vms.review_api.get_mentionable_users",
@@ -122,6 +127,30 @@ export const CommentEditor = forwardRef<CommentEditorHandle, CommentEditorProps>
     useEffect(() => {
       mentionUsersRef.current = mentionUsers
     }, [mentionUsers])
+
+    // Keep ref to image upload fn to avoid stale closures
+    const imageUploadRef = useRef(onImageUpload)
+    useEffect(() => {
+      imageUploadRef.current = onImageUpload
+    }, [onImageUpload])
+
+    const handleImageFiles = useCallback(async (files: File[], editor: ReturnType<typeof useEditor>) => {
+      if (!editor || !imageUploadRef.current) return
+      for (const file of files) {
+        if (!file.type.startsWith("image/")) continue
+        try {
+          const { src, r2Key } = await imageUploadRef.current(file)
+          editor.chain().focus().setImage({
+            src,
+            alt: file.name,
+            // @ts-expect-error custom attribute
+            "data-r2-key": r2Key,
+          }).run()
+        } catch (err) {
+          console.error("Failed to upload image:", err)
+        }
+      }
+    }, [])
 
     const editor = useEditor({
       immediatelyRender: false,
@@ -140,6 +169,24 @@ export const CommentEditor = forwardRef<CommentEditorHandle, CommentEditorProps>
         }),
         Placeholder.configure({
           placeholder,
+        }),
+        TiptapImage.extend({
+          addAttributes() {
+            return {
+              ...this.parent?.(),
+              "data-r2-key": {
+                default: null,
+                parseHTML: (el) => el.getAttribute("data-r2-key"),
+                renderHTML: (attrs) => {
+                  if (!attrs["data-r2-key"]) return {}
+                  return { "data-r2-key": attrs["data-r2-key"] }
+                },
+              },
+            }
+          },
+        }).configure({
+          inline: false,
+          allowBase64: false,
         }),
         // Only add mention extension for non-guests
         ...(!isGuest
@@ -221,6 +268,26 @@ export const CommentEditor = forwardRef<CommentEditorHandle, CommentEditorProps>
           }
           return false
         },
+        handlePaste: (_view, event) => {
+          const files = Array.from(event.clipboardData?.files ?? [])
+          const imageFiles = files.filter((f) => f.type.startsWith("image/"))
+          if (imageFiles.length > 0 && imageUploadRef.current) {
+            event.preventDefault()
+            void handleImageFiles(imageFiles, editor)
+            return true
+          }
+          return false
+        },
+        handleDrop: (_view, event) => {
+          const files = Array.from(event.dataTransfer?.files ?? [])
+          const imageFiles = files.filter((f) => f.type.startsWith("image/"))
+          if (imageFiles.length > 0 && imageUploadRef.current) {
+            event.preventDefault()
+            void handleImageFiles(imageFiles, editor)
+            return true
+          }
+          return false
+        },
       },
     })
 
@@ -229,7 +296,15 @@ export const CommentEditor = forwardRef<CommentEditorHandle, CommentEditorProps>
       getText: () => editor?.getText() ?? "",
       clearContent: () => editor?.commands.clearContent(),
       focus: () => editor?.commands.focus(),
-      isEmpty: () => editor?.isEmpty ?? true,
+      isEmpty: () => {
+        if (!editor) return true
+        // Check both text and image nodes (tiptap considers image-only as "empty")
+        const html = editor.getHTML()
+        return editor.isEmpty && !html.includes("<img")
+      },
+      insertImage: (file: File) => {
+        if (editor) void handleImageFiles([file], editor)
+      },
     }))
 
     if (!editor) return null
@@ -238,7 +313,7 @@ export const CommentEditor = forwardRef<CommentEditorHandle, CommentEditorProps>
       <div className={className}>
         <EditorContent
           editor={editor}
-          className="comment-editor max-h-24 overflow-y-auto rounded-md border bg-background px-3 py-2 [&_.ProseMirror]:min-h-[2rem] [&_.ProseMirror]:outline-none [&_.is-editor-empty:first-child::before]:text-muted-foreground [&_.is-editor-empty:first-child::before]:float-left [&_.is-editor-empty:first-child::before]:pointer-events-none [&_.is-editor-empty:first-child::before]:h-0 [&_.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.mention]:rounded [&_.mention]:bg-primary/10 [&_.mention]:px-1 [&_.mention]:py-0.5 [&_.mention]:font-medium [&_.mention]:text-primary"
+          className="comment-editor max-h-48 overflow-y-auto rounded-md border bg-background px-3 py-2 [&_.ProseMirror]:min-h-[2rem] [&_.ProseMirror]:outline-none [&_.is-editor-empty:first-child::before]:text-muted-foreground [&_.is-editor-empty:first-child::before]:float-left [&_.is-editor-empty:first-child::before]:pointer-events-none [&_.is-editor-empty:first-child::before]:h-0 [&_.is-editor-empty:first-child::before]:content-[attr(data-placeholder)] [&_.mention]:rounded [&_.mention]:bg-primary/10 [&_.mention]:px-1 [&_.mention]:py-0.5 [&_.mention]:font-medium [&_.mention]:text-primary [&_img]:mt-1 [&_img]:max-w-full [&_img]:rounded-md [&_img]:max-h-32 [&_img]:object-contain"
         />
       </div>
     )
