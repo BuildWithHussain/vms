@@ -94,9 +94,10 @@ export function VideoTimeline({
                 </span>
                 {" — "}
                 <span className="text-xs">
-                  {comment.comment_text.length > 40
-                    ? comment.comment_text.slice(0, 40) + "..."
-                    : comment.comment_text}
+                  {(() => {
+                    const text = comment.comment_text.replace(/<[^>]*>/g, "")
+                    return text.length > 40 ? text.slice(0, 40) + "..." : text
+                  })()}
                 </span>
               </TooltipContent>
             </Tooltip>
