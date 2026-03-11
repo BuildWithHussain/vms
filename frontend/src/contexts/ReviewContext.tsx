@@ -28,6 +28,8 @@ interface ReviewContextType {
 
   // Comments
   comments: ReturnType<typeof useReviewComments>["comments"]
+  versionFilter: number | "all"
+  setVersionFilter: (v: number | "all") => void
 
   // Annotations
   annotationMode: boolean
@@ -86,12 +88,14 @@ export function ReviewProvider({ assetId, token, isGuest, assetVersion, children
     }
   }, [])
 
+  const [versionFilter, setVersionFilter] = useState<number | "all">(assetVersion)
+
   const fabricCanvas = useFabricCanvas()
 
   const { call: fetchAnnotation } = useFrappePostCall("vms.review_api.get_annotation_data")
 
-  // Comments (sorted by timestamp for timeline markers)
-  const { comments } = useReviewComments(assetId, "timestamp", token)
+  // Comments (sorted by timestamp for timeline markers, filtered by version)
+  const { comments } = useReviewComments(assetId, "timestamp", token, versionFilter)
 
   const seekTo = useCallback((time: number) => {
     seekToRef.current?.(time)
@@ -190,6 +194,8 @@ export function ReviewProvider({ assetId, token, isGuest, assetVersion, children
         seekTo,
         seekToRef,
         comments,
+        versionFilter,
+        setVersionFilter,
         annotationMode,
         pendingAnnotation,
         replayAnnotation,

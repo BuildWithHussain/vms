@@ -24,6 +24,8 @@ export function CommentPanel() {
     token,
     isGuest,
     assetVersion,
+    versionFilter,
+    setVersionFilter,
     annotationMode,
     pendingAnnotation,
     finishAnnotation,
@@ -39,7 +41,6 @@ export function CommentPanel() {
   const { currentUser } = useFrappeAuth()
 
   const [sortBy, setSortBy] = useState<"timestamp" | "recent">("recent")
-  const [versionFilter, setVersionFilter] = useState<number | "all">(assetVersion)
   const [replyTo, setReplyTo] = useState<{
     name: string
     commenterName: string
