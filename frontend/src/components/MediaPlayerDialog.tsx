@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import type { VMSAsset } from "@/types"
 
 type MediaType = "video" | "audio" | "image"
 
@@ -24,6 +25,8 @@ interface MediaPlayerDialogProps {
   assetName: string | null
   fileName?: string
   fileType?: string
+  siblings?: VMSAsset[]
+  onNavigate?: (asset: VMSAsset) => void
 }
 
 export function MediaPlayerDialog({
@@ -32,6 +35,8 @@ export function MediaPlayerDialog({
   assetName,
   fileName,
   fileType,
+  siblings,
+  onNavigate,
 }: MediaPlayerDialogProps) {
   const [mediaUrl, setMediaUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -67,6 +72,31 @@ export function MediaPlayerDialog({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, assetName])
+
+  useEffect(() => {
+    if (!open || !onNavigate || !siblings || siblings.length < 2 || !assetName) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return
+      const target = e.target as HTMLElement | null
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+        return
+      }
+      const index = siblings.findIndex((a) => a.name === assetName)
+      if (index === -1) return
+      const nextIndex = e.key === "ArrowLeft"
+        ? (index - 1 + siblings.length) % siblings.length
+        : (index + 1) % siblings.length
+      const next = siblings[nextIndex]
+      if (next && next.name !== assetName) {
+        e.preventDefault()
+        onNavigate(next)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown, true)
+    return () => window.removeEventListener("keydown", handleKeyDown, true)
+  }, [open, assetName, siblings, onNavigate])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

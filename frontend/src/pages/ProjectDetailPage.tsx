@@ -219,6 +219,11 @@ export function ProjectDetailPage() {
     [folderAssets, forReviewItems, deliverableItems],
   )
 
+  const imageSiblings = useMemo(
+    () => allAssets.filter((a) => a.status === "Ready" && a.file_type?.startsWith("image/")),
+    [allAssets],
+  )
+
   const handleBulkDownload = () => {
     const toDownload = allAssets.filter((a) => selected.has(a.name))
     downloadMany(toDownload)
@@ -775,6 +780,8 @@ export function ProjectDetailPage() {
         assetName={previewAsset?.name ?? null}
         fileName={previewAsset?.file_name}
         fileType={previewAsset?.file_type}
+        siblings={previewAsset?.file_type?.startsWith("image/") ? imageSiblings : undefined}
+        onNavigate={setPreviewAsset}
       />
 
       <CreateFolderDialog
