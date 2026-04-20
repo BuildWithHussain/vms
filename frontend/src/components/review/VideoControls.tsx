@@ -40,6 +40,7 @@ interface VideoControlsProps {
   onToggleFullscreen: () => void
   onSkipBackward: () => void
   onSkipForward: () => void
+  popoverContainer?: HTMLElement | null
 }
 
 export function VideoControls({
@@ -59,6 +60,7 @@ export function VideoControls({
   onToggleFullscreen,
   onSkipBackward,
   onSkipForward,
+  popoverContainer,
 }: VideoControlsProps) {
   const VolumeIcon = isMuted || volume === 0
     ? VolumeMute01Icon
@@ -110,7 +112,7 @@ export function VideoControls({
           >
             {playbackRate}x
           </PopoverTrigger>
-          <PopoverContent className="w-auto min-w-0 p-1" align="end">
+          <PopoverContent className="w-auto min-w-0 p-1" align="end" container={popoverContainer}>
             <div className="flex flex-col">
               {SPEED_OPTIONS.map((rate) => (
                 <Button

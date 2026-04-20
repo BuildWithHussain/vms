@@ -13,6 +13,7 @@ interface VideoTimelineProps {
   comments: VMSReviewComment[]
   onSeek: (time: number) => void
   onCommentMarkerClick?: (commentName: string, timestamp?: number | null) => void
+  tooltipContainer?: HTMLElement | null
 }
 
 export function VideoTimeline({
@@ -21,6 +22,7 @@ export function VideoTimeline({
   comments,
   onSeek,
   onCommentMarkerClick,
+  tooltipContainer,
 }: VideoTimelineProps) {
   const trackRef = useRef<HTMLDivElement>(null)
 
@@ -88,7 +90,7 @@ export function VideoTimeline({
                   }
                 }}
               />
-              <TooltipContent side="top" sideOffset={8}>
+              <TooltipContent side="top" sideOffset={8} container={tooltipContainer}>
                 <span className="font-mono text-xs">
                   {formatTimestamp(comment.video_timestamp!)}
                 </span>
