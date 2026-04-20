@@ -94,6 +94,26 @@ def get_compress_status(job_name: str):
 	return result
 
 
+@frappe.whitelist()
+def get_compress_download_url(job_name: str):
+	"""Get a fresh presigned download URL for a completed compression job."""
+	if not frappe.db.exists("VMS Compress Job", job_name):
+		frappe.throw(_("Job not found"), frappe.DoesNotExistError)
+
+	job = frappe.get_doc("VMS Compress Job", job_name)
+
+	if job.owner != frappe.session.user and "System Manager" not in frappe.get_roles():
+		frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+	if job.status != "Complete" or not job.compressed_r2_key:
+		frappe.throw(_("Compressed file is not available"))
+
+	url = generate_presigned_download_url(
+		job.compressed_r2_key, job.compressed_file_name or job.original_file_name
+	)
+	return {"url": url, "file_name": job.compressed_file_name or job.original_file_name}
+
+
 @frappe.whitelist(methods=["GET"])
 def get_compress_jobs(page: int | str = 1, page_size: int | str = 20):
 	"""List compression jobs for the current user."""

@@ -86,6 +86,8 @@ function CompressTab() {
 
   const { call: getUploadUrl } = useFrappePostCall("vms.tools_api.get_tool_upload_url")
   const { call: startCompression } = useFrappePostCall("vms.tools_api.start_compression")
+  const { call: getCompressDownloadUrl } = useFrappePostCall("vms.tools_api.get_compress_download_url")
+  const [downloadingJob, setDownloadingJob] = useState<string | null>(null)
 
   // Fetch job list
   const { data: jobsData, isLoading: jobsLoading, mutate: mutateJobs } = useFrappeGetCall<{
@@ -234,6 +236,24 @@ function CompressTab() {
     setFile(null)
   }
 
+  const handleDownloadJob = async (jobName: string) => {
+    try {
+      setDownloadingJob(jobName)
+      const res = await getCompressDownloadUrl({ job_name: jobName })
+      const { url, file_name } = res.message as { url: string; file_name: string }
+      const a = document.createElement("a")
+      a.href = url
+      a.download = file_name
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+    } catch {
+      toast.error("Failed to download compressed file")
+    } finally {
+      setDownloadingJob(null)
+    }
+  }
+
   const jobs = jobsData?.message?.jobs ?? []
   const isProcessing = activeJob && currentStatus && !["Complete", "Error"].includes(currentStatus.status)
 
@@ -371,6 +391,7 @@ function CompressTab() {
                 <TableHead>Reduction</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created</TableHead>
+                <TableHead className="w-[80px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -399,6 +420,19 @@ function CompressTab() {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDistanceToNow(new Date(job.creation), { addSuffix: true })}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {job.status === "Complete" && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        disabled={downloadingJob === job.name}
+                        onClick={() => handleDownloadJob(job.name)}
+                        title="Download compressed file"
+                      >
+                        <HugeiconsIcon icon={Download04Icon} strokeWidth={2} className="size-4" />
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
