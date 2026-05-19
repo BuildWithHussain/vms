@@ -2,6 +2,7 @@ import { useState, useCallback } from "react"
 import { useSelection } from "@/hooks/useSelection"
 import { DropZoneOverlay } from "@/components/DropZoneOverlay"
 import { CategoryBadge } from "@/components/CategoryBadge"
+import { AssetTags } from "@/components/AssetTags"
 import { useNavigate } from "react-router"
 import { useFrappeGetCall } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -345,7 +346,13 @@ export function UncategorisedPage() {
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="pl-10">
+                    <CardContent className="space-y-2 pl-10">
+                      <AssetTags
+                        assetName={asset.name}
+                        tags={asset.tags ?? []}
+                        compact
+                        onChanged={() => mutate()}
+                      />
                       <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <UserAvatar name={asset.uploader_name} image={asset.uploader_image} />
                         {asset.file_size && (
@@ -415,6 +422,11 @@ export function UncategorisedPage() {
                           {asset.status}
                         </Badge>
                       </div>
+                      <AssetTags
+                        assetName={asset.name}
+                        tags={asset.tags ?? []}
+                        onChanged={() => mutate()}
+                      />
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         <UserAvatar name={asset.uploader_name} image={asset.uploader_image} />
                         {asset.file_size && (
