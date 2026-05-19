@@ -685,6 +685,7 @@ def get_project_assets(project, folder=None, category=None, page=1, page_size=20
 			"review_token",
 			"folder",
 			"_user_tags",
+			"card_color",
 		],
 		order_by="creation desc",
 		start=start,
@@ -755,6 +756,7 @@ def get_inbox_assets(page=1, page_size=20):
 			"creation",
 			"thumbnail_url",
 			"_user_tags",
+			"card_color",
 		],
 		order_by="creation desc",
 		start=start,
@@ -823,6 +825,26 @@ def remove_asset_tag(asset_name: str, tag: str):
 
 	tags_str = frappe.db.get_value("VMS Asset", asset_name, "_user_tags") or ""
 	return {"tags": _parse_user_tags(tags_str)}
+
+
+# Curated palette for asset card accent colours. Empty string clears the colour.
+ALLOWED_CARD_COLORS = {"", "red", "amber", "green", "blue", "purple", "pink"}
+
+
+@frappe.whitelist()
+def set_asset_card_color(asset_name: str, color: str = ""):
+	"""Set (or clear) the accent colour for an asset card. Pass empty string to clear."""
+	if not frappe.db.exists("VMS Asset", asset_name):
+		frappe.throw(_("Asset {0} does not exist").format(asset_name))
+
+	color = (color or "").strip().lower()
+	if color not in ALLOWED_CARD_COLORS:
+		frappe.throw(_("Invalid colour {0}").format(color))
+
+	frappe.get_doc("VMS Asset", asset_name).check_permission("write")
+
+	frappe.db.set_value("VMS Asset", asset_name, "card_color", color)
+	return {"card_color": color}
 
 
 @frappe.whitelist()

@@ -43,6 +43,7 @@ export interface VMSAsset {
   is_public_review?: 0 | 1
   review_token?: string | null
   tags?: string[]
+  card_color?: string | null
   deleted_at?: string | null
   deleted_by?: string | null
   deleter_name?: string

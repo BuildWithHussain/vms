@@ -20,7 +20,7 @@ import {
   Share01Icon,
 } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
-import { formatBytes } from "@/lib/utils"
+import { cn, formatBytes } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -62,6 +62,7 @@ import { DeleteFolderDialog } from "@/components/DeleteFolderDialog"
 import { DropZoneOverlay } from "@/components/DropZoneOverlay"
 import { CategoryBadge } from "@/components/CategoryBadge"
 import { AssetTags } from "@/components/AssetTags"
+import { AssetCardColor, CARD_COLOR_BORDER_CLASS } from "@/components/AssetCardColor"
 import { useDownload } from "@/hooks/useDownload"
 import { UserAvatar } from "@/components/UserAvatar"
 import { toast } from "sonner"
@@ -1367,7 +1368,10 @@ function AssetList({
             <AssetContextMenu key={asset.name} asset={asset} actions={menuActions} isConvertible={isConvertibleToMp4(asset)}>
               <Card
                 size="sm"
-                className="cursor-pointer transition-shadow hover:shadow-md"
+                className={cn(
+                  "cursor-pointer transition-shadow hover:shadow-md",
+                  asset.card_color && CARD_COLOR_BORDER_CLASS[asset.card_color],
+                )}
                 draggable={canDrag}
                 onDragStart={canDrag ? (e: React.DragEvent<HTMLDivElement>) => handleDragStart(e, asset.name) : undefined}
                 onClick={() => {
@@ -1408,6 +1412,11 @@ function AssetList({
                         >
                           {asset.status}
                         </Badge>
+                        <AssetCardColor
+                          assetName={asset.name}
+                          color={asset.card_color}
+                          onChanged={onCategoryChanged}
+                        />
                         <div onClick={(e) => e.stopPropagation()}>
                           <AssetDropdownMenu
                             asset={asset}
@@ -1461,7 +1470,10 @@ function AssetList({
           {items.map((asset) => (
             <AssetContextMenu key={asset.name} asset={asset} actions={menuActions} isConvertible={isConvertibleToMp4(asset)}>
               <Card
-                className="flex cursor-pointer flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md"
+                className={cn(
+                  "flex cursor-pointer flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md",
+                  asset.card_color && CARD_COLOR_BORDER_CLASS[asset.card_color],
+                )}
                 draggable={canDrag}
                 onDragStart={canDrag ? (e: React.DragEvent<HTMLDivElement>) => handleDragStart(e, asset.name) : undefined}
                 onClick={() => {
@@ -1490,12 +1502,19 @@ function AssetList({
                         {asset.file_name}
                       </CardTitle>
                     </div>
-                    <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-                      <AssetDropdownMenu
-                        asset={asset}
-                        actions={menuActions}
-                        isConvertible={isConvertibleToMp4(asset)}
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <AssetCardColor
+                        assetName={asset.name}
+                        color={asset.card_color}
+                        onChanged={onCategoryChanged}
                       />
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <AssetDropdownMenu
+                          asset={asset}
+                          actions={menuActions}
+                          isConvertible={isConvertibleToMp4(asset)}
+                        />
+                      </div>
                     </div>
                   </div>
                 </CardHeader>

@@ -42,6 +42,8 @@
   "youtube_video_url",
   "section_break_versions",
   "version",
+  "section_break_appearance",
+  "card_color",
   "section_break_trash",
   "deleted_at",
   "column_break_trash",
@@ -263,6 +265,17 @@
    "label": "Version",
    "default": "1",
    "read_only": 1
+  },
+  {
+   "fieldname": "section_break_appearance",
+   "fieldtype": "Section Break",
+   "label": "Appearance"
+  },
+  {
+   "fieldname": "card_color",
+   "fieldtype": "Data",
+   "label": "Card Color",
+   "description": "Optional accent colour for the asset card (e.g. red, amber, green)"
   },
   {
    "fieldname": "section_break_trash",
