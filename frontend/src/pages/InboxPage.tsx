@@ -3,12 +3,13 @@ import { useSelection } from "@/hooks/useSelection"
 import { DropZoneOverlay } from "@/components/DropZoneOverlay"
 import { CategoryBadge } from "@/components/CategoryBadge"
 import { AssetTags } from "@/components/AssetTags"
+import { AssetCardColor, CARD_COLOR_BORDER_CLASS } from "@/components/AssetCardColor"
 import { useNavigate } from "react-router"
 import { useFrappeGetCall } from "frappe-react-sdk"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { CloudUploadIcon, Delete02Icon, Download04Icon, Film01Icon, GridViewIcon, Album01Icon, ListViewIcon, Move01Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons"
 import { Badge } from "@/components/ui/badge"
-import { formatBytes } from "@/lib/utils"
+import { cn, formatBytes } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { AssetDropdownMenu, AssetContextMenu } from "@/components/AssetCardMenu"
 import type { AssetMenuActions } from "@/components/AssetCardMenu"
@@ -302,7 +303,10 @@ export function UncategorisedPage() {
                 <AssetContextMenu key={asset.name} asset={asset} actions={menuActions}>
                   <Card
                     size="sm"
-                    className="cursor-pointer transition-shadow hover:shadow-md"
+                    className={cn(
+                      "cursor-pointer transition-shadow hover:shadow-md",
+                      asset.card_color && CARD_COLOR_BORDER_CLASS[asset.card_color],
+                    )}
                     onClick={() => handleAssetClick(asset)}
                   >
                     <CardHeader>
@@ -339,6 +343,11 @@ export function UncategorisedPage() {
                             >
                               {asset.status}
                             </Badge>
+                            <AssetCardColor
+                              assetName={asset.name}
+                              color={asset.card_color}
+                              onChanged={() => mutate()}
+                            />
                             <div onClick={(e) => e.stopPropagation()}>
                               <AssetDropdownMenu asset={asset} actions={menuActions} />
                             </div>
@@ -377,7 +386,10 @@ export function UncategorisedPage() {
               {assets.map((asset) => (
                 <AssetContextMenu key={asset.name} asset={asset} actions={menuActions}>
                   <Card
-                    className="flex cursor-pointer flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md"
+                    className={cn(
+                      "flex cursor-pointer flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md",
+                      asset.card_color && CARD_COLOR_BORDER_CLASS[asset.card_color],
+                    )}
                     onClick={() => handleAssetClick(asset)}
                   >
                     <div className="flex aspect-video w-full items-center justify-center bg-muted">
@@ -402,8 +414,15 @@ export function UncategorisedPage() {
                             {asset.file_name}
                           </CardTitle>
                         </div>
-                        <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-                          <AssetDropdownMenu asset={asset} actions={menuActions} />
+                        <div className="flex shrink-0 items-center gap-0.5">
+                          <AssetCardColor
+                            assetName={asset.name}
+                            color={asset.card_color}
+                            onChanged={() => mutate()}
+                          />
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <AssetDropdownMenu asset={asset} actions={menuActions} />
+                          </div>
                         </div>
                       </div>
                     </CardHeader>
