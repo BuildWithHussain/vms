@@ -684,6 +684,7 @@ def get_project_assets(project, folder=None, category=None, page=1, page_size=20
 			"is_public_review",
 			"review_token",
 			"folder",
+			"_user_tags",
 		],
 		order_by="creation desc",
 		start=start,
@@ -705,6 +706,7 @@ def get_project_assets(project, folder=None, category=None, page=1, page_size=20
 		u = user_map.get(asset.uploaded_by, {})
 		asset["uploader_name"] = u.get("full_name", asset.uploaded_by)
 		asset["uploader_image"] = u.get("user_image")
+		asset["tags"] = _parse_user_tags(asset.get("_user_tags"))
 
 	return {
 		"assets": assets,
@@ -713,6 +715,13 @@ def get_project_assets(project, folder=None, category=None, page=1, page_size=20
 		"page_size": page_size,
 		"total_pages": -(-total // page_size),
 	}
+
+
+def _parse_user_tags(value):
+	"""Convert Frappe's comma-delimited `_user_tags` string into a clean list."""
+	if not value:
+		return []
+	return [t for t in (tag.strip() for tag in value.split(",")) if t]
 
 
 @frappe.whitelist(methods=["GET"])
@@ -745,6 +754,7 @@ def get_inbox_assets(page=1, page_size=20):
 			"uploaded_at",
 			"creation",
 			"thumbnail_url",
+			"_user_tags",
 		],
 		order_by="creation desc",
 		start=start,
@@ -766,6 +776,7 @@ def get_inbox_assets(page=1, page_size=20):
 		u = user_map.get(asset.uploaded_by, {})
 		asset["uploader_name"] = u.get("full_name", asset.uploaded_by)
 		asset["uploader_image"] = u.get("user_image")
+		asset["tags"] = _parse_user_tags(asset.get("_user_tags"))
 
 	return {
 		"assets": assets,
@@ -774,6 +785,44 @@ def get_inbox_assets(page=1, page_size=20):
 		"page_size": page_size,
 		"total_pages": -(-total // page_size),
 	}
+
+
+@frappe.whitelist()
+def add_asset_tag(asset_name: str, tag: str):
+	"""Add a user tag to a VMS Asset. Returns the updated tag list."""
+	if not frappe.db.exists("VMS Asset", asset_name):
+		frappe.throw(_("Asset {0} does not exist").format(asset_name))
+
+	tag = (tag or "").strip()
+	if not tag:
+		frappe.throw(_("Tag cannot be empty"))
+	if len(tag) > 50:
+		frappe.throw(_("Tag is too long (max 50 chars)"))
+
+	frappe.get_doc("VMS Asset", asset_name).check_permission("write")
+
+	from frappe.desk.doctype.tag.tag import DocTags
+
+	DocTags("VMS Asset").add(asset_name, tag)
+
+	tags_str = frappe.db.get_value("VMS Asset", asset_name, "_user_tags") or ""
+	return {"tags": _parse_user_tags(tags_str)}
+
+
+@frappe.whitelist()
+def remove_asset_tag(asset_name: str, tag: str):
+	"""Remove a user tag from a VMS Asset. Returns the updated tag list."""
+	if not frappe.db.exists("VMS Asset", asset_name):
+		frappe.throw(_("Asset {0} does not exist").format(asset_name))
+
+	frappe.get_doc("VMS Asset", asset_name).check_permission("write")
+
+	from frappe.desk.doctype.tag.tag import DocTags
+
+	DocTags("VMS Asset").remove(asset_name, tag)
+
+	tags_str = frappe.db.get_value("VMS Asset", asset_name, "_user_tags") or ""
+	return {"tags": _parse_user_tags(tags_str)}
 
 
 @frappe.whitelist()

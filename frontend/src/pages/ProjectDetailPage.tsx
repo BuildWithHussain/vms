@@ -61,6 +61,7 @@ import { MoveToFolderDialog } from "@/components/MoveToFolderDialog"
 import { DeleteFolderDialog } from "@/components/DeleteFolderDialog"
 import { DropZoneOverlay } from "@/components/DropZoneOverlay"
 import { CategoryBadge } from "@/components/CategoryBadge"
+import { AssetTags } from "@/components/AssetTags"
 import { useDownload } from "@/hooks/useDownload"
 import { UserAvatar } from "@/components/UserAvatar"
 import { toast } from "sonner"
@@ -1418,7 +1419,13 @@ function AssetList({
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="pl-10">
+                <CardContent className="space-y-2 pl-10">
+                  <AssetTags
+                    assetName={asset.name}
+                    tags={asset.tags ?? []}
+                    compact
+                    onChanged={onCategoryChanged}
+                  />
                   <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <UserAvatar name={asset.uploader_name} image={asset.uploader_image} />
                     {asset.file_size && (
@@ -1507,6 +1514,11 @@ function AssetList({
                       {asset.status}
                     </Badge>
                   </div>
+                  <AssetTags
+                    assetName={asset.name}
+                    tags={asset.tags ?? []}
+                    onChanged={onCategoryChanged}
+                  />
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <UserAvatar name={asset.uploader_name} image={asset.uploader_image} />
                     {asset.file_size && (
