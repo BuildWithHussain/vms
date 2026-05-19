@@ -128,8 +128,12 @@ def _extract_mentioned_users(html_text):
 
 
 def _send_comment_email(comment, asset, commenter_name, recipients):
-	"""Send email notification to recipients."""
+	"""Send email notification to recipients (enabled users only)."""
 	if not recipients:
+		return
+
+	recipient_emails = _user_names_to_emails(recipients)
+	if not recipient_emails:
 		return
 
 	asset_url = _get_review_url(asset)
@@ -152,7 +156,7 @@ def _send_comment_email(comment, asset, commenter_name, recipients):
 
 	try:
 		frappe.sendmail(
-			recipients=list(recipients),
+			recipients=recipient_emails,
 			subject=subject,
 			message=message,
 			reference_doctype="VMS Review Comment",
