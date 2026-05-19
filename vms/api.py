@@ -639,13 +639,15 @@ def move_assets_to_folder(asset_names: str | list, folder: str | None = None):
 
 
 @frappe.whitelist(methods=["GET"])
-def get_project_assets(project, folder=None, category=None, page=1, page_size=20):
-	"""Get project assets with server-side folder/category filtering and pagination.
+def get_project_assets(project, folder=None, category=None, tag=None, page=1, page_size=20):
+	"""Get project assets with server-side folder/category/tag filtering and pagination.
 
 	Parameters:
 		project: VMS Project ID (required)
 		folder: VMS Folder ID. None = root-level assets only. Ignored when category is set.
 		category: "For Review" or "Deliverable". Returns matching assets across ALL folders.
+		tag: Filter to assets tagged with this tag. Crosses folder/category boundaries
+			like category does (returns matching assets across ALL folders).
 		page: Page number (1-indexed, default 1)
 		page_size: Items per page (default 20, max 100)
 	"""
@@ -660,10 +662,29 @@ def get_project_assets(project, folder=None, category=None, page=1, page_size=20
 
 	if category:
 		filters["category"] = category
+	elif tag:
+		# tag filter spans folders so the user sees every match in the project
+		pass
 	elif folder:
 		filters["folder"] = folder
 	else:
 		filters["folder"] = ["is", "not set"]
+
+	if tag:
+		tagged_names = frappe.get_all(
+			"Tag Link",
+			filters={"document_type": "VMS Asset", "tag": tag},
+			pluck="document_name",
+		)
+		if not tagged_names:
+			return {
+				"assets": [],
+				"total": 0,
+				"page": page,
+				"page_size": page_size,
+				"total_pages": 0,
+			}
+		filters["name"] = ["in", tagged_names]
 
 	total = frappe.db.count("VMS Asset", filters=filters)
 
@@ -809,6 +830,33 @@ def add_asset_tag(asset_name: str, tag: str):
 
 	tags_str = frappe.db.get_value("VMS Asset", asset_name, "_user_tags") or ""
 	return {"tags": _parse_user_tags(tags_str)}
+
+
+@frappe.whitelist(methods=["GET"])
+def get_project_tags(project: str):
+	"""Return distinct tags applied to non-trashed assets in this project, with usage counts.
+
+	Used by the project page tag filter dropdown.
+	"""
+	if not frappe.db.exists("VMS Project", project):
+		frappe.throw(_("Project {0} does not exist").format(project))
+
+	rows = frappe.db.sql(
+		"""
+		SELECT tl.tag AS tag, COUNT(*) AS count
+		FROM `tabTag Link` tl
+		INNER JOIN `tabVMS Asset` a ON a.name = tl.document_name
+		WHERE tl.document_type = 'VMS Asset'
+			AND a.project = %s
+			AND a.deleted_at IS NULL
+			AND a.status != 'Uploading'
+		GROUP BY tl.tag
+		ORDER BY tl.tag ASC
+		""",
+		(project,),
+		as_dict=True,
+	)
+	return {"tags": rows}
 
 
 @frappe.whitelist()

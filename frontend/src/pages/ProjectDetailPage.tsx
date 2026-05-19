@@ -62,6 +62,7 @@ import { DeleteFolderDialog } from "@/components/DeleteFolderDialog"
 import { DropZoneOverlay } from "@/components/DropZoneOverlay"
 import { CategoryBadge } from "@/components/CategoryBadge"
 import { AssetTags } from "@/components/AssetTags"
+import { AssetTagFilter } from "@/components/AssetTagFilter"
 import { AssetCardColor, CARD_COLOR_BORDER_CLASS } from "@/components/AssetCardColor"
 import { useDownload } from "@/hooks/useDownload"
 import { UserAvatar } from "@/components/UserAvatar"
@@ -106,6 +107,7 @@ export function ProjectDetailPage() {
   const { selected, toggleSelect, toggleSelectAll, clearSelection } = useSelection()
   const [activeTab, setActiveTab] = useState("all")
   const [page, setPage] = useState(1)
+  const [tagFilter, setTagFilter] = useState<string | null>(null)
   const { downloadOne, downloadMany, isDownloading } = useDownload()
 
   const { call: callTogglePublicReview } = useFrappePostCall("vms.review_api.toggle_public_review")
@@ -122,20 +124,20 @@ export function ProjectDetailPage() {
 
   const { data: folderAssetsData, mutate: mutateFolderAssets, isLoading: isLoadingFolder } = useFrappeGetCall<{ message: PaginatedAssets }>(
     "vms.api.get_project_assets",
-    { project: projectId!, folder: currentFolder ?? undefined, page: activeTab === "all" ? page : 1, page_size: PAGE_SIZE },
-    `project-assets-folder-${projectId}-${currentFolder ?? "root"}-p${activeTab === "all" ? page : 1}`,
+    { project: projectId!, folder: currentFolder ?? undefined, tag: tagFilter ?? undefined, page: activeTab === "all" ? page : 1, page_size: PAGE_SIZE },
+    `project-assets-folder-${projectId}-${currentFolder ?? "root"}-t${tagFilter ?? ""}-p${activeTab === "all" ? page : 1}`,
   )
 
   const { data: forReviewData, mutate: mutateForReview, isLoading: isLoadingForReview } = useFrappeGetCall<{ message: PaginatedAssets }>(
     "vms.api.get_project_assets",
-    { project: projectId!, category: "For Review", page: activeTab === "for-review" ? page : 1, page_size: PAGE_SIZE },
-    `project-assets-review-${projectId}-p${activeTab === "for-review" ? page : 1}`,
+    { project: projectId!, category: "For Review", tag: tagFilter ?? undefined, page: activeTab === "for-review" ? page : 1, page_size: PAGE_SIZE },
+    `project-assets-review-${projectId}-t${tagFilter ?? ""}-p${activeTab === "for-review" ? page : 1}`,
   )
 
   const { data: deliverablesData, mutate: mutateDeliverables, isLoading: isLoadingDeliverables } = useFrappeGetCall<{ message: PaginatedAssets }>(
     "vms.api.get_project_assets",
-    { project: projectId!, category: "Deliverable", page: activeTab === "deliverables" ? page : 1, page_size: PAGE_SIZE },
-    `project-assets-deliverables-${projectId}-p${activeTab === "deliverables" ? page : 1}`,
+    { project: projectId!, category: "Deliverable", tag: tagFilter ?? undefined, page: activeTab === "deliverables" ? page : 1, page_size: PAGE_SIZE },
+    `project-assets-deliverables-${projectId}-t${tagFilter ?? ""}-p${activeTab === "deliverables" ? page : 1}`,
   )
 
   const folderAssets = folderAssetsData?.message?.assets ?? []
@@ -571,6 +573,11 @@ export function ProjectDetailPage() {
                 </Button>
               </>
             )}
+            <AssetTagFilter
+              project={projectId!}
+              value={tagFilter}
+              onChange={(t) => { setTagFilter(t); setPage(1); clearSelection() }}
+            />
             <ToggleGroup
               className="hidden sm:flex"
               value={[view]}
@@ -644,11 +651,11 @@ export function ProjectDetailPage() {
             onMoveToFolder={handleMenuMoveToFolder}
             onCopyShareLink={handleMenuCopyShareLink}
             onToggleSharing={handleMenuToggleSharing}
-            folders={currentFolder ? undefined : folders ?? undefined}
+            folders={currentFolder || tagFilter ? undefined : folders ?? undefined}
             onFolderClick={handleFolderClick}
-            onFolderRename={currentFolder ? undefined : handleCardFolderRename}
-            onFolderDelete={currentFolder ? undefined : handleCardFolderDelete}
-            onDropToFolder={currentFolder ? undefined : handleDropToFolder}
+            onFolderRename={currentFolder || tagFilter ? undefined : handleCardFolderRename}
+            onFolderDelete={currentFolder || tagFilter ? undefined : handleCardFolderDelete}
+            onDropToFolder={currentFolder || tagFilter ? undefined : handleDropToFolder}
             draggable={(folders ?? []).length > 0 || !!currentFolder}
             isLoading={isLoadingFolder}
             emptyMessage={
