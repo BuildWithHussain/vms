@@ -6,11 +6,13 @@ import "yet-another-react-lightbox/styles.css"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   CheckmarkCircle02Icon,
+  Copy01Icon,
   Delete02Icon,
   MailReply01Icon,
   Clock01Icon,
   PenTool01Icon,
   PencilEdit01Icon,
+  Tick02Icon,
 } from "@hugeicons/core-free-icons"
 import { Button } from "@/components/ui/button"
 import {
@@ -76,7 +78,21 @@ export function CommentItem({
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState(0)
   const [lightboxSlides, setLightboxSlides] = useState<{ src: string }[]>([])
+  const [copied, setCopied] = useState(false)
   const editEditorRef = useRef<CommentEditorHandle>(null)
+
+  const handleCopy = useCallback(async () => {
+    const tmp = document.createElement("div")
+    tmp.innerHTML = comment.comment_text
+    const text = (tmp.textContent || tmp.innerText || "").trim()
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // clipboard may be unavailable (e.g. insecure context); silently ignore
+    }
+  }, [comment.comment_text])
   const handleCommentClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       const target = e.target as HTMLElement
@@ -182,6 +198,19 @@ export function CommentItem({
               </span>
 
               <div className="ml-auto flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={handleCopy}
+                  title={copied ? "Copied!" : "Copy comment"}
+                >
+                  <HugeiconsIcon
+                    icon={copied ? Tick02Icon : Copy01Icon}
+                    size={14}
+                    strokeWidth={2}
+                    className={copied ? "text-green-500" : ""}
+                  />
+                </Button>
                 {!isNested && (
                   <Button
                     variant="ghost"
