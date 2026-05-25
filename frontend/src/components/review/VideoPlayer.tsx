@@ -278,7 +278,7 @@ export function VideoPlayer({ assetName }: VideoPlayerProps) {
           comments={comments}
           onSeek={player.seek}
           onCommentMarkerClick={viewAnnotation}
-          tooltipContainer={isFullscreen ? containerRef.current : null}
+          tooltipContainer={isFullscreen ? containerRef.current : undefined}
         />
         <VideoControls
           isPlaying={player.isPlaying}
@@ -297,7 +297,7 @@ export function VideoPlayer({ assetName }: VideoPlayerProps) {
           onToggleFullscreen={toggleFullscreen}
           onSkipBackward={skipBackward}
           onSkipForward={skipForward}
-          popoverContainer={isFullscreen ? containerRef.current : null}
+          popoverContainer={isFullscreen ? containerRef.current : undefined}
         />
       </div>
     </div>
