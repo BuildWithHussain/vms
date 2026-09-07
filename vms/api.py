@@ -2250,3 +2250,35 @@ def get_shared_asset_download_url(
 
 	url = generate_presigned_download_url(asset.r2_key, asset.file_name)
 	return {"url": url}
+
+
+# nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
+@frappe.whitelist(allow_guest=True)
+@rate_limit(key="asset_name", limit=15, seconds=60, methods=["GET"])
+def download_shared_converted_asset(
+	asset_name: str,
+	format: str,
+	project: str | None = None,
+	token: str | None = None,
+	folder: str | None = None,
+):
+	scope_field, scope_value = _validate_shared_asset_scope(project, token, folder)
+
+	meta = frappe.db.get_value(
+		"VMS Asset",
+		asset_name,
+		["project", "folder", "status", "deleted_at"],
+		as_dict=True,
+	)
+
+	if not meta or meta.deleted_at or meta.status == "Uploading" or meta.get(scope_field) != scope_value:
+		frappe.throw(_("Asset not found in this share"), frappe.DoesNotExistError)
+
+	asset = frappe.get_doc("VMS Asset", asset_name)
+
+	if not asset.r2_key:
+		frappe.throw(_("Asset has no R2 key"))
+
+	from vms.image_export import serve_converted_download
+
+	serve_converted_download(asset, format)

@@ -123,7 +123,20 @@
 										/>
 									</p>
 								</div>
+								<Dropdown
+									v-if="isConvertibleStill(asset.file_type, asset.file_name)"
+									:options="downloadMenu(asset)"
+									align="end"
+								>
+									<Button
+										variant="ghost"
+										icon="lucide-download"
+										label="Download"
+										@click.stop
+									/>
+								</Dropdown>
 								<Button
+									v-else
 									variant="ghost"
 									icon="lucide-download"
 									label="Download"
@@ -169,6 +182,11 @@
 			:name="preview.asset.file_name"
 			:mime="preview.asset.file_type ?? ''"
 			:download-url="preview.downloadUrl"
+			:download-menu="
+				isConvertibleStill(preview.asset.file_type, preview.asset.file_name)
+					? downloadMenu(preview.asset)
+					: undefined
+			"
 			@update:open="preview = null"
 		/>
 	</div>
@@ -180,16 +198,18 @@ import { useRoute } from 'vue-router'
 import {
 	Badge,
 	Button,
+	Dropdown,
 	PageHeaderBase,
 	PageHeaderTitle,
 	Spinner,
 	toast,
 	useCall,
 	usePageMeta,
+	type DropdownOption,
 } from 'frappe-ui'
 import type { ViewUrlResponse } from '@/types'
 import EmptyState from '@/components/common/EmptyState.vue'
-import { fileKindStyle } from '@/lib/fileType'
+import { fileKindStyle, isConvertibleStill } from '@/lib/fileType'
 import MediaPreviewDialog from '@/components/common/MediaPreviewDialog.vue'
 import { formatBytes, serverMessage } from '@/lib/format'
 
@@ -340,6 +360,27 @@ async function downloadAll() {
 	} finally {
 		downloadingAll.value = false
 	}
+}
+
+function downloadConverted(asset: SharedAsset, format: 'jpeg' | 'png') {
+	const params = new URLSearchParams({ asset_name: asset.name, format, token: token.value })
+	if (isFolder.value) params.set('folder', props.folderId ?? '')
+	else params.set('project', props.projectId ?? '')
+	const outName = asset.file_name.replace(/\.[^.]+$/, '') + (format === 'jpeg' ? '.jpg' : '.png')
+	toast.info(`Preparing ${format.toUpperCase()}…`)
+	triggerDownload(
+		`/api/v2/method/vms.api.download_shared_converted_asset?${params.toString()}`,
+		outName,
+	)
+}
+
+function downloadMenu(asset: SharedAsset): DropdownOption[] {
+	const ext = asset.file_name.match(/\.([^.]+)$/)?.[1]?.toUpperCase() ?? 'file'
+	return [
+		{ label: `Original (${ext})`, icon: 'lucide-download', onClick: () => download(asset) },
+		{ label: 'JPEG', icon: 'lucide-image', onClick: () => downloadConverted(asset, 'jpeg') },
+		{ label: 'PNG', icon: 'lucide-image', onClick: () => downloadConverted(asset, 'png') },
+	]
 }
 
 function triggerDownload(url: string, fileName: string) {
