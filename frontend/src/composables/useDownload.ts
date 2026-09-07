@@ -44,27 +44,17 @@ export function useDownload(token?: string | null) {
 		}
 	}
 
-	async function downloadConverted(assetName: string, fileName: string, format: DownloadFormat) {
-		isDownloading.value = true
-		try {
-			const params = new URLSearchParams({ asset_name: assetName, format })
-			if (token) params.set('token', token)
-			const method = token
-				? 'vms.review_api.download_guest_converted_asset'
-				: 'vms.api.download_converted_asset'
-			const res = await fetch(`/api/method/${method}?${params.toString()}`, {
-				credentials: 'include',
-			})
-			if (!res.ok) throw new Error(`Could not prepare ${format.toUpperCase()} (${res.status})`)
-			const blob = await res.blob()
-			const url = URL.createObjectURL(blob)
-			triggerDownload(url, convertedName(fileName, format))
-			setTimeout(() => URL.revokeObjectURL(url), 10_000)
-		} catch (e: unknown) {
-			toast.error(e instanceof Error ? e.message : 'Download failed')
-		} finally {
-			isDownloading.value = false
-		}
+	function downloadConverted(assetName: string, fileName: string, format: DownloadFormat) {
+		const params = new URLSearchParams({ asset_name: assetName, format })
+		if (token) params.set('token', token)
+		const method = token
+			? 'vms.review_api.download_guest_converted_asset'
+			: 'vms.api.download_converted_asset'
+		toast.info(`Preparing ${format.toUpperCase()}…`)
+		triggerDownload(
+			`/api/v2/method/${method}?${params.toString()}`,
+			convertedName(fileName, format),
+		)
 	}
 
 	async function downloadMany(assets: { name: string; file_name: string }[]) {

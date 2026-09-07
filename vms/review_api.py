@@ -3,6 +3,7 @@ import uuid
 
 import frappe
 from frappe import _
+from frappe.rate_limiter import rate_limit
 
 from vms.r2 import (
 	generate_presigned_download_url,
@@ -542,8 +543,10 @@ def get_guest_download_url(asset_name: str, token: str):
 	return {"url": url}
 
 
+# nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
 @frappe.whitelist(allow_guest=True)
-def download_guest_converted_asset(asset_name: str, token: str, format: str):
+@rate_limit(key="asset_name", limit=15, seconds=60, methods=["GET"])
+def download_guest_converted_asset(asset_name: str, format: str, token: str | None = None):
 	_validate_public_token(asset_name, token)
 
 	asset = frappe.get_doc("VMS Asset", asset_name)

@@ -22,6 +22,8 @@ TARGET_FORMATS = {
 JPEG_QUALITY = 90
 _WHITE = (255, 255, 255)
 
+MAX_SOURCE_BYTES = 300 * 1024 * 1024
+
 
 def _extension(file_name: str | None) -> str:
 	if not file_name:
@@ -88,6 +90,7 @@ def _encode(img: Image.Image, pil_format: str) -> bytes:
 def _download_source(r2_key: str, dest_path: str):
 	resp = requests.get(generate_presigned_view_url(r2_key), stream=True, timeout=120)
 	resp.raise_for_status()
+	# nosemgrep: frappe-semgrep-rules.rules.security.frappe-security-file-traversal
 	with open(dest_path, "wb") as f:
 		for chunk in resp.iter_content(chunk_size=1024 * 1024):
 			f.write(chunk)
@@ -101,6 +104,9 @@ def convert_asset_image(asset, target_format: str) -> tuple[bytes, str, str]:
 
 	if not is_convertible_still(asset.file_type, asset.file_name):
 		frappe.throw(_("This file is not available as JPEG or PNG."))
+
+	if asset.file_size and asset.file_size > MAX_SOURCE_BYTES:
+		frappe.throw(_("This file is too large to convert on download. Download the original instead."))
 
 	with tempfile.TemporaryDirectory(prefix="vms_export_") as tmp:
 		src_path = os.path.join(tmp, f"source{_extension(asset.file_name) or '.bin'}")
