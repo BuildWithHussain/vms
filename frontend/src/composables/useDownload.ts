@@ -2,6 +2,8 @@ import { ref } from 'vue'
 import { call, toast } from 'frappe-ui'
 import type { ViewUrlResponse } from '@/types'
 
+export type DownloadFormat = 'jpeg' | 'png'
+
 function triggerDownload(url: string, fileName: string) {
 	const a = document.createElement('a')
 	a.href = url
@@ -9,6 +11,10 @@ function triggerDownload(url: string, fileName: string) {
 	document.body.appendChild(a)
 	a.click()
 	document.body.removeChild(a)
+}
+
+function convertedName(fileName: string, format: DownloadFormat) {
+	return fileName.replace(/\.[^.]+$/, '') + (format === 'jpeg' ? '.jpg' : '.png')
 }
 
 /**
@@ -38,6 +44,29 @@ export function useDownload(token?: string | null) {
 		}
 	}
 
+	async function downloadConverted(assetName: string, fileName: string, format: DownloadFormat) {
+		isDownloading.value = true
+		try {
+			const params = new URLSearchParams({ asset_name: assetName, format })
+			if (token) params.set('token', token)
+			const method = token
+				? 'vms.review_api.download_guest_converted_asset'
+				: 'vms.api.download_converted_asset'
+			const res = await fetch(`/api/method/${method}?${params.toString()}`, {
+				credentials: 'include',
+			})
+			if (!res.ok) throw new Error(`Could not prepare ${format.toUpperCase()} (${res.status})`)
+			const blob = await res.blob()
+			const url = URL.createObjectURL(blob)
+			triggerDownload(url, convertedName(fileName, format))
+			setTimeout(() => URL.revokeObjectURL(url), 10_000)
+		} catch (e: unknown) {
+			toast.error(e instanceof Error ? e.message : 'Download failed')
+		} finally {
+			isDownloading.value = false
+		}
+	}
+
 	async function downloadMany(assets: { name: string; file_name: string }[]) {
 		isDownloading.value = true
 		let failed = 0
@@ -58,5 +87,5 @@ export function useDownload(token?: string | null) {
 		}
 	}
 
-	return { downloadOne, downloadMany, isDownloading }
+	return { downloadOne, downloadConverted, downloadMany, isDownloading }
 }

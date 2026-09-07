@@ -18,8 +18,20 @@
 			/>
 		</div>
 
+		<Dropdown
+			v-if="review.isGuest.value && canPickFormat"
+			:options="downloadFormatOptions"
+			align="end"
+		>
+			<Button
+				variant="subtle"
+				icon-left="lucide-download"
+				label="Download"
+				:loading="isDownloading"
+			/>
+		</Dropdown>
 		<Button
-			v-if="review.isGuest.value"
+			v-else-if="review.isGuest.value"
 			variant="subtle"
 			icon-left="lucide-download"
 			label="Download"
@@ -78,6 +90,7 @@ import {
 } from 'frappe-ui'
 import type { ReviewAsset } from '@/types'
 import { assetStatusTheme } from '@/lib/status'
+import { isConvertibleStill } from '@/lib/fileType'
 import { useDownload } from '@/composables/useDownload'
 import { useReview } from '@/composables/useReview'
 import YoutubeIcon from '@/components/common/YoutubeIcon.vue'
@@ -97,7 +110,33 @@ const emit = defineEmits<{
 const router = useRouter()
 const review = useReview()
 const shareOpen = ref(false)
-const { downloadOne, isDownloading } = useDownload(review.token)
+const { downloadOne, downloadConverted, isDownloading } = useDownload(review.token)
+
+const canPickFormat = computed(() =>
+	isConvertibleStill(props.asset.file_type, props.asset.file_name),
+)
+
+const originalExt = computed(
+	() => props.asset.file_name.match(/\.([^.]+)$/)?.[1]?.toUpperCase() ?? 'file',
+)
+
+const downloadFormatOptions = computed<DropdownOption[]>(() => [
+	{
+		label: `Original (${originalExt.value})`,
+		icon: 'lucide-download',
+		onClick: () => downloadOne(props.asset.name, props.asset.file_name),
+	},
+	{
+		label: 'JPEG',
+		icon: 'lucide-image',
+		onClick: () => downloadConverted(props.asset.name, props.asset.file_name, 'jpeg'),
+	},
+	{
+		label: 'PNG',
+		icon: 'lucide-image',
+		onClick: () => downloadConverted(props.asset.name, props.asset.file_name, 'png'),
+	},
+])
 
 const publicReview = computed({
 	get: () => props.asset.is_public_review === 1,
@@ -111,11 +150,13 @@ const shareUrl = computed(() => {
 
 const menuOptions = computed<DropdownOption[]>(() => {
 	const options: DropdownOption[] = [
-		{
-			label: 'Download',
-			icon: 'lucide-download',
-			onClick: () => downloadOne(props.asset.name, props.asset.file_name),
-		},
+		canPickFormat.value
+			? { label: 'Download', icon: 'lucide-download', submenu: downloadFormatOptions.value }
+			: {
+					label: 'Download',
+					icon: 'lucide-download',
+					onClick: () => downloadOne(props.asset.name, props.asset.file_name),
+				},
 		{
 			label: 'New version',
 			icon: 'lucide-upload',

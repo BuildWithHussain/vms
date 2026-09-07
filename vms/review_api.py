@@ -540,3 +540,17 @@ def get_guest_download_url(asset_name: str, token: str):
 
 	url = generate_presigned_download_url(asset.r2_key, asset.file_name)
 	return {"url": url}
+
+
+@frappe.whitelist(allow_guest=True)
+def download_guest_converted_asset(asset_name: str, token: str, format: str):
+	_validate_public_token(asset_name, token)
+
+	asset = frappe.get_doc("VMS Asset", asset_name)
+
+	if not asset.r2_key:
+		frappe.throw(_("Asset has no R2 key"))
+
+	from vms.image_export import serve_converted_download
+
+	serve_converted_download(asset, format)

@@ -549,6 +549,20 @@ def get_download_url(asset_name: str):
 
 
 @frappe.whitelist()
+def download_converted_asset(asset_name: str, format: str):
+	require_vms_access()
+
+	asset = frappe.get_doc("VMS Asset", asset_name)
+
+	if not asset.r2_key:
+		frappe.throw(_("Asset has no R2 key"))
+
+	from vms.image_export import serve_converted_download
+
+	serve_converted_download(asset, format)
+
+
+@frappe.whitelist()
 def move_asset(asset_name: str, target_project: str):
 	"""Move an asset to a different project (or from Inbox to a project)."""
 	require_vms_access()

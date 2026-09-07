@@ -3,6 +3,7 @@ import { useRouter } from 'vue-router'
 import { dialog, toast, useCall, type DropdownOption } from 'frappe-ui'
 import type { Asset } from '@/types'
 import { serverMessage } from '@/lib/format'
+import { isConvertibleStill } from '@/lib/fileType'
 import { useDownload } from '@/composables/useDownload'
 import { useVersionUpload } from '@/composables/useVersionUpload'
 
@@ -50,7 +51,7 @@ interface AssetParams {
  */
 export function useAssetActions(asset: Ref<Asset>, ctx: AssetActionsContext): DropdownOption[] {
 	const router = useRouter()
-	const { downloadOne } = useDownload()
+	const { downloadOne, downloadConverted } = useDownload()
 	const { openVersionUpload } = useVersionUpload()
 
 	const isReady = () => asset.value.status === 'Ready'
@@ -187,6 +188,39 @@ export function useAssetActions(asset: Ref<Asset>, ctx: AssetActionsContext): Dr
 		},
 	]
 
+	const downloadOption: DropdownOption = isConvertibleStill(
+		asset.value.file_type,
+		asset.value.file_name,
+	)
+		? {
+				label: 'Download',
+				icon: 'lucide-download',
+				condition: isReady,
+				submenu: [
+					{
+						label: 'Original',
+						icon: 'lucide-download',
+						onClick: () => downloadOne(asset.value.name, asset.value.file_name),
+					},
+					{
+						label: 'JPEG',
+						icon: 'lucide-image',
+						onClick: () => downloadConverted(asset.value.name, asset.value.file_name, 'jpeg'),
+					},
+					{
+						label: 'PNG',
+						icon: 'lucide-image',
+						onClick: () => downloadConverted(asset.value.name, asset.value.file_name, 'png'),
+					},
+				],
+			}
+		: {
+				label: 'Download',
+				icon: 'lucide-download',
+				condition: isReady,
+				onClick: () => downloadOne(asset.value.name, asset.value.file_name),
+			}
+
 	return [
 		{
 			label: 'Review',
@@ -194,12 +228,7 @@ export function useAssetActions(asset: Ref<Asset>, ctx: AssetActionsContext): Dr
 			condition: isReady,
 			onClick: () => router.push(`/review/${asset.value.name}`),
 		},
-		{
-			label: 'Download',
-			icon: 'lucide-download',
-			condition: isReady,
-			onClick: () => downloadOne(asset.value.name, asset.value.file_name),
-		},
+		downloadOption,
 		{
 			label: 'Copy review link',
 			icon: 'lucide-link',
