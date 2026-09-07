@@ -1,6 +1,18 @@
 export type FileKind = 'video' | 'image' | 'audio' | 'file'
 
 export const RAW_EXTENSIONS = ['arw', 'cr2', 'cr3', 'dng', 'nef', 'orf', 'raf', 'rw2']
+export const HEIC_EXTENSIONS = ['heic', 'heif']
+
+function extensionOf(fileName?: string | null): string {
+	return fileName?.toLowerCase().match(/\.([^.]+)$/)?.[1] ?? ''
+}
+
+export function isConvertibleStill(fileType?: string | null, fileName?: string | null): boolean {
+	const ext = extensionOf(fileName)
+	if (RAW_EXTENSIONS.includes(ext) || HEIC_EXTENSIONS.includes(ext)) return true
+	const type = fileType ?? ''
+	return type === 'image/heic' || type === 'image/heif' || type.startsWith('image/x-')
+}
 
 export interface FileKindStyle {
 	icon: string

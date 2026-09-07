@@ -106,7 +106,7 @@
    "label": "Presigned URL Expiry (seconds)"
   },
   {
-   "default": "mp4,mov,avi,mkv,webm,m4v,mp3,wav,png,jpg,jpeg,gif,webp,arw,cr2,cr3,dng,nef,orf,raf,rw2",
+   "default": "mp4,mov,avi,mkv,webm,m4v,mp3,wav,png,jpg,jpeg,gif,webp,heic,heif,arw,cr2,cr3,dng,nef,orf,raf,rw2",
    "description": "Comma-separated list of allowed file extensions",
    "fieldname": "allowed_extensions",
    "fieldtype": "Small Text",
@@ -214,7 +214,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-09-01 12:00:00.000000",
+ "modified": "2026-09-08 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Video Management Solution",
  "name": "VMS Settings",

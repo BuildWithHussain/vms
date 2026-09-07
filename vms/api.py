@@ -5,6 +5,7 @@ import uuid
 import frappe
 import requests
 from frappe import _
+from frappe.rate_limiter import rate_limit
 from frappe.utils import cint
 
 from vms.permissions import require_vms_access
@@ -546,6 +547,21 @@ def get_download_url(asset_name: str):
 	)
 
 	return {"url": url}
+
+
+@frappe.whitelist()
+@rate_limit(key="asset_name", limit=30, seconds=60, methods=["GET"])
+def download_converted_asset(asset_name: str, format: str):
+	require_vms_access()
+
+	asset = frappe.get_doc("VMS Asset", asset_name)
+
+	if not asset.r2_key:
+		frappe.throw(_("Asset has no R2 key"))
+
+	from vms.image_export import serve_converted_download
+
+	serve_converted_download(asset, format)
 
 
 @frappe.whitelist()

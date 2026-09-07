@@ -3,6 +3,7 @@ import uuid
 
 import frappe
 from frappe import _
+from frappe.rate_limiter import rate_limit
 
 from vms.r2 import (
 	generate_presigned_download_url,
@@ -540,3 +541,19 @@ def get_guest_download_url(asset_name: str, token: str):
 
 	url = generate_presigned_download_url(asset.r2_key, asset.file_name)
 	return {"url": url}
+
+
+# nosemgrep: frappe-semgrep-rules.rules.security.guest-whitelisted-method
+@frappe.whitelist(allow_guest=True)
+@rate_limit(key="asset_name", limit=15, seconds=60, methods=["GET"])
+def download_guest_converted_asset(asset_name: str, format: str, token: str | None = None):
+	_validate_public_token(asset_name, token)
+
+	asset = frappe.get_doc("VMS Asset", asset_name)
+
+	if not asset.r2_key:
+		frappe.throw(_("Asset has no R2 key"))
+
+	from vms.image_export import serve_converted_download
+
+	serve_converted_download(asset, format)

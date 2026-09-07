@@ -11,6 +11,7 @@ dependencies = [
     # "frappe~=16.0.0" # Installed and managed by bench.
     "boto3>=1.35.0",
     "rawpy>=0.24.0",
+    "pillow-heif>=0.18.0",
 ]
 
 [deploy.dependencies.apt]

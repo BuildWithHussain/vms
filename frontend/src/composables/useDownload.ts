@@ -2,6 +2,8 @@ import { ref } from 'vue'
 import { call, toast } from 'frappe-ui'
 import type { ViewUrlResponse } from '@/types'
 
+export type DownloadFormat = 'jpeg' | 'png'
+
 function triggerDownload(url: string, fileName: string) {
 	const a = document.createElement('a')
 	a.href = url
@@ -9,6 +11,10 @@ function triggerDownload(url: string, fileName: string) {
 	document.body.appendChild(a)
 	a.click()
 	document.body.removeChild(a)
+}
+
+function convertedName(fileName: string, format: DownloadFormat) {
+	return fileName.replace(/\.[^.]+$/, '') + (format === 'jpeg' ? '.jpg' : '.png')
 }
 
 /**
@@ -38,6 +44,19 @@ export function useDownload(token?: string | null) {
 		}
 	}
 
+	function downloadConverted(assetName: string, fileName: string, format: DownloadFormat) {
+		const params = new URLSearchParams({ asset_name: assetName, format })
+		if (token) params.set('token', token)
+		const method = token
+			? 'vms.review_api.download_guest_converted_asset'
+			: 'vms.api.download_converted_asset'
+		toast.info(`Preparing ${format.toUpperCase()}…`)
+		triggerDownload(
+			`/api/v2/method/${method}?${params.toString()}`,
+			convertedName(fileName, format),
+		)
+	}
+
 	async function downloadMany(assets: { name: string; file_name: string }[]) {
 		isDownloading.value = true
 		let failed = 0
@@ -58,5 +77,5 @@ export function useDownload(token?: string | null) {
 		}
 	}
 
-	return { downloadOne, downloadMany, isDownloading }
+	return { downloadOne, downloadConverted, downloadMany, isDownloading }
 }
