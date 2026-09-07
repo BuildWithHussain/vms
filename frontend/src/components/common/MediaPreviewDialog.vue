@@ -3,8 +3,11 @@
 		<template #default="{ close }">
 			<div class="flex items-center gap-2 border-b border-outline-gray-1 px-4 py-2">
 				<p class="flex-1 truncate text-base font-medium text-ink-gray-8">{{ name }}</p>
+				<Dropdown v-if="downloadMenu?.length" :options="downloadMenu" align="end">
+					<Button variant="ghost" icon-left="lucide-download" label="Download" />
+				</Dropdown>
 				<Button
-					v-if="downloadUrl"
+					v-else-if="downloadUrl"
 					variant="ghost"
 					icon-left="lucide-download"
 					label="Download"
@@ -62,7 +65,7 @@
 
 <script setup lang="ts">
 import { computed, onScopeDispose, ref, watch } from 'vue'
-import { Button, Dialog } from 'frappe-ui'
+import { Button, Dialog, Dropdown, type DropdownOption } from 'frappe-ui'
 
 const props = defineProps<{
 	open: boolean
@@ -70,6 +73,7 @@ const props = defineProps<{
 	name: string
 	mime: string
 	downloadUrl?: string
+	downloadMenu?: DropdownOption[]
 	hasPrevious?: boolean
 	hasNext?: boolean
 }>()
