@@ -146,24 +146,8 @@
 						</article>
 					</div>
 
-					<div v-if="totalPages > 1" class="flex items-center justify-center gap-3">
-						<Button
-							variant="outline"
-							icon-left="lucide-arrow-left"
-							label="Previous"
-							:disabled="page <= 1"
-							@click="page -= 1"
-						/>
-						<span class="text-sm text-ink-gray-5">
-							Page {{ page }} of {{ totalPages }}
-						</span>
-						<Button
-							variant="outline"
-							icon-right="lucide-arrow-right"
-							label="Next"
-							:disabled="page >= totalPages"
-							@click="page += 1"
-						/>
+					<div v-if="hasMore" ref="sentinel" class="grid place-items-center py-4">
+						<Spinner class="size-5 text-ink-gray-5" />
 					</div>
 
 					<p
@@ -211,6 +195,7 @@ import type { ViewUrlResponse } from '@/types'
 import EmptyState from '@/components/common/EmptyState.vue'
 import { fileKindStyle, isConvertibleStill } from '@/lib/fileType'
 import MediaPreviewDialog from '@/components/common/MediaPreviewDialog.vue'
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { formatBytes, serverMessage } from '@/lib/format'
 
 interface SharedScope {
@@ -264,7 +249,12 @@ const token = computed(() => {
 	return typeof value === 'string' && value ? value : ''
 })
 
-const page = ref(1)
+const request = ref({ page: 1, append: false })
+const assets = ref<SharedAsset[]>([])
+const total = ref(0)
+const loadingMore = ref(false)
+const reachedEnd = ref(false)
+const sentinel = ref<HTMLElement | null>(null)
 const preview = ref<{ asset: SharedAsset; url: string; downloadUrl?: string } | null>(null)
 const downloadingAll = ref(false)
 
@@ -297,10 +287,22 @@ const assetsCall = useCall<SharedAssetsResponse, ScopeParams & { page: number; p
 	{
 		url: assetsUrl,
 		method: 'GET',
-		params: () => ({ ...scopeParams(), page: page.value, page_size: PAGE_SIZE }),
+		params: () => ({ ...scopeParams(), page: request.value.page, page_size: PAGE_SIZE }),
 		immediate: Boolean(token.value),
-		refetch: true,
 		cacheKey: ['shared-assets', scopeId.value],
+		onSuccess: (data: SharedAssetsResponse) => {
+			total.value = data.total
+			if (request.value.append) {
+				const seen = new Set(assets.value.map((asset) => asset.name))
+				const fresh = data.assets.filter((asset) => !seen.has(asset.name))
+				assets.value = assets.value.concat(fresh)
+				reachedEnd.value = fresh.length === 0
+			} else {
+				assets.value = data.assets
+				reachedEnd.value = false
+			}
+			request.value.append = false
+		},
 	},
 )
 
@@ -316,12 +318,21 @@ const downloadUrl = useCall<ViewUrlResponse, SharedAssetParams>({
 	immediate: false,
 })
 
-const assets = computed(() => assetsCall.data?.assets ?? [])
-const total = computed(() => assetsCall.data?.total ?? 0)
-const totalPages = computed(() => assetsCall.data?.total_pages ?? 1)
 const title = computed(() => info.data?.folder_name ?? info.data?.project_name ?? '')
+const hasMore = computed(() => !reachedEnd.value && assets.value.length < total.value)
 
 usePageMeta(() => ({ title: title.value ? `${title.value} · VMS` : 'Shared · VMS' }))
+
+function loadMore() {
+	if (assetsCall.loading || loadingMore.value || !hasMore.value) return
+	loadingMore.value = true
+	request.value = { page: Math.floor(assets.value.length / PAGE_SIZE) + 1, append: true }
+	void assetsCall.reload().finally(() => {
+		loadingMore.value = false
+	})
+}
+
+useInfiniteScroll(sentinel, loadingMore, () => hasMore.value, loadMore)
 
 function paramsFor(asset: SharedAsset): SharedAssetParams {
 	return { ...scopeParams(), asset_name: asset.name }
