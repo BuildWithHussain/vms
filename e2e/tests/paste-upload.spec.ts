@@ -55,7 +55,22 @@ test.describe("Paste to upload", () => {
     page,
     context,
   }) => {
-    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    // Headless CI exposes no readable clipboard, so capture what the app writes.
+    await page.addInitScript(() => {
+      const store = window as unknown as { __lastCopy?: string };
+      const record = (text: string) => {
+        store.__lastCopy = text;
+        return Promise.resolve();
+      };
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText = record;
+      } else {
+        Object.defineProperty(navigator, "clipboard", {
+          configurable: true,
+          value: { writeText: record },
+        });
+      }
+    });
     await new Shell(page).goto(`/vms/projects/${projectName}`);
 
     await pasteFile(page, {
@@ -74,7 +89,9 @@ test.describe("Paste to upload", () => {
       { timeout: 30000 },
     );
 
-    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    const copied = await page.evaluate(
+      () => (window as unknown as { __lastCopy?: string }).__lastCopy ?? "",
+    );
     expect(copied).toMatch(/\/vms\/review\/[^?]+\?token=\w+$/);
 
     // The link is public, so it opens without a session.
