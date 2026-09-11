@@ -26,11 +26,10 @@
 							variant="subtle"
 							size="sm"
 							class="font-mono"
+							icon-left="lucide-clock-3"
+							:label="formatTimestamp(comment.video_timestamp ?? 0)"
 							@click.stop="openTimestamp"
-						>
-							<span class="lucide-clock-3 size-3" />
-							{{ formatTimestamp(comment.video_timestamp ?? 0) }}
-						</Button>
+						/>
 						<Badge
 							v-if="comment.has_annotation"
 							theme="blue"
