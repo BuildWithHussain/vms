@@ -1,4 +1,5 @@
 import { readonly, ref, watch, type Ref } from 'vue'
+import { formatDuration } from '@/lib/format'
 
 export function useVideoPlayer(video: Ref<HTMLVideoElement | null>) {
 	const isPlaying = ref(false)
@@ -161,6 +162,5 @@ export function formatTimecode(seconds: number, fps = 30): string {
 
 export function formatTimestamp(seconds: number): string {
 	if (!Number.isFinite(seconds) || seconds < 0) return '0:00'
-	const totalSeconds = Math.floor(seconds)
-	return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, '0')}`
+	return formatDuration(seconds)
 }
